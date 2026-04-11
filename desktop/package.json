@@ -1,7 +1,7 @@
 {
   "name": "hermes-desktop",
   "version": "0.1.0",
-  "description": "Hermes Agent — self-contained macOS desktop app",
+  "description": "Atomic Hermes — self-contained macOS desktop app",
   "main": "dist/main/main.js",
   "private": true,
   "scripts": {
@@ -11,6 +11,7 @@
     "start": "npm run build:all && electron .",
     "dev": "tsc --watch & electron .",
     "bundle": "bash scripts/bundle-all.sh",
+    "bundle:dev": "bash scripts/bundle-dev.sh",
     "dist": "npm run build:all && electron-builder"
   },
   "dependencies": {
@@ -27,17 +28,24 @@
     "electron-builder": "^25.0.0",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
     "react-redux": "^9.2.0",
     "react-router-dom": "^7.13.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
     "typescript": "^5.6.0",
     "vite": "^7.3.1"
   },
   "build": {
     "appId": "com.nousresearch.hermes-agent",
-    "productName": "Hermes Agent",
+    "productName": "Atomic Hermes",
     "mac": {
       "category": "public.app-category.developer-tools",
-      "target": ["dmg", "zip"],
+      "target": [
+        "dmg",
+        "zip"
+      ],
       "icon": "assets/icon.icns"
     },
     "extraResources": [

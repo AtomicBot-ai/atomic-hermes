@@ -47,7 +47,7 @@
   border-radius: var(--radius-sm);
   object-fit: contain;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35))
-    drop-shadow(0 0 16px rgba(194, 255, 64, 0.16));
+    drop-shadow(0 0 16px rgba(0, 232, 212, 0.16));
 }
 
 .UiBrandMark {
@@ -56,8 +56,8 @@
   display: inline-grid;
   place-items: center;
   border-radius: var(--radius-sm);
-  background: rgba(194, 255, 64, 0.18);
-  color: var(--lime);
+  background: rgba(0, 232, 212, 0.18);
+  color: var(--accent-brand);
   font-weight: 800;
   line-height: 1;
 }
@@ -65,7 +65,10 @@
 .UiBrandText {
   letter-spacing: 0.4px;
   font-weight: 750;
+  font-size: 12px;
+  line-height: 1;
   color: rgba(230, 237, 243, 0.95);
+  white-space: nowrap;
 }
 
 .UiSplashLogo {
@@ -271,4 +274,28 @@
 .UiBannerImageContainer > img {
   width: 100%;
   border-radius: var(--radius-xl);
+}
+
+/* ── OnboardingDots ─── */
+
+.UiOnboardingDots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 0;
+}
+
+.UiOnboardingDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--surface-tertiary);
+  transition: all var(--transition-base);
+}
+
+.UiOnboardingDot--active {
+  width: 24px;
+  border-radius: 4px;
+  background: var(--accent-brand);
 }

@@ -17,32 +17,7 @@
   min-height: 0;
 }
 
-.UiAppTopbar {
-  height: 56px;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-  padding: 0 16px;
-  border-bottom: 1px solid var(--border-light);
-  background: rgba(11, 15, 20, 0.55);
-  backdrop-filter: blur(18px);
-}
-
-.UiAppNavLink {
-  cursor: pointer;
-}
-
-.UiAppTopbarActions {
-  position: relative;
-  display: flex;
-  gap: 8px;
-  align-items: center;
-  flex: 0 0 auto;
-}
-
-.UiMainLayoutMain {
+.UiChatLayoutMain {
   flex: 1 1 auto;
   min-width: 0;
   min-height: 0;
@@ -52,7 +27,7 @@
   flex-direction: column;
 }
 
-.UiMainLayout {
+.UiChatLayout {
   flex: 1 1 auto;
   min-height: 0;
   overflow: hidden;

@@ -1,0 +1,147 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline';"
+    />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Atomic Hermes</title>
+    <style>
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        font-family:
+          system-ui,
+          -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+        display: grid;
+        place-items: center;
+        background: #0b0f14;
+        color: #e6edf3;
+      }
+      .card {
+        width: min(760px, 92vw);
+        border: 1px solid rgba(230, 237, 243, 0.12);
+        border-radius: 16px;
+        padding: 18px 18px 16px;
+        background: rgba(255, 255, 255, 0.03);
+        box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+      }
+      .title {
+        font-size: 18px;
+        font-weight: 650;
+        margin: 0 0 8px;
+      }
+      .subtitle {
+        font-size: 13px;
+        opacity: 0.86;
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
+      .meta {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        align-items: center;
+        margin: 10px 0 14px;
+      }
+      .pill {
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid rgba(230, 237, 243, 0.14);
+        background: rgba(230, 237, 243, 0.05);
+      }
+      pre {
+        margin: 0;
+        padding: 12px 12px;
+        border-radius: 12px;
+        background: rgba(0, 0, 0, 0.35);
+        border: 1px solid rgba(230, 237, 243, 0.1);
+        max-height: 320px;
+        overflow: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        font-family:
+          ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New",
+          monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        color: #d2dbe6;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 14px;
+      }
+      button {
+        appearance: none;
+        border: 1px solid rgba(230, 237, 243, 0.16);
+        background: rgba(230, 237, 243, 0.06);
+        color: #e6edf3;
+        border-radius: 12px;
+        padding: 10px 12px;
+        font-size: 13px;
+        cursor: pointer;
+      }
+      button.primary {
+        border-color: rgba(255, 122, 0, 0.35);
+        background: rgba(255, 122, 0, 0.14);
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: default;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="title">Atomic Hermes failed to start</div>
+      <div class="subtitle">
+        The Gateway process did not become available. Open the logs to see the root cause.
+      </div>
+      <div class="meta">
+        <div class="pill" id="pill-port">port: ?</div>
+        <div class="pill" id="pill-logs">logs: ?</div>
+      </div>
+      <pre id="details">No details.</pre>
+      <div class="actions">
+        <button class="primary" id="open-logs">Open logs</button>
+        <button id="retry">Retry</button>
+      </div>
+    </div>
+    <script>
+      const params = new URLSearchParams(location.search);
+      const port = params.get("port") || "?";
+      const logsDir = params.get("logsDir") || "?";
+      const details = params.get("details") || "No details.";
+      document.getElementById("pill-port").textContent = `port: ${port}`;
+      document.getElementById("pill-logs").textContent = `logs: ${logsDir}`;
+      document.getElementById("details").textContent = details;
+
+      const openBtn = document.getElementById("open-logs");
+      openBtn.addEventListener("click", async () => {
+        openBtn.disabled = true;
+        try {
+          if (window.openclawDesktop && typeof window.openclawDesktop.openLogs === "function") {
+            await window.openclawDesktop.openLogs();
+          }
+        } finally {
+          openBtn.disabled = false;
+        }
+      });
+
+      const retryBtn = document.getElementById("retry");
+      retryBtn.addEventListener("click", () => {
+        location.href = "loading.html";
+      });
+    </script>
+  </body>
+</html>

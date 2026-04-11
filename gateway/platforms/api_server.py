@@ -452,6 +452,7 @@ class APIServerAdapter(BasePlatformAdapter):
         ephemeral_system_prompt: Optional[str] = None,
         session_id: Optional[str] = None,
         stream_delta_callback=None,
+        reasoning_callback=None,
         tool_progress_callback=None,
     ) -> Any:
         """
@@ -490,6 +491,7 @@ class APIServerAdapter(BasePlatformAdapter):
             session_id=session_id,
             platform="api_server",
             stream_delta_callback=stream_delta_callback,
+            reasoning_callback=reasoning_callback,
             tool_progress_callback=tool_progress_callback,
             session_db=self._ensure_session_db(),
             fallback_model=fallback_model,
@@ -1765,19 +1767,25 @@ class APIServerAdapter(BasePlatformAdapter):
                 return False
 
             # Port conflict detection — fail fast if port is already in use
-            try:
-                with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as _s:
-                    _s.settimeout(1)
-                    _s.connect(('127.0.0.1', self._port))
-                logger.error('[%s] Port %d already in use. Set a different port in config.yaml: platforms.api_server.port', self.name, self._port)
-                return False
-            except (ConnectionRefusedError, OSError):
-                pass  # port is free
+            # (skip for port 0 — OS assigns a free port automatically)
+            if self._port != 0:
+                try:
+                    with _socket.socket(_socket.AF_INET, _socket.SOCK_STREAM) as _s:
+                        _s.settimeout(1)
+                        _s.connect(('127.0.0.1', self._port))
+                    logger.error('[%s] Port %d already in use. Set a different port in config.yaml: platforms.api_server.port', self.name, self._port)
+                    return False
+                except (ConnectionRefusedError, OSError):
+                    pass  # port is free
 
             self._runner = web.AppRunner(self._app)
             await self._runner.setup()
             self._site = web.TCPSite(self._runner, self._host, self._port)
             await self._site.start()
+
+            # Resolve actual port (handles port 0 / OS-assigned)
+            if self._site._server and self._site._server.sockets:
+                self._port = self._site._server.sockets[0].getsockname()[1]
 
             self._mark_connected()
             if not self._api_key:
@@ -1792,6 +1800,9 @@ class APIServerAdapter(BasePlatformAdapter):
                 "[%s] API server listening on http://%s:%d (model: %s)",
                 self.name, self._host, self._port, self._model_name,
             )
+
+            if os.getenv("HERMES_DESKTOP_MODE"):
+                print(f"HERMES_PORT:{self._port}", flush=True)
             return True
 
         except Exception as e:

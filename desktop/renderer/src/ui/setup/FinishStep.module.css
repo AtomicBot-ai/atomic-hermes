@@ -1,0 +1,58 @@
+.successCard {
+  position: relative;
+  z-index: 2;
+  min-height: 360px;
+  justify-content: center;
+}
+
+.checkmark {
+  margin-bottom: 24px;
+}
+
+.title {
+  font-weight: 800;
+  font-size: 28px;
+  line-height: 34px;
+  letter-spacing: 1.5px;
+  color: var(--text);
+  margin: 0 0 8px;
+}
+
+.subtitle {
+  font-size: 15px;
+  color: rgba(255, 255, 255, 0.6);
+  margin: 0 0 32px;
+  max-width: 380px;
+  line-height: 1.5;
+}
+
+/* ── Confetti ── */
+
+.confettiLayer {
+  position: fixed;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.confettiPiece {
+  position: absolute;
+  top: -10px;
+  width: 8px;
+  height: 8px;
+  border-radius: 1px;
+  opacity: 0;
+  animation: confettiFall linear forwards;
+}
+
+@keyframes confettiFall {
+  0% {
+    opacity: 1;
+    transform: translateY(0) rotate(0deg);
+  }
+  100% {
+    opacity: 0;
+    transform: translateY(100vh) rotate(720deg);
+  }
+}

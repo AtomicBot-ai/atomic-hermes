@@ -11,6 +11,6 @@ export function isBootstrapPath(pathname: string): boolean {
     pathname === "/" ||
     pathname === routes.loading ||
     pathname === routes.error ||
-    pathname === routes.setup
+    pathname.startsWith(routes.setup)
   );
 }

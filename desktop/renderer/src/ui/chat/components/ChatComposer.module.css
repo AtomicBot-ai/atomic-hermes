@@ -1,0 +1,142 @@
+/* Chat composer: input bar at bottom, + / input / mic / send */
+.UiChatComposer {
+  flex-shrink: 0;
+  padding: 0 24px 20px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.UiChatComposerInner {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
+  width: 100%;
+  box-sizing: border-box;
+  padding: 12px 8px 8px 8px;
+  gap: 2px;
+  border-radius: 20px;
+  border: 1px solid var(--surface-overlay-strong);
+  background: #272727;
+  box-shadow:
+    0 80px 22px 0 rgba(0, 0, 0, 0),
+    0 51px 20px 0 rgba(0, 0, 0, 0),
+    0 29px 17px 0 rgba(0, 0, 0, 0.01),
+    0 13px 13px 0 rgba(0, 0, 0, 0.02),
+    0 3px 7px 0 rgba(0, 0, 0, 0.02);
+}
+
+.UiChatComposerButtonBlock {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.UiChatComposerButtonGroup {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.UiChatInput {
+  flex: 1 1 auto;
+  resize: none;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  color: #fff;
+  font-size: 16px;
+  line-height: 28px;
+  min-height: 28px;
+  max-height: 180px;
+  width: 100%;
+  padding: 0 8px;
+  box-sizing: border-box;
+  font-family: var(--font-body);
+  overflow-y: auto;
+}
+
+.UiChatInput:focus {
+  outline: none;
+}
+
+.UiChatInput::placeholder {
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.UiChatAttachButton {
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border-radius: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: rgb(255, 255, 255);
+  font-size: 20px;
+  line-height: 1;
+  cursor: pointer;
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.UiChatAttachButton:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: var(--surface-overlay-subtle);
+}
+
+.UiChatSendButton {
+  flex-shrink: 0;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-brand);
+  color: var(--bg-base);
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.UiChatSendButton:hover:not(:disabled) {
+  opacity: 0.8;
+}
+
+.UiChatSendButton:disabled {
+  background: var(--surface-overlay-strong);
+  color: rgba(255, 255, 255, 0.9);
+  opacity: 0.4;
+  cursor: default;
+}
+
+.UiChatSendButton svg {
+  width: 20px;
+  height: 20px;
+  display: block;
+}
+
+.UiChatStopButton {
+  background: #ffffff;
+}
+
+.UiChatStopButtonInner {
+  width: 13px;
+  height: 13px;
+  flex-shrink: 0;
+  aspect-ratio: 1/1;
+  border-radius: var(--radius-xs);
+  background: #0d0d17;
+}
+
+.UiChatStopButton:hover:not(:disabled) {
+  opacity: 0.9;
+}

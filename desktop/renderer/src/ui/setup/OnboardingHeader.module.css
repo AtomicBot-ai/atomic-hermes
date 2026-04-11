@@ -1,0 +1,45 @@
+.header {
+  width: min(520px, 92vw);
+  display: flex;
+  align-items: center;
+  margin-bottom: 0px;
+}
+
+.side {
+  width: 50px;
+  min-width: 50px;
+}
+
+.sideRight {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.textButton {
+  appearance: none;
+  background: none;
+  border: 0;
+  color: rgba(230, 237, 243, 0.72);
+  font-size: 14px;
+  cursor: pointer;
+  transition: color var(--transition-base);
+  padding: 0;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.textButton:hover:enabled {
+  color: rgba(230, 237, 243, 0.92);
+}
+
+.textButton:disabled {
+  opacity: 0.55;
+  cursor: default;
+}

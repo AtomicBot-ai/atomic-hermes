@@ -439,8 +439,8 @@ document.getElementById("new-chat-btn").addEventListener("click", () => {
   sessionId = "session-" + Date.now().toString(36);
   messagesEl.innerHTML = `
     <div class="welcome-message">
-      <div class="welcome-icon">⚕</div>
-      <h2>Welcome to Hermes Agent</h2>
+      <div class="welcome-icon"><img src="../assets/icon-sm.png" alt="" width="48" height="48"></div>
+      <h2>Welcome to Atomic Hermes</h2>
       <p>Ask me anything. I can search the web, write code, manage files, run commands, and more.</p>
     </div>
   `;

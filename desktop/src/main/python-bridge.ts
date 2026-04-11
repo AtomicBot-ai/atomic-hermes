@@ -16,10 +16,7 @@ function getResourcePath(...segments: string[]): string {
 }
 
 function getHermesHome(): string {
-  return path.join(
-    app.getPath("appData"),
-    "ai.atomicbot.hermes"
-  );
+  return path.join(app.getPath("userData"), "hermes");
 }
 
 function ensureHermesHome(): void {
@@ -48,9 +45,10 @@ function copyDirRecursive(src: string, dest: string): void {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
 
-    if (entry.isDirectory()) {
+    const stat = fs.statSync(srcPath);
+    if (stat.isDirectory()) {
       copyDirRecursive(srcPath, destPath);
-    } else if (!fs.existsSync(destPath)) {
+    } else if (stat.isFile() && !fs.existsSync(destPath)) {
       fs.copyFileSync(srcPath, destPath);
     }
   }
@@ -101,8 +99,8 @@ export async function startPythonBackend(): Promise<PythonBridge> {
 
   const pythonPath = getPythonPath();
   const serverScript = app.isPackaged
-    ? path.join(process.resourcesPath, "python-server", "server.py")
-    : path.join(__dirname, "..", "..", "src", "python-server", "server.py");
+    ? path.join(process.resourcesPath, "python-server", "desktop-gateway.py")
+    : path.join(__dirname, "..", "..", "src", "python-server", "desktop-gateway.py");
 
   const hermesRoot = getResourcePath("hermes-agent");
   const hermesHome = getHermesHome();
@@ -114,6 +112,7 @@ export async function startPythonBackend(): Promise<PythonBridge> {
     HERMES_AGENT_ROOT: hermesRoot,
     PYTHONDONTWRITEBYTECODE: "1",
     NODE_PATH: getResourcePath("node_modules"),
+    HERMES_DESKTOP_MODE: "1",
   };
 
   const child = spawn(pythonPath, [serverScript], {
@@ -124,8 +123,8 @@ export async function startPythonBackend(): Promise<PythonBridge> {
 
   const port = await new Promise<number>((resolve, reject) => {
     const timeout = setTimeout(() => {
-      reject(new Error("Python backend did not start within 30s"));
-    }, 30_000);
+      reject(new Error("Gateway did not start within 60s"));
+    }, 60_000);
 
     let stderr = "";
 
@@ -139,7 +138,8 @@ export async function startPythonBackend(): Promise<PythonBridge> {
     });
 
     child.stderr?.on("data", (data: Buffer) => {
-      stderr += data.toString();
+      const chunk = data.toString();
+      stderr += chunk;
       if (stderr.length > 8192) stderr = stderr.slice(-4096);
     });
 

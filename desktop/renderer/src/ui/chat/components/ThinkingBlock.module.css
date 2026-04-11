@@ -1,0 +1,145 @@
+.ThinkingBlock {
+  --thinking-toggle-height: 28px;
+  margin-bottom: 8px;
+  border-radius: var(--radius-sm, 6px);
+  overflow: hidden;
+}
+
+.ThinkingReserve {
+  height: calc(var(--thinking-toggle-height) + 8px);
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.ThinkingToggle {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 6px 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-height: var(--thinking-toggle-height);
+  text-align: left;
+  border-radius: var(--radius-sm, 6px);
+  line-height: 16px;
+  transition:
+    background var(--transition-fast, 0.15s ease),
+    color var(--transition-fast, 0.15s ease);
+}
+
+.ThinkingToggle:hover {
+  background: transparent;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ThinkingChevron {
+  width: 14px;
+  height: 14px;
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.ThinkingChevron[data-open="true"] {
+  transform: rotate(90deg);
+}
+
+.ThinkingLabel {
+  flex: 1;
+}
+
+.ThinkingLabelShimmer {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.5) 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    rgba(255, 255, 255, 0.5) 100%
+  );
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: thinkingShimmer 1.8s linear infinite;
+}
+
+@keyframes thinkingShimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+.ThinkingContent {
+  padding: 8px 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.45);
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 400px;
+  overflow-y: auto;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  animation: thinkingContentEnter 200ms ease both;
+}
+
+.ThinkingActions {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.ThinkingSectionTitle {
+  margin-bottom: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.35);
+}
+
+.ThinkingActionList {
+  margin: 0;
+  padding-left: 16px;
+}
+
+.ThinkingActionItem {
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.ThinkingActionItem + .ThinkingActionItem {
+  margin-top: 4px;
+}
+
+@keyframes thinkingContentEnter {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+  to {
+    opacity: 1;
+    max-height: 400px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ThinkingLabelShimmer {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.5);
+  }
+
+  .ThinkingContent {
+    animation: none;
+  }
+
+  .ThinkingChevron {
+    transition: none;
+  }
+}

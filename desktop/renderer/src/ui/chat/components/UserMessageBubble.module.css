@@ -1,0 +1,60 @@
+/* User message: right-aligned, dark gray pill bubble */
+.UiChatRow-user {
+  justify-content: flex-end;
+  margin-bottom: 12px;
+  scroll-margin-top: 28px;
+}
+
+.UiChatBubble-user {
+  max-width: min(600px, 80%);
+  border: none;
+  border-radius: 22px;
+  padding: 14px 22px;
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.UiChatBubble-user :global(.UiChatBubbleMeta) {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.UiChatBubble-user :global(.UiChatRole) {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.UiChatBubble-user :global(.UiChatPending) {
+  font-size: 10px;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.UiChatBubble-user :global(.UiChatText) {
+  word-break: break-word;
+  line-height: 1.45;
+  font-size: 16px;
+  color: #fff;
+  animation: chatTextFadeIn 450ms cubic-bezier(0.16, 1, 0.3, 1) 80ms both;
+}
+
+.UiChatBubble-user :global(.UiChatText p) {
+  margin: 0;
+}
+
+@keyframes chatTextFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .UiChatBubble-user :global(.UiChatText) {
+    animation: none;
+  }
+}
