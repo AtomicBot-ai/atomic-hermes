@@ -1740,6 +1740,12 @@ class APIServerAdapter(BasePlatformAdapter):
             # Structured event streaming
             self._app.router.add_post("/v1/runs", self._handle_runs)
             self._app.router.add_get("/v1/runs/{run_id}/events", self._handle_run_events)
+            # Extension point: additional routes (config, skills, etc.)
+            try:
+                from gateway.platforms.api_extensions import register_routes
+                register_routes(self._app, self)
+            except ImportError:
+                pass
             # Start background sweep to clean up orphaned (unconsumed) run streams
             sweep_task = asyncio.create_task(self._sweep_orphaned_runs())
             try:

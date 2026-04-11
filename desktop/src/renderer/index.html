@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; connect-src 'self' ws://127.0.0.1:* http://127.0.0.1:*; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline';">
+  <title>Hermes Agent</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Loading screen -->
+    <div id="loading-screen" class="screen active">
+      <div class="loading-content">
+        <div class="loading-icon">⚕</div>
+        <div class="loading-text">Starting Hermes Agent...</div>
+        <div class="loading-spinner"></div>
+        <div id="loading-error" class="loading-error" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Settings screen -->
+    <div id="settings-screen" class="screen">
+      <div class="settings-container">
+        <h1>Hermes Agent Setup</h1>
+        <p class="settings-subtitle">Configure your API keys to get started</p>
+
+        <div class="settings-group">
+          <label for="provider-select">Provider</label>
+          <select id="provider-select">
+            <option value="openrouter">OpenRouter (200+ models)</option>
+            <option value="anthropic">Anthropic</option>
+            <option value="openai">OpenAI</option>
+            <option value="nous">Nous Portal</option>
+          </select>
+        </div>
+
+        <div class="settings-group" id="openrouter-key-group">
+          <label for="openrouter-key">OpenRouter API Key</label>
+          <input type="password" id="openrouter-key" placeholder="sk-or-..." autocomplete="off">
+          <a href="https://openrouter.ai/keys" target="_blank" class="settings-link">Get API key →</a>
+        </div>
+
+        <div class="settings-group hidden" id="anthropic-key-group">
+          <label for="anthropic-key">Anthropic API Key</label>
+          <input type="password" id="anthropic-key" placeholder="sk-ant-..." autocomplete="off">
+          <a href="https://console.anthropic.com/" target="_blank" class="settings-link">Get API key →</a>
+        </div>
+
+        <div class="settings-group hidden" id="openai-key-group">
+          <label for="openai-key">OpenAI API Key</label>
+          <input type="password" id="openai-key" placeholder="sk-..." autocomplete="off">
+          <a href="https://platform.openai.com/api-keys" target="_blank" class="settings-link">Get API key →</a>
+        </div>
+
+        <div class="settings-group hidden" id="nous-key-group">
+          <label for="nous-key">Nous Portal API Key</label>
+          <input type="password" id="nous-key" placeholder="..." autocomplete="off">
+          <a href="https://portal.nousresearch.com" target="_blank" class="settings-link">Get API key →</a>
+        </div>
+
+        <div class="settings-group">
+          <label for="model-input">Model (optional)</label>
+          <input type="text" id="model-input" placeholder="anthropic/claude-sonnet-4-20250514">
+        </div>
+
+        <button id="save-settings-btn" class="btn-primary">Save & Start</button>
+        <div id="settings-error" class="settings-error" style="display:none"></div>
+      </div>
+    </div>
+
+    <!-- Chat screen -->
+    <div id="chat-screen" class="screen">
+      <div class="chat-header">
+        <div class="chat-header-left">
+          <span class="chat-title">Hermes Agent</span>
+          <span id="chat-status" class="chat-status">connecting...</span>
+        </div>
+        <div class="chat-header-right">
+          <button id="new-chat-btn" class="btn-icon" title="New conversation">⟳</button>
+          <button id="settings-btn" class="btn-icon" title="Settings">⚙</button>
+        </div>
+      </div>
+
+      <div id="messages" class="messages-container">
+        <div class="welcome-message">
+          <div class="welcome-icon">⚕</div>
+          <h2>Welcome to Hermes Agent</h2>
+          <p>Ask me anything. I can search the web, write code, manage files, run commands, and more.</p>
+        </div>
+      </div>
+
+      <div class="input-container">
+        <div class="input-wrapper">
+          <textarea id="message-input" placeholder="Send a message..." rows="1"></textarea>
+          <button id="send-btn" class="send-button" title="Send">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
