@@ -4,6 +4,15 @@ export const routes = {
   setup: "/setup",
   chat: "/chat",
   settings: "/settings",
+  // Legacy path that now redirects to the unified AI Models screen.
+  settingsProviders: "/settings/ai-providers",
+  settingsModels: "/settings/ai-models",
+  settingsSkills: "/settings/skills",
+  settingsMessengers: "/settings/messengers",
+  settingsVoice: "/settings/voice",
+  settingsMcpServers: "/settings/mcp-servers",
+  settingsAccount: "/settings/account",
+  settingsOther: "/settings/other",
 } as const;
 
 export function isBootstrapPath(pathname: string): boolean {

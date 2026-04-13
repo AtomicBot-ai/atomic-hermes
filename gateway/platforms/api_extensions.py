@@ -19,20 +19,20 @@ import uuid
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+from gateway.platforms.api_profile_shared import (
+    deep_merge as _deep_merge,
+    extract_active_model as _extract_active_model,
+    mask_key as _mask_key,
+    oauth_poll_token as _oauth_poll_token,
+    oauth_request_device_code as _oauth_request_device_code,
+)
+
 logger = logging.getLogger(__name__)
 
 try:
     from aiohttp import web
 except ImportError:
     web = None  # type: ignore[assignment]
-
-
-def _mask_key(key: str) -> str:
-    """Mask an API key for safe display: show first 4 + last 4 chars."""
-    if not key or len(key) < 12:
-        return "***"
-    return f"{key[:4]}...{key[-4:]}"
-
 
 def _get_hermes_home() -> Path:
     try:
@@ -66,23 +66,6 @@ def _openai_error(
         }
     }
 
-
-def _extract_active_model(config: Dict[str, Any]) -> tuple:
-    """Extract active model and provider from config dict.
-
-    Handles both flat format (model: "str", provider: "str")
-    and legacy nested format (model: {default: "str", provider: "str"}).
-    """
-    model_field = config.get("model", "")
-    if isinstance(model_field, dict):
-        active_model = model_field.get("default", "")
-        active_provider = model_field.get("provider", config.get("provider", ""))
-    else:
-        active_model = str(model_field) if model_field else ""
-        active_provider = str(config.get("provider", ""))
-    return active_model, active_provider
-
-
 # ---------------------------------------------------------------------------
 # Route handlers
 # ---------------------------------------------------------------------------
@@ -95,6 +78,19 @@ class _ConfigRoutes:
 
     def _check_auth(self, request: "web.Request") -> Optional["web.Response"]:
         return self._adapter._check_auth(request)
+
+    def _profile_id(self, request: "web.Request") -> str:
+        return self._adapter._resolve_request_profile(request)
+
+    def _profile_headers(self, request: "web.Request") -> Dict[str, str]:
+        return {"X-Hermes-Profile": self._profile_id(request)}
+
+    def _use_host_profile(self, request: "web.Request") -> bool:
+        return self._adapter._is_host_profile(self._profile_id(request))
+
+    async def _profile_call(self, request: "web.Request", method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        profile_id = self._profile_id(request)
+        return await self._adapter._worker_call(profile_id, method, params or {})
 
     @staticmethod
     def _derive_chat_session_id(
@@ -427,12 +423,174 @@ class _ConfigRoutes:
 
         return response
 
+    async def _write_worker_extended_chat_completion_stream(
+        self,
+        request,
+        *,
+        profile_id: str,
+        completion_id: str,
+        created: int,
+        model: str,
+        session_id: str,
+        user_message: str,
+        history: List[Dict[str, str]],
+        system_prompt: Optional[str],
+    ):
+        """Write the extended SSE stream using a profile worker."""
+        headers = {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "X-Hermes-Session-Id": session_id,
+            "X-Hermes-Profile": profile_id,
+        }
+        response = web.StreamResponse(status=200, headers=headers)
+        await response.prepare(request)
+
+        async def _write_event(event_name: Optional[str], payload: Dict[str, Any]) -> None:
+            prefix = f"event: {event_name}\n" if event_name else ""
+            await response.write(f"{prefix}data: {json.dumps(payload)}\n\n".encode())
+
+        await _write_event(
+            None,
+            self._build_stream_chunk(
+                completion_id,
+                created,
+                model,
+                delta={"role": "assistant"},
+            ),
+        )
+        await _write_event(
+            "session_id",
+            {
+                "id": completion_id,
+                "object": "chat.completion.session",
+                "created": created,
+                "model": model,
+                "session_id": session_id,
+            },
+        )
+
+        final_result = None
+        try:
+            async for message in self._adapter._worker_stream(
+                profile_id,
+                {
+                    "user_message": user_message,
+                    "conversation_history": history,
+                    "ephemeral_system_prompt": system_prompt,
+                    "session_id": session_id,
+                },
+            ):
+                if message.get("kind") == "event":
+                    kind = message.get("event")
+                    payload = message.get("payload")
+                    if kind == "content":
+                        await _write_event(
+                            None,
+                            self._build_stream_chunk(
+                                completion_id,
+                                created,
+                                model,
+                                delta={"content": payload},
+                            ),
+                        )
+                    elif kind == "reasoning":
+                        await _write_event(
+                            "reasoning_delta",
+                            self._build_stream_chunk(
+                                completion_id,
+                                created,
+                                model,
+                                delta={"reasoning": payload},
+                                extra={"session_id": session_id},
+                            ),
+                        )
+                    elif kind == "tool_progress":
+                        await _write_event(
+                            "tool_progress",
+                            self._build_stream_chunk(
+                                completion_id,
+                                created,
+                                model,
+                                delta={"tool_progress": payload},
+                                extra={"session_id": session_id},
+                            ),
+                        )
+                    continue
+                final_result = message["result"]["result"]
+        except Exception as exc:
+            await _write_event("error", {"error": str(exc)})
+            await _write_event(
+                None,
+                self._build_stream_chunk(completion_id, created, model, finish_reason="stop"),
+            )
+            await response.write(b"data: [DONE]\n\n")
+            return response
+
+        usage = self._build_usage_payload(final_result or {})
+        final_payload = self._extract_final_assistant_payload(final_result or {})
+        final_message = final_payload["message"]
+        finish_reason = final_payload["finish_reason"]
+        if final_message.get("reasoning_details"):
+            await _write_event(
+                "reasoning_details",
+                {
+                    "id": completion_id,
+                    "object": "chat.completion.reasoning_details",
+                    "created": created,
+                    "model": model,
+                    "session_id": session_id,
+                    "reasoning_details": final_message["reasoning_details"],
+                },
+            )
+        await _write_event(
+            "usage",
+            {
+                "id": completion_id,
+                "object": "chat.completion.usage",
+                "created": created,
+                "model": model,
+                "session_id": session_id,
+                "usage": usage,
+            },
+        )
+        await _write_event(
+            "final_message",
+            {
+                "id": completion_id,
+                "object": "chat.completion",
+                "created": created,
+                "model": model,
+                "session_id": session_id,
+                "choices": [{
+                    "index": 0,
+                    "message": final_message,
+                    "finish_reason": finish_reason,
+                }],
+                "usage": usage,
+            },
+        )
+        await _write_event(
+            None,
+            self._build_stream_chunk(
+                completion_id,
+                created,
+                model,
+                finish_reason=finish_reason,
+                usage=usage,
+                extra={"session_id": session_id},
+            ),
+        )
+        await response.write(b"data: [DONE]\n\n")
+        return response
+
     # -- POST /api/v1/chat/completions ----------------------------------------
 
     async def handle_chat_completions_v1(self, request):
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        profile_id = self._profile_id(request)
 
         try:
             body = await request.json()
@@ -484,9 +642,16 @@ class _ConfigRoutes:
                 return web.json_response(_openai_error("Invalid session ID"), status=400)
             session_id = provided_session_id
             try:
-                db = self._adapter._ensure_session_db()
-                if db is not None:
-                    history = db.get_messages_as_conversation(session_id)
+                if self._use_host_profile(request):
+                    db = self._adapter._ensure_session_db()
+                    if db is not None:
+                        history = db.get_messages_as_conversation(session_id)
+                else:
+                    history = await self._profile_call(
+                        request,
+                        "get_session_history",
+                        {"session_id": session_id},
+                    )
             except Exception as exc:
                 logger.warning("[api_extensions] Failed to load session history for %s: %s", session_id, exc)
                 history = []
@@ -499,10 +664,22 @@ class _ConfigRoutes:
             session_id = self._derive_chat_session_id(system_prompt, first_user)
 
         completion_id = f"chatcmpl-{uuid.uuid4().hex[:29]}"
-        model_name = body.get("model", self._adapter._model_name)
+        model_name = body.get("model", self._adapter._advertised_model_name(profile_id))
         created = int(time.time())
 
         if stream:
+            if not self._use_host_profile(request):
+                return await self._write_worker_extended_chat_completion_stream(
+                    request,
+                    profile_id=profile_id,
+                    completion_id=completion_id,
+                    created=created,
+                    model=model_name,
+                    session_id=session_id,
+                    user_message=user_message,
+                    history=history,
+                    system_prompt=system_prompt,
+                )
             import queue as _q
 
             stream_q: _q.Queue = _q.Queue()
@@ -557,12 +734,25 @@ class _ConfigRoutes:
             )
 
         try:
-            result = await self._run_chat_completion(
-                user_message=user_message,
-                history=history,
-                system_prompt=system_prompt,
-                session_id=session_id,
-            )
+            if self._use_host_profile(request):
+                result = await self._run_chat_completion(
+                    user_message=user_message,
+                    history=history,
+                    system_prompt=system_prompt,
+                    session_id=session_id,
+                )
+            else:
+                payload = await self._profile_call(
+                    request,
+                    "run_agent",
+                    {
+                        "user_message": user_message,
+                        "conversation_history": history,
+                        "ephemeral_system_prompt": system_prompt,
+                        "session_id": session_id,
+                    },
+                )
+                result = payload["result"]
         except Exception as exc:
             logger.exception("[api_extensions] Error running extended chat completion")
             return web.json_response(
@@ -587,7 +777,10 @@ class _ConfigRoutes:
             ],
             "usage": usage,
         }
-        return web.json_response(response_data, headers={"X-Hermes-Session-Id": session_id})
+        return web.json_response(
+            response_data,
+            headers={"X-Hermes-Session-Id": session_id, "X-Hermes-Profile": profile_id},
+        )
 
     # -- GET /api/capabilities ------------------------------------------------
 
@@ -615,12 +808,117 @@ class _ConfigRoutes:
             "capabilities": capabilities,
         })
 
+    async def handle_profiles(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        client_id = self._adapter._extract_client_id(request)
+        profiles = self._adapter._profile_registry.list_profiles()
+        running_profiles = {self._adapter._host_profile_id}
+        for entry in self._adapter._profile_runtime_manager.status():
+            if entry.get("running") and entry.get("profile"):
+                running_profiles.add(str(entry["profile"]))
+        merged_profiles = []
+        for profile in profiles:
+            item = dict(profile)
+            item["gatewayRunning"] = bool(item.get("gatewayRunning")) or item.get("id") in running_profiles
+            merged_profiles.append(item)
+        return web.json_response({
+            "profiles": merged_profiles,
+            "selectedProfile": self._adapter._selected_profiles.get(client_id) if client_id else None,
+            "hostProfile": self._adapter._host_profile_id,
+        }, headers=self._profile_headers(request))
+
+    async def handle_create_profile(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+        name = str(body.get("name", "")).strip()
+        clone_from = body.get("cloneFrom")
+        clone_all = bool(body.get("cloneAll", False))
+        clone_config = bool(body.get("cloneConfig", False))
+        if not name:
+            return web.json_response({"ok": False, "error": "name is required"}, status=400)
+
+        try:
+            created = self._adapter._profile_registry.create_profile(
+                name=name,
+                clone_from=str(clone_from).strip() if clone_from else None,
+                clone_all=clone_all,
+                clone_config=clone_config,
+            )
+            return web.json_response({"ok": True, "profile": created}, headers=self._profile_headers(request))
+        except Exception as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+
+    async def handle_select_profile(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+        client_id = str(body.get("clientId") or self._adapter._extract_client_id(request)).strip()
+        profile_id = str(body.get("profile", "")).strip()
+        if not client_id:
+            return web.json_response({"ok": False, "error": "clientId is required"}, status=400)
+        if not profile_id:
+            return web.json_response({"ok": False, "error": "profile is required"}, status=400)
+
+        try:
+            self._adapter._resolve_profile_home(profile_id)
+        except Exception as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=404)
+
+        self._adapter._set_selected_profile(client_id, profile_id)
+        return web.json_response({
+            "ok": True,
+            "clientId": client_id,
+            "selectedProfile": profile_id,
+        }, headers={"X-Hermes-Profile": profile_id})
+
+    async def handle_profile_runtimes(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        runtimes = [{
+            "profile": self._adapter._host_profile_id,
+            "home": str(_get_hermes_home()),
+            "running": True,
+            "pid": os.getpid(),
+            "pendingRequests": 0,
+            "mode": "host",
+        }]
+        for entry in self._adapter._profile_runtime_manager.status():
+            entry = dict(entry)
+            entry["mode"] = "worker"
+            runtimes.append(entry)
+        return web.json_response({"runtimes": runtimes, "total": len(runtimes)}, headers=self._profile_headers(request))
+
     # -- GET /api/config ------------------------------------------------------
 
     async def handle_get_config(self, request: "web.Request") -> "web.Response":
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "get_config")
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error reading config from worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         try:
             from hermes_cli.config import load_config, load_env, OPTIONAL_ENV_VARS
@@ -652,7 +950,7 @@ class _ConfigRoutes:
                 "hermesHome": str(hermes_home),
                 "hasApiKeys": len(providers_status) > 0,
                 "providers": providers_status,
-            })
+            }, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error reading config")
             return web.json_response(
@@ -672,6 +970,13 @@ class _ConfigRoutes:
             return web.json_response(
                 {"ok": False, "error": "Invalid JSON"}, status=400,
             )
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "patch_config", body)
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error saving config via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         try:
             from hermes_cli.config import load_config, save_config, save_env_value
@@ -690,7 +995,7 @@ class _ConfigRoutes:
                 "ok": True,
                 "message": "Config updated",
                 "restartRequired": False,
-            })
+            }, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error saving config")
             return web.json_response(
@@ -703,6 +1008,13 @@ class _ConfigRoutes:
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "list_providers")
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error listing providers via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         try:
             from hermes_cli.config import load_config
@@ -724,7 +1036,7 @@ class _ConfigRoutes:
                 "providers": providers,
                 "currentProvider": active_provider,
                 "currentModel": active_model,
-            })
+            }, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error listing providers")
             return web.json_response(
@@ -753,6 +1065,14 @@ class _ConfigRoutes:
             return web.json_response(
                 {"ok": False, "error": "Provide 'model' and/or 'provider'"}, status=400,
             )
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "switch_model", body)
+                status = int(payload.pop("status", 200))
+                return web.json_response(payload, status=status, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error switching model via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         try:
             from hermes_cli.config import load_config
@@ -783,12 +1103,12 @@ class _ConfigRoutes:
                     "warning": result.warning_message or None,
                     "resolvedViaAlias": result.resolved_via_alias or None,
                     "isGlobal": result.is_global,
-                })
+                }, headers=self._profile_headers(request))
             else:
                 return web.json_response({
                     "ok": False,
                     "error": result.error_message,
-                }, status=422)
+                }, status=422, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error switching model")
             return web.json_response(
@@ -838,6 +1158,13 @@ class _ConfigRoutes:
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "list_skills")
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error listing skills via worker")
+                return web.json_response({"ok": False, "error": str(e), "skills": []}, status=500)
 
         try:
             from agent.skill_commands import scan_skill_commands
@@ -852,7 +1179,7 @@ class _ConfigRoutes:
                     "path": info.get("skill_dir", ""),
                 })
 
-            return web.json_response({"skills": skills, "total": len(skills)})
+            return web.json_response({"skills": skills, "total": len(skills)}, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error listing skills")
             return web.json_response(
@@ -865,6 +1192,13 @@ class _ConfigRoutes:
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "list_memory")
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error listing memory via worker")
+                return web.json_response({"ok": False, "error": str(e), "files": []}, status=500)
 
         try:
             memory_dir = _get_hermes_home() / "memory"
@@ -881,7 +1215,7 @@ class _ConfigRoutes:
                             "modified": stat.st_mtime,
                         })
 
-            return web.json_response({"files": files, "total": len(files)})
+            return web.json_response({"files": files, "total": len(files)}, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error listing memory")
             return web.json_response(
@@ -894,6 +1228,13 @@ class _ConfigRoutes:
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "list_mcp_servers")
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error listing MCP servers via worker")
+                return web.json_response({"ok": False, "error": str(e), "servers": []}, status=500)
 
         try:
             from hermes_cli.config import load_config
@@ -927,7 +1268,7 @@ class _ConfigRoutes:
                         server["connectTimeout"] = entry["connect_timeout"]
                     servers.append(server)
 
-            return web.json_response({"servers": servers, "total": len(servers)})
+            return web.json_response({"servers": servers, "total": len(servers)}, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error listing MCP servers")
             return web.json_response(
@@ -954,6 +1295,13 @@ class _ConfigRoutes:
                 {"ok": False, "error": "provider must be 'nous' or 'openai-codex'"},
                 status=400,
             )
+        if not self._use_host_profile(request):
+            try:
+                result = await self._profile_call(request, "oauth_device_code", {"provider": provider})
+                return web.json_response(result, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] OAuth device-code error via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -972,6 +1320,20 @@ class _ConfigRoutes:
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(
+                    request,
+                    "list_sessions",
+                    {
+                        "limit": int(request.query.get("limit", "50")),
+                        "offset": int(request.query.get("offset", "0")),
+                    },
+                )
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error listing sessions via worker")
+                return web.json_response({"ok": False, "error": str(e), "sessions": []}, status=500)
 
         try:
             db = self._adapter._ensure_session_db()
@@ -997,7 +1359,7 @@ class _ConfigRoutes:
                     "model": s.get("model") or None,
                 })
 
-            return web.json_response({"sessions": result, "total": len(result)})
+            return web.json_response({"sessions": result, "total": len(result)}, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error listing sessions")
             return web.json_response(
@@ -1012,6 +1374,13 @@ class _ConfigRoutes:
             return auth_err
 
         session_id = request.match_info["session_id"]
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "get_session_messages", {"session_id": session_id})
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error fetching session messages via worker")
+                return web.json_response({"ok": False, "error": str(e), "messages": []}, status=500)
         try:
             db = self._adapter._ensure_session_db()
             if db is None:
@@ -1023,7 +1392,7 @@ class _ConfigRoutes:
             return web.json_response({
                 "sessionKey": session_id,
                 "messages": messages,
-            })
+            }, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error fetching session messages")
             return web.json_response(
@@ -1038,6 +1407,15 @@ class _ConfigRoutes:
             return auth_err
 
         session_id = request.match_info["session_id"]
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "delete_session", {"session_id": session_id})
+                if not payload.get("ok"):
+                    return web.json_response({"ok": False, "error": "Session not found"}, status=404, headers=self._profile_headers(request))
+                return web.json_response({"ok": True}, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error deleting session via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
         try:
             db = self._adapter._ensure_session_db()
             if db is None:
@@ -1051,7 +1429,7 @@ class _ConfigRoutes:
                     {"ok": False, "error": "Session not found"}, status=404,
                 )
 
-            return web.json_response({"ok": True})
+            return web.json_response({"ok": True}, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error deleting session")
             return web.json_response(
@@ -1085,6 +1463,17 @@ class _ConfigRoutes:
             )
 
         extra = {k: v for k, v in body.items() if k not in ("provider", "deviceCode")}
+        if not self._use_host_profile(request):
+            try:
+                result = await self._profile_call(
+                    request,
+                    "oauth_poll_token",
+                    {"provider": provider, "device_code": device_code, "extra": extra},
+                )
+                return web.json_response(result, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] OAuth poll-token error via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
 
         try:
             result = await asyncio.get_event_loop().run_in_executor(
@@ -1099,258 +1488,6 @@ class _ConfigRoutes:
 
 
 # ---------------------------------------------------------------------------
-# OAuth helpers (run in thread pool — these make synchronous HTTP calls)
-# ---------------------------------------------------------------------------
-
-def _oauth_request_device_code(provider: str) -> Dict[str, Any]:
-    """Request a device code for the given OAuth provider."""
-    import httpx
-
-    if provider == "nous":
-        from hermes_cli.auth import (
-            _request_device_code,
-            PROVIDER_REGISTRY,
-        )
-        pconfig = PROVIDER_REGISTRY["nous"]
-        portal_url = (
-            os.getenv("HERMES_PORTAL_BASE_URL")
-            or os.getenv("NOUS_PORTAL_BASE_URL")
-            or pconfig.portal_base_url
-        ).rstrip("/")
-        client_id = pconfig.client_id
-        scope = pconfig.scope
-
-        with httpx.Client(
-            timeout=httpx.Timeout(15.0),
-            headers={"Accept": "application/json"},
-        ) as client:
-            data = _request_device_code(
-                client=client,
-                portal_base_url=portal_url,
-                client_id=client_id,
-                scope=scope,
-            )
-
-        return {
-            "ok": True,
-            "provider": "nous",
-            "device_code": data["device_code"],
-            "user_code": data["user_code"],
-            "verification_uri_complete": data["verification_uri_complete"],
-            "interval": int(data.get("interval", 5)),
-            "expires_in": int(data.get("expires_in", 900)),
-            "client_id": client_id,
-            "portal_base_url": portal_url,
-        }
-
-    # openai-codex
-    from hermes_cli.auth import CODEX_OAUTH_CLIENT_ID
-
-    issuer = "https://auth.openai.com"
-    with httpx.Client(timeout=httpx.Timeout(15.0)) as client:
-        resp = client.post(
-            f"{issuer}/api/accounts/deviceauth/usercode",
-            json={"client_id": CODEX_OAUTH_CLIENT_ID},
-            headers={"Content-Type": "application/json"},
-        )
-
-    if resp.status_code != 200:
-        return {"ok": False, "error": f"Device code request returned {resp.status_code}"}
-
-    data = resp.json()
-    user_code = data.get("user_code", "")
-    device_auth_id = data.get("device_auth_id", "")
-
-    if not user_code or not device_auth_id:
-        return {"ok": False, "error": "Incomplete device code response"}
-
-    return {
-        "ok": True,
-        "provider": "openai-codex",
-        "device_code": device_auth_id,
-        "user_code": user_code,
-        "verification_uri_complete": f"{issuer}/codex/device",
-        "interval": max(3, int(data.get("interval", 5))),
-        "expires_in": 900,
-    }
-
-
-def _oauth_poll_token(
-    provider: str, device_code: str, extra: Dict[str, Any],
-) -> Dict[str, Any]:
-    """Single poll attempt for token readiness. Returns status dict."""
-    import httpx
-
-    if provider == "nous":
-        from hermes_cli.auth import (
-            PROVIDER_REGISTRY,
-            _save_auth_store,
-            _load_auth_store,
-            refresh_nous_oauth_from_state,
-        )
-        from datetime import datetime, timezone
-
-        pconfig = PROVIDER_REGISTRY["nous"]
-        portal_url = extra.get("portal_base_url") or (
-            os.getenv("HERMES_PORTAL_BASE_URL")
-            or os.getenv("NOUS_PORTAL_BASE_URL")
-            or pconfig.portal_base_url
-        ).rstrip("/")
-        client_id = extra.get("client_id") or pconfig.client_id
-
-        with httpx.Client(
-            timeout=httpx.Timeout(15.0),
-            headers={"Accept": "application/json"},
-        ) as client:
-            response = client.post(
-                f"{portal_url}/api/oauth/token",
-                data={
-                    "grant_type": "urn:ietf:params:oauth:grant-type:device_code",
-                    "client_id": client_id,
-                    "device_code": device_code,
-                },
-            )
-
-        if response.status_code == 200:
-            token_data = response.json()
-            if "access_token" not in token_data:
-                return {"status": "error", "message": "No access_token in response"}
-
-            now = datetime.now(timezone.utc)
-            token_expires_in = int(token_data.get("expires_in", 0))
-            inference_url = (
-                token_data.get("inference_base_url")
-                or os.getenv("NOUS_INFERENCE_BASE_URL")
-                or pconfig.inference_base_url
-            ).rstrip("/")
-
-            auth_state = {
-                "portal_base_url": portal_url,
-                "inference_base_url": inference_url,
-                "client_id": client_id,
-                "scope": token_data.get("scope") or pconfig.scope,
-                "token_type": token_data.get("token_type", "Bearer"),
-                "access_token": token_data["access_token"],
-                "refresh_token": token_data.get("refresh_token"),
-                "obtained_at": now.isoformat(),
-                "expires_at": datetime.fromtimestamp(
-                    now.timestamp() + token_expires_in, tz=timezone.utc,
-                ).isoformat(),
-                "expires_in": token_expires_in,
-                "agent_key": None,
-                "agent_key_id": None,
-                "agent_key_expires_at": None,
-            }
-
-            try:
-                auth_state = refresh_nous_oauth_from_state(
-                    auth_state, min_key_ttl_seconds=300,
-                    timeout_seconds=15.0, force_refresh=False, force_mint=True,
-                )
-            except Exception as exc:
-                logger.warning("[api_extensions] Nous agent key mint failed: %s", exc)
-
-            store = _load_auth_store()
-            store.setdefault("providers", {})["nous"] = auth_state
-            _save_auth_store(store)
-
-            return {"status": "success", "message": "Authenticated with Nous Portal"}
-
-        try:
-            err = response.json()
-        except Exception:
-            return {"status": "error", "message": f"HTTP {response.status_code}"}
-
-        error_code = err.get("error", "")
-        if error_code in ("authorization_pending", "slow_down"):
-            return {"status": "pending", "message": "Waiting for user approval"}
-        return {"status": "error", "message": err.get("error_description", error_code)}
-
-    # openai-codex
-    from hermes_cli.auth import CODEX_OAUTH_CLIENT_ID, CODEX_OAUTH_TOKEN_URL
-
-    issuer = "https://auth.openai.com"
-    with httpx.Client(timeout=httpx.Timeout(15.0)) as client:
-        poll_resp = client.post(
-            f"{issuer}/api/accounts/deviceauth/token",
-            json={"device_auth_id": device_code, "user_code": extra.get("user_code", "")},
-            headers={"Content-Type": "application/json"},
-        )
-
-    if poll_resp.status_code in (403, 404):
-        return {"status": "pending", "message": "Waiting for user approval"}
-
-    if poll_resp.status_code != 200:
-        return {"status": "error", "message": f"Poll returned {poll_resp.status_code}"}
-
-    code_resp = poll_resp.json()
-    authorization_code = code_resp.get("authorization_code", "")
-    code_verifier = code_resp.get("code_verifier", "")
-
-    if not authorization_code or not code_verifier:
-        return {"status": "error", "message": "Missing authorization_code or code_verifier"}
-
-    redirect_uri = f"{issuer}/deviceauth/callback"
-    with httpx.Client(timeout=httpx.Timeout(15.0)) as client:
-        token_resp = client.post(
-            CODEX_OAUTH_TOKEN_URL,
-            data={
-                "grant_type": "authorization_code",
-                "code": authorization_code,
-                "redirect_uri": redirect_uri,
-                "client_id": CODEX_OAUTH_CLIENT_ID,
-                "code_verifier": code_verifier,
-            },
-            headers={"Content-Type": "application/x-www-form-urlencoded"},
-        )
-
-    if token_resp.status_code != 200:
-        return {"status": "error", "message": f"Token exchange returned {token_resp.status_code}"}
-
-    tokens = token_resp.json()
-    if not tokens.get("access_token"):
-        return {"status": "error", "message": "No access_token from token exchange"}
-
-    from hermes_cli.auth import _save_auth_store, _load_auth_store
-    from datetime import datetime, timezone
-
-    base_url = (
-        os.getenv("HERMES_CODEX_BASE_URL", "").strip().rstrip("/")
-        or "https://api.openai.com/v1"
-    )
-    store = _load_auth_store()
-    store.setdefault("providers", {})["openai-codex"] = {
-        "tokens": {
-            "access_token": tokens["access_token"],
-            "refresh_token": tokens.get("refresh_token", ""),
-        },
-        "base_url": base_url,
-        "last_refresh": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
-    }
-    _save_auth_store(store)
-
-    return {"status": "success", "message": "Authenticated with OpenAI Codex"}
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _deep_merge(base: dict, override: dict) -> dict:
-    """Deep-merge override into base, modifying base in place."""
-    for key, value in override.items():
-        if (
-            key in base
-            and isinstance(base[key], dict)
-            and isinstance(value, dict)
-        ):
-            _deep_merge(base[key], value)
-        else:
-            base[key] = value
-    return base
-
-
-# ---------------------------------------------------------------------------
 # Registration entry point
 # ---------------------------------------------------------------------------
 
@@ -1360,6 +1497,10 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
 
     app.router.add_post("/api/v1/chat/completions", routes.handle_chat_completions_v1)
     app.router.add_get("/api/capabilities", routes.handle_capabilities)
+    app.router.add_get("/api/profiles", routes.handle_profiles)
+    app.router.add_post("/api/profiles", routes.handle_create_profile)
+    app.router.add_post("/api/profiles/session/select", routes.handle_select_profile)
+    app.router.add_get("/api/profiles/runtimes", routes.handle_profile_runtimes)
     app.router.add_get("/api/config", routes.handle_get_config)
     app.router.add_patch("/api/config", routes.handle_patch_config)
     app.router.add_get("/api/providers", routes.handle_providers)
@@ -1375,4 +1516,4 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
     app.router.add_get("/api/sessions/{session_id}/messages", routes.handle_session_messages)
     app.router.add_delete("/api/sessions/{session_id}", routes.handle_delete_session)
 
-    logger.info("[api_extensions] Registered %d config/setup routes", 15)
+    logger.info("[api_extensions] Registered %d config/setup routes", 19)

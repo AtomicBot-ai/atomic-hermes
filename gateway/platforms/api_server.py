@@ -30,6 +30,7 @@ import re
 import sqlite3
 import time
 import uuid
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 try:
@@ -45,6 +46,8 @@ from gateway.platforms.base import (
     SendResult,
     is_network_accessible,
 )
+from gateway.platforms.api_profile_registry import ProfileRegistry
+from gateway.platforms.api_profile_runtime import ProfileRuntimeManager
 
 logger = logging.getLogger(__name__)
 
@@ -321,18 +324,27 @@ class APIServerAdapter(BasePlatformAdapter):
         self._cors_origins: tuple[str, ...] = self._parse_cors_origins(
             extra.get("cors_origins", os.getenv("API_SERVER_CORS_ORIGINS", "")),
         )
-        self._model_name: str = self._resolve_model_name(
-            extra.get("model_name", os.getenv("API_SERVER_MODEL_NAME", "")),
-        )
+        self._explicit_model_name: str = extra.get("model_name", os.getenv("API_SERVER_MODEL_NAME", ""))
+        self._model_name: str = self._resolve_model_name(self._explicit_model_name)
         self._app: Optional["web.Application"] = None
         self._runner: Optional["web.AppRunner"] = None
         self._site: Optional["web.TCPSite"] = None
         self._response_store = ResponseStore()
+        self._response_stores: Dict[str, ResponseStore] = {}
         # Active run streams: run_id -> asyncio.Queue of SSE event dicts
         self._run_streams: Dict[str, "asyncio.Queue[Optional[Dict]]"] = {}
         # Creation timestamps for orphaned-run TTL sweep
         self._run_streams_created: Dict[str, float] = {}
         self._session_db: Optional[Any] = None  # Lazy-init SessionDB for session continuity
+        self._profile_registry = ProfileRegistry()
+        self._profile_runtime_manager = ProfileRuntimeManager()
+        self._selected_profiles: Dict[str, str] = {}
+        try:
+            from hermes_cli.profiles import get_active_profile_name
+
+            self._host_profile_id = get_active_profile_name()
+        except Exception:
+            self._host_profile_id = "default"
 
     @staticmethod
     def _parse_cors_origins(value: Any) -> tuple[str, ...]:
@@ -367,6 +379,71 @@ class APIServerAdapter(BasePlatformAdapter):
                 return profile
         except Exception:
             pass
+        return "hermes-agent"
+
+    def _extract_client_id(self, request: "web.Request") -> str:
+        """Return the optional client identifier used for sticky profile selection."""
+        return (
+            request.headers.get("X-Hermes-Client-Id", "").strip()
+            or request.query.get("client_id", "").strip()
+        )
+
+    def _resolve_request_profile(self, request: "web.Request") -> str:
+        """Resolve the effective profile for a request."""
+        explicit = request.headers.get("X-Hermes-Profile", "").strip()
+        if explicit:
+            return explicit
+        client_id = self._extract_client_id(request)
+        if client_id and client_id in self._selected_profiles:
+            return self._selected_profiles[client_id]
+        return self._host_profile_id or "default"
+
+    def _set_selected_profile(self, client_id: str, profile_id: str) -> None:
+        """Pin a client identifier to a profile until changed."""
+        self._selected_profiles[client_id] = profile_id
+
+    def _is_host_profile(self, profile_id: str) -> bool:
+        return profile_id == (self._host_profile_id or "default")
+
+    def _resolve_profile_home(self, profile_id: str) -> Path:
+        return self._profile_registry.get_profile_home(profile_id)
+
+    def _response_store_for_profile(self, profile_id: str) -> ResponseStore:
+        """Return the response store for a specific profile."""
+        if self._is_host_profile(profile_id):
+            return self._response_store
+        store = self._response_stores.get(profile_id)
+        if store is None:
+            profile_home = self._resolve_profile_home(profile_id)
+            store = ResponseStore(db_path=str(profile_home / "response_store.db"))
+            self._response_stores[profile_id] = store
+        return store
+
+    async def _worker_call(self, profile_id: str, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        """Execute a profile-scoped call via an isolated worker."""
+        return await self._profile_runtime_manager.call(
+            profile_id,
+            self._resolve_profile_home(profile_id),
+            method,
+            params,
+        )
+
+    async def _worker_stream(self, profile_id: str, params: Dict[str, Any]):
+        """Stream agent events from an isolated worker."""
+        async for message in self._profile_runtime_manager.stream(
+            profile_id,
+            self._resolve_profile_home(profile_id),
+            params,
+        ):
+            yield message
+
+    def _advertised_model_name(self, profile_id: Optional[str] = None) -> str:
+        """Return the model name advertised to clients for the selected profile."""
+        if self._explicit_model_name and self._explicit_model_name.strip():
+            return self._explicit_model_name.strip()
+        effective_profile = profile_id or self._host_profile_id
+        if effective_profile and effective_profile not in ("default", "custom"):
+            return effective_profile
         return "hermes-agent"
 
     def _cors_headers_for_origin(self, origin: str) -> Optional[Dict[str, str]]:
@@ -512,26 +589,30 @@ class APIServerAdapter(BasePlatformAdapter):
         if auth_err:
             return auth_err
 
+        profile_id = self._resolve_request_profile(request)
+        model_name = self._advertised_model_name(profile_id)
+
         return web.json_response({
             "object": "list",
             "data": [
                 {
-                    "id": self._model_name,
+                    "id": model_name,
                     "object": "model",
                     "created": int(time.time()),
                     "owned_by": "hermes",
                     "permission": [],
-                    "root": self._model_name,
+                    "root": model_name,
                     "parent": None,
                 }
             ],
-        })
+        }, headers={"X-Hermes-Profile": profile_id})
 
     async def _handle_chat_completions(self, request: "web.Request") -> "web.Response":
         """POST /v1/chat/completions — OpenAI Chat Completions format."""
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        profile_id = self._resolve_request_profile(request)
 
         # Parse request body
         try:
@@ -607,9 +688,16 @@ class APIServerAdapter(BasePlatformAdapter):
                 )
             session_id = provided_session_id
             try:
-                db = self._ensure_session_db()
-                if db is not None:
-                    history = db.get_messages_as_conversation(session_id)
+                if self._is_host_profile(profile_id):
+                    db = self._ensure_session_db()
+                    if db is not None:
+                        history = db.get_messages_as_conversation(session_id)
+                else:
+                    history = await self._worker_call(
+                        profile_id,
+                        "get_session_history",
+                        {"session_id": session_id},
+                    )
             except Exception as e:
                 logger.warning("Failed to load session history for %s: %s", session_id, e)
                 history = []
@@ -627,10 +715,22 @@ class APIServerAdapter(BasePlatformAdapter):
             # history already set from request body above
 
         completion_id = f"chatcmpl-{uuid.uuid4().hex[:29]}"
-        model_name = body.get("model", self._model_name)
+        model_name = body.get("model", self._advertised_model_name(profile_id))
         created = int(time.time())
 
         if stream:
+            if not self._is_host_profile(profile_id):
+                return await self._write_worker_sse_chat_completion(
+                    request=request,
+                    profile_id=profile_id,
+                    completion_id=completion_id,
+                    model=model_name,
+                    created=created,
+                    user_message=user_message,
+                    conversation_history=history,
+                    ephemeral_system_prompt=system_prompt,
+                    session_id=session_id,
+                )
             import queue as _q
             _stream_q: _q.Queue = _q.Queue()
 
@@ -696,12 +796,24 @@ class APIServerAdapter(BasePlatformAdapter):
 
         # Non-streaming: run the agent (with optional Idempotency-Key)
         async def _compute_completion():
-            return await self._run_agent(
-                user_message=user_message,
-                conversation_history=history,
-                ephemeral_system_prompt=system_prompt,
-                session_id=session_id,
+            if self._is_host_profile(profile_id):
+                return await self._run_agent(
+                    user_message=user_message,
+                    conversation_history=history,
+                    ephemeral_system_prompt=system_prompt,
+                    session_id=session_id,
+                )
+            payload = await self._worker_call(
+                profile_id,
+                "run_agent",
+                {
+                    "user_message": user_message,
+                    "conversation_history": history,
+                    "ephemeral_system_prompt": system_prompt,
+                    "session_id": session_id,
+                },
             )
+            return payload["result"], payload["usage"]
 
         idempotency_key = request.headers.get("Idempotency-Key")
         if idempotency_key:
@@ -750,7 +862,10 @@ class APIServerAdapter(BasePlatformAdapter):
             },
         }
 
-        return web.json_response(response_data, headers={"X-Hermes-Session-Id": session_id})
+        return web.json_response(
+            response_data,
+            headers={"X-Hermes-Session-Id": session_id, "X-Hermes-Profile": profile_id},
+        )
 
     async def _write_sse_chat_completion(
         self, request: "web.Request", completion_id: str, model: str,
@@ -873,11 +988,108 @@ class APIServerAdapter(BasePlatformAdapter):
 
         return response
 
+    async def _write_worker_sse_chat_completion(
+        self,
+        *,
+        request: "web.Request",
+        profile_id: str,
+        completion_id: str,
+        model: str,
+        created: int,
+        user_message: str,
+        conversation_history: List[Dict[str, str]],
+        ephemeral_system_prompt: Optional[str],
+        session_id: str,
+    ) -> "web.StreamResponse":
+        """Proxy worker stream events as OpenAI-compatible SSE."""
+        sse_headers = {
+            "Content-Type": "text/event-stream",
+            "Cache-Control": "no-cache",
+            "X-Hermes-Session-Id": session_id,
+            "X-Hermes-Profile": profile_id,
+        }
+        origin = request.headers.get("Origin", "")
+        cors = self._cors_headers_for_origin(origin) if origin else None
+        if cors:
+            sse_headers.update(cors)
+        response = web.StreamResponse(status=200, headers=sse_headers)
+        await response.prepare(request)
+        role_chunk = {
+            "id": completion_id,
+            "object": "chat.completion.chunk",
+            "created": created,
+            "model": model,
+            "choices": [{"index": 0, "delta": {"role": "assistant"}, "finish_reason": None}],
+        }
+        await response.write(f"data: {json.dumps(role_chunk)}\n\n".encode())
+
+        try:
+            async for message in self._worker_stream(
+                profile_id,
+                {
+                    "user_message": user_message,
+                    "conversation_history": conversation_history,
+                    "ephemeral_system_prompt": ephemeral_system_prompt,
+                    "session_id": session_id,
+                },
+            ):
+                if message.get("kind") == "event":
+                    event = message.get("event")
+                    payload = message.get("payload")
+                    if event == "tool_progress":
+                        await response.write(
+                            f"event: hermes.tool.progress\ndata: {json.dumps(payload)}\n\n".encode()
+                        )
+                        continue
+                    if event != "content":
+                        continue
+                    content_chunk = {
+                        "id": completion_id,
+                        "object": "chat.completion.chunk",
+                        "created": created,
+                        "model": model,
+                        "choices": [{"index": 0, "delta": {"content": payload}, "finish_reason": None}],
+                    }
+                    await response.write(f"data: {json.dumps(content_chunk)}\n\n".encode())
+                    continue
+
+                payload = message["result"]
+                usage = payload["usage"]
+                finish_chunk = {
+                    "id": completion_id,
+                    "object": "chat.completion.chunk",
+                    "created": created,
+                    "model": model,
+                    "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+                    "usage": {
+                        "prompt_tokens": usage.get("input_tokens", 0),
+                        "completion_tokens": usage.get("output_tokens", 0),
+                        "total_tokens": usage.get("total_tokens", 0),
+                    },
+                }
+                await response.write(f"data: {json.dumps(finish_chunk)}\n\n".encode())
+        except Exception as exc:
+            await response.write(
+                f"event: error\ndata: {json.dumps({'error': str(exc)})}\n\n".encode()
+            )
+            stop_chunk = {
+                "id": completion_id,
+                "object": "chat.completion.chunk",
+                "created": created,
+                "model": model,
+                "choices": [{"index": 0, "delta": {}, "finish_reason": "stop"}],
+            }
+            await response.write(f"data: {json.dumps(stop_chunk)}\n\n".encode())
+        await response.write(b"data: [DONE]\n\n")
+        return response
+
     async def _handle_responses(self, request: "web.Request") -> "web.Response":
         """POST /v1/responses — OpenAI Responses API format."""
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        profile_id = self._resolve_request_profile(request)
+        response_store = self._response_store_for_profile(profile_id)
 
         # Parse request body
         try:
@@ -903,7 +1115,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         # Resolve conversation name to latest response_id
         if conversation:
-            previous_response_id = self._response_store.get_conversation(conversation)
+            previous_response_id = response_store.get_conversation(conversation)
             # No error if conversation doesn't exist yet — it's a new conversation
 
         # Normalize input to message list
@@ -955,7 +1167,7 @@ class APIServerAdapter(BasePlatformAdapter):
                 logger.debug("Both conversation_history and previous_response_id provided; using conversation_history")
 
         if not conversation_history and previous_response_id:
-            stored = self._response_store.get(previous_response_id)
+            stored = response_store.get(previous_response_id)
             if stored is None:
                 return web.json_response(_openai_error(f"Previous response not found: {previous_response_id}"), status=404)
             conversation_history = list(stored.get("conversation_history", []))
@@ -980,12 +1192,24 @@ class APIServerAdapter(BasePlatformAdapter):
         session_id = str(uuid.uuid4())
 
         async def _compute_response():
-            return await self._run_agent(
-                user_message=user_message,
-                conversation_history=conversation_history,
-                ephemeral_system_prompt=instructions,
-                session_id=session_id,
+            if self._is_host_profile(profile_id):
+                return await self._run_agent(
+                    user_message=user_message,
+                    conversation_history=conversation_history,
+                    ephemeral_system_prompt=instructions,
+                    session_id=session_id,
+                )
+            payload = await self._worker_call(
+                profile_id,
+                "run_agent",
+                {
+                    "user_message": user_message,
+                    "conversation_history": conversation_history,
+                    "ephemeral_system_prompt": instructions,
+                    "session_id": session_id,
+                },
             )
+            return payload["result"], payload["usage"]
 
         idempotency_key = request.headers.get("Idempotency-Key")
         if idempotency_key:
@@ -1037,7 +1261,7 @@ class APIServerAdapter(BasePlatformAdapter):
             "object": "response",
             "status": "completed",
             "created_at": created_at,
-            "model": body.get("model", self._model_name),
+            "model": body.get("model", self._advertised_model_name(profile_id)),
             "output": output_items,
             "usage": {
                 "input_tokens": usage.get("input_tokens", 0),
@@ -1048,7 +1272,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         # Store the complete response object for future chaining / GET retrieval
         if store:
-            self._response_store.put(response_id, {
+            response_store.put(response_id, {
                 "response": response_data,
                 "conversation_history": full_history,
                 "instructions": instructions,
@@ -1056,9 +1280,9 @@ class APIServerAdapter(BasePlatformAdapter):
             # Update conversation mapping so the next request with the same
             # conversation name automatically chains to this response
             if conversation:
-                self._response_store.set_conversation(conversation, response_id)
+                response_store.set_conversation(conversation, response_id)
 
-        return web.json_response(response_data)
+        return web.json_response(response_data, headers={"X-Hermes-Profile": profile_id})
 
     # ------------------------------------------------------------------
     # GET / DELETE response endpoints
@@ -1069,22 +1293,24 @@ class APIServerAdapter(BasePlatformAdapter):
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        profile_id = self._resolve_request_profile(request)
 
         response_id = request.match_info["response_id"]
-        stored = self._response_store.get(response_id)
+        stored = self._response_store_for_profile(profile_id).get(response_id)
         if stored is None:
             return web.json_response(_openai_error(f"Response not found: {response_id}"), status=404)
 
-        return web.json_response(stored["response"])
+        return web.json_response(stored["response"], headers={"X-Hermes-Profile": profile_id})
 
     async def _handle_delete_response(self, request: "web.Request") -> "web.Response":
         """DELETE /v1/responses/{response_id} — delete a stored response."""
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        profile_id = self._resolve_request_profile(request)
 
         response_id = request.match_info["response_id"]
-        deleted = self._response_store.delete(response_id)
+        deleted = self._response_store_for_profile(profile_id).delete(response_id)
         if not deleted:
             return web.json_response(_openai_error(f"Response not found: {response_id}"), status=404)
 
@@ -1092,7 +1318,7 @@ class APIServerAdapter(BasePlatformAdapter):
             "id": response_id,
             "object": "response",
             "deleted": True,
-        })
+        }, headers={"X-Hermes-Profile": profile_id})
 
     # ------------------------------------------------------------------
     # Cron jobs API
@@ -1496,6 +1722,7 @@ class APIServerAdapter(BasePlatformAdapter):
         auth_err = self._check_auth(request)
         if auth_err:
             return auth_err
+        profile_id = self._resolve_request_profile(request)
 
         # Enforce concurrency limit
         if len(self._run_streams) >= self._MAX_CONCURRENT_RUNS:
@@ -1589,26 +1816,52 @@ class APIServerAdapter(BasePlatformAdapter):
 
         async def _run_and_close():
             try:
-                agent = self._create_agent(
-                    ephemeral_system_prompt=ephemeral_system_prompt,
-                    session_id=session_id,
-                    stream_delta_callback=_text_cb,
-                    tool_progress_callback=event_cb,
-                )
-                def _run_sync():
-                    r = agent.run_conversation(
-                        user_message=user_message,
-                        conversation_history=conversation_history,
-                        task_id="default",
+                if self._is_host_profile(profile_id):
+                    agent = self._create_agent(
+                        ephemeral_system_prompt=ephemeral_system_prompt,
+                        session_id=session_id,
+                        stream_delta_callback=_text_cb,
+                        tool_progress_callback=event_cb,
                     )
-                    u = {
-                        "input_tokens": getattr(agent, "session_prompt_tokens", 0) or 0,
-                        "output_tokens": getattr(agent, "session_completion_tokens", 0) or 0,
-                        "total_tokens": getattr(agent, "session_total_tokens", 0) or 0,
-                    }
-                    return r, u
 
-                result, usage = await asyncio.get_running_loop().run_in_executor(None, _run_sync)
+                    def _run_sync():
+                        r = agent.run_conversation(
+                            user_message=user_message,
+                            conversation_history=conversation_history,
+                            task_id="default",
+                        )
+                        u = {
+                            "input_tokens": getattr(agent, "session_prompt_tokens", 0) or 0,
+                            "output_tokens": getattr(agent, "session_completion_tokens", 0) or 0,
+                            "total_tokens": getattr(agent, "session_total_tokens", 0) or 0,
+                        }
+                        return r, u
+
+                    result, usage = await asyncio.get_running_loop().run_in_executor(None, _run_sync)
+                else:
+                    usage = {"input_tokens": 0, "output_tokens": 0, "total_tokens": 0}
+                    result = {}
+                    async for message in self._worker_stream(
+                        profile_id,
+                        {
+                            "user_message": user_message,
+                            "conversation_history": conversation_history,
+                            "ephemeral_system_prompt": ephemeral_system_prompt,
+                            "session_id": session_id,
+                        },
+                    ):
+                        if message.get("kind") == "event":
+                            if message.get("event") == "content":
+                                _text_cb(message.get("payload"))
+                            elif message.get("event") == "tool_progress":
+                                payload = message.get("payload") or {}
+                                event_cb("tool.started", payload.get("tool"), payload.get("label"), {})
+                            elif message.get("event") == "reasoning":
+                                event_cb("reasoning.available", preview=message.get("payload"))
+                            continue
+                        payload = message["result"]
+                        result = payload["result"]
+                        usage = payload["usage"]
                 final_response = result.get("final_response", "") if isinstance(result, dict) else ""
                 q.put_nowait({
                     "event": "run.completed",
@@ -1616,6 +1869,7 @@ class APIServerAdapter(BasePlatformAdapter):
                     "timestamp": time.time(),
                     "output": final_response,
                     "usage": usage,
+                    "profile": profile_id,
                 })
             except Exception as exc:
                 logger.exception("[api_server] run %s failed", run_id)
@@ -1812,6 +2066,7 @@ class APIServerAdapter(BasePlatformAdapter):
     async def disconnect(self) -> None:
         """Stop the aiohttp web server."""
         self._mark_disconnected()
+        await self._profile_runtime_manager.shutdown()
         if self._site:
             await self._site.stop()
             self._site = None

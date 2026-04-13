@@ -9,7 +9,7 @@
     "build:renderer": "vite build --config renderer/vite.config.ts",
     "build:all": "npm run build:ts && npm run build:renderer",
     "start": "npm run build:all && electron .",
-    "dev": "tsc --watch & electron .",
+    "dev": "npm run build:renderer && tsc --watch & electron .",
     "bundle": "bash scripts/bundle-all.sh",
     "bundle:dev": "bash scripts/bundle-dev.sh",
     "dist": "npm run build:all && electron-builder"

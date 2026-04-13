@@ -71,6 +71,12 @@
 .UiChatSidebar[data-open="true"] .UiChatSidebarWide {
   opacity: 1;
   pointer-events: auto;
+  overflow: visible;
+}
+
+.UiChatSidebar[data-open="true"] {
+  overflow: visible;
+  z-index: 999;
 }
 
 /* ── Narrow rail (icons only, always mounted) ── */
@@ -215,6 +221,9 @@
   flex-direction: column;
   gap: 2px;
   padding: 0 6px;
+  position: relative;
+  z-index: 10;
+  overflow: visible;
 }
 
 .UiChatSidebarNavLink {
@@ -246,6 +255,301 @@
 
 .UiChatSidebarNavLabel {
   min-width: 0;
+}
+
+.UiChatSidebarProfileRoot {
+  position: relative;
+  width: 100%;
+  min-width: 0;
+}
+
+.UiChatSidebarProfileTrigger {
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  padding: 8px;
+  border: 1px solid rgba(107, 237, 223, 0.22);
+  border-radius: 14px;
+  background: rgba(12, 18, 24, 0.76);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    border-color 140ms ease,
+    background 140ms ease,
+    transform 140ms ease;
+}
+
+.UiChatSidebarProfileTrigger:hover {
+  background: rgba(18, 26, 34, 0.96);
+  border-color: rgba(107, 237, 223, 0.4);
+}
+
+.UiChatSidebarProfileTrigger[aria-expanded="true"] {
+  border-color: rgba(107, 237, 223, 0.58);
+  background: rgba(18, 30, 38, 0.98);
+}
+
+.UiChatSidebarProfileAvatar {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(111, 162, 255, 0.95), rgba(78, 122, 227, 0.88));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.UiChatSidebarProfileText {
+  min-width: 0;
+  flex: 1 1 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.UiChatSidebarProfileTitle {
+  display: block;
+  min-width: 0;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 18px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.UiChatSidebarProfileSubtitle {
+  display: block;
+  min-width: 0;
+  color: var(--muted2);
+  font-size: 12px;
+  line-height: 15px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.UiChatSidebarProfileChevron {
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.UiChatSidebarProfileDropdown {
+  position: fixed;
+  min-width: 0;
+  z-index: 2000;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(18, 24, 31, 0.98);
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+  backdrop-filter: blur(12px);
+  overflow-y: auto;
+}
+
+.UiChatSidebarProfileDropdownTitle {
+  padding: 2px 4px;
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 16px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.UiChatSidebarProfileDropdownList {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.UiChatSidebarProfileOption {
+  width: 100%;
+  min-width: 0;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 10px;
+  border: 1px solid transparent;
+  border-radius: 12px;
+  background: transparent;
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.UiChatSidebarProfileOption:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.06);
+}
+
+.UiChatSidebarProfileOptionActive {
+  background: rgba(53, 147, 136, 0.22);
+  border-color: rgba(82, 202, 187, 0.28);
+}
+
+.UiChatSidebarProfileMeta {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.UiChatSidebarProfileStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  background: #26d969;
+  box-shadow: 0 0 10px rgba(38, 217, 105, 0.45);
+}
+
+.UiChatSidebarProfileCheck {
+  color: rgba(255, 255, 255, 0.88);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.UiChatSidebarProfileEmpty {
+  padding: 12px 10px;
+  color: var(--muted2);
+  font-size: 13px;
+  line-height: 18px;
+  text-align: center;
+}
+
+.UiChatSidebarProfileActions {
+  display: flex;
+  gap: 4px;
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.UiChatSidebarProfileAction {
+  flex: 1 1 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 7px 6px;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 500;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    color 140ms ease;
+}
+
+.UiChatSidebarProfileAction:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.96);
+}
+
+.UiChatSidebarProfileAction:disabled {
+  opacity: 0.5;
+  cursor: progress;
+}
+
+.UiChatSidebarProfileActionIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: var(--muted);
+}
+
+.UiChatSidebarProfileInlineInput {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding-top: 6px;
+  margin-top: 4px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.UiChatSidebarProfileInlineLabel {
+  font-size: 12px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  padding: 0 2px;
+}
+
+.UiChatSidebarProfileInlineForm {
+  display: flex;
+  gap: 6px;
+}
+
+.UiChatSidebarProfileInlineField {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text);
+  font-size: 13px;
+  outline: none;
+  transition: border-color 140ms ease;
+}
+
+.UiChatSidebarProfileInlineField::placeholder {
+  color: rgba(255, 255, 255, 0.3);
+}
+
+.UiChatSidebarProfileInlineField:focus {
+  border-color: rgba(107, 237, 223, 0.5);
+}
+
+.UiChatSidebarProfileInlineSubmit {
+  flex-shrink: 0;
+  height: 34px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 10px;
+  background: rgba(107, 237, 223, 0.18);
+  color: rgba(107, 237, 223, 0.95);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    opacity 140ms ease;
+}
+
+.UiChatSidebarProfileInlineSubmit:hover:not(:disabled) {
+  background: rgba(107, 237, 223, 0.28);
+}
+
+.UiChatSidebarProfileInlineSubmit:disabled {
+  opacity: 0.4;
+  cursor: default;
 }
 
 .UiChatSidebarSessions {

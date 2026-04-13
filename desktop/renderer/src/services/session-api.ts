@@ -1,4 +1,5 @@
 import { getBaseUrl } from "./api";
+import { withHermesHeaders } from "./request-context";
 
 export type SessionListItem = {
   key: string;
@@ -40,7 +41,7 @@ export async function fetchSessions(
   offset = 0,
 ): Promise<SessionsResponse> {
   const url = `${getBaseUrl(port)}/api/sessions?limit=${limit}&offset=${offset}`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+  const res = await fetch(url, withHermesHeaders({ signal: AbortSignal.timeout(10_000) }));
   if (!res.ok) {
     throw new Error(`fetchSessions: HTTP ${res.status}`);
   }
@@ -52,7 +53,7 @@ export async function fetchSessionMessages(
   sessionId: string,
 ): Promise<SessionMessagesResponse> {
   const url = `${getBaseUrl(port)}/api/sessions/${encodeURIComponent(sessionId)}/messages`;
-  const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  const res = await fetch(url, withHermesHeaders({ signal: AbortSignal.timeout(15_000) }));
   if (!res.ok) {
     throw new Error(`fetchSessionMessages: HTTP ${res.status}`);
   }
@@ -64,10 +65,10 @@ export async function deleteSession(
   sessionId: string,
 ): Promise<{ ok: boolean; error?: string }> {
   const url = `${getBaseUrl(port)}/api/sessions/${encodeURIComponent(sessionId)}`;
-  const res = await fetch(url, {
+  const res = await fetch(url, withHermesHeaders({
     method: "DELETE",
     signal: AbortSignal.timeout(10_000),
-  });
+  }));
   if (!res.ok) {
     throw new Error(`deleteSession: HTTP ${res.status}`);
   }

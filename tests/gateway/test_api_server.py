@@ -346,6 +346,17 @@ class TestModelsEndpoint:
             )
             assert resp.status == 200
 
+    @pytest.mark.asyncio
+    async def test_models_follow_selected_profile(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        app = _create_app(adapter)
+        async with TestClient(TestServer(app)) as cli:
+            resp = await cli.get("/v1/models", headers={"X-Hermes-Client-Id": "client-a"})
+            assert resp.status == 200
+            data = await resp.json()
+            assert data["data"][0]["id"] == "coder"
+            assert resp.headers["X-Hermes-Profile"] == "coder"
+
 
 # ---------------------------------------------------------------------------
 # /v1/chat/completions endpoint
@@ -678,6 +689,27 @@ class TestChatCompletionsEndpoint:
             assert resp.status == 500
             data = await resp.json()
             assert "Provider failed" in data["error"]["message"]
+
+    @pytest.mark.asyncio
+    async def test_non_host_profile_routes_completion_to_worker(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        app = _create_app(adapter)
+        with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
+            mock_worker.return_value = {
+                "result": {"final_response": "Worker hi", "messages": []},
+                "usage": {"input_tokens": 2, "output_tokens": 3, "total_tokens": 5},
+            }
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.post(
+                    "/v1/chat/completions",
+                    headers={"X-Hermes-Client-Id": "client-a"},
+                    json={"messages": [{"role": "user", "content": "Hello"}]},
+                )
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["choices"][0]["message"]["content"] == "Worker hi"
+                assert resp.headers["X-Hermes-Profile"] == "coder"
+                mock_worker.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_stable_session_id_across_turns(self, adapter):
@@ -1021,6 +1053,27 @@ class TestResponsesEndpoint:
                 json={"model": "hermes-agent", "input": 42},
             )
             assert resp.status == 400
+
+    @pytest.mark.asyncio
+    async def test_non_host_profile_uses_isolated_response_store(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        app = _create_app(adapter)
+        with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
+            mock_worker.return_value = {
+                "result": {"final_response": "Worker response", "messages": []},
+                "usage": {"input_tokens": 1, "output_tokens": 1, "total_tokens": 2},
+            }
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.post(
+                    "/v1/responses",
+                    headers={"X-Hermes-Client-Id": "client-a"},
+                    json={"input": "hello"},
+                )
+                assert resp.status == 200
+                data = await resp.json()
+                stored = adapter._response_store_for_profile("coder").get(data["id"])
+                assert stored is not None
+                assert adapter._response_store.get(data["id"]) is None
 
 
 # ---------------------------------------------------------------------------

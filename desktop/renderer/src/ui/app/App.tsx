@@ -9,6 +9,12 @@ import { SetupPage } from "../setup/SetupPage";
 import { Sidebar } from "../sidebar/Sidebar";
 import { ChatPage } from "../chat/ChatPage";
 import { StartChatPage } from "../chat/StartChatPage";
+import {
+  AiModelsTab,
+  PlaceholderTab,
+  SettingsIndexRedirect,
+  SettingsPage,
+} from "../settings";
 import a from "./App.module.css";
 
 const SIDEBAR_OPEN_LS_KEY = "hermes:sidebar-open";
@@ -80,17 +86,6 @@ function SidebarLayout() {
   );
 }
 
-function SettingsPlaceholder() {
-  return (
-    <div className={a.UiCentered}>
-      <div style={{ textAlign: "center", opacity: 0.6 }}>
-        <h2 style={{ fontSize: 20, fontWeight: 600, marginBottom: 8 }}>Settings</h2>
-        <p style={{ fontSize: 14 }}>Settings interface will be here</p>
-      </div>
-    </div>
-  );
-}
-
 export function App() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
@@ -131,7 +126,65 @@ export function App() {
         <Route path="/" element={<SidebarLayout />}>
           <Route index element={<Navigate to={routes.chat} replace />} />
           <Route path="chat" element={<ChatRoute />} />
-          <Route path="settings" element={<SettingsPlaceholder />} />
+          <Route path="settings" element={<SettingsPage state={state} />}>
+            <Route index element={<SettingsIndexRedirect />} />
+            <Route path="ai-providers" element={<Navigate to={routes.settingsModels} replace />} />
+            <Route path="ai-models" element={<AiModelsTab />} />
+            <Route
+              path="skills"
+              element={
+                <PlaceholderTab
+                  title="Skills"
+                  description="Browse and configure optional skills once Hermes exposes the required desktop state."
+                />
+              }
+            />
+            <Route
+              path="messengers"
+              element={
+                <PlaceholderTab
+                  title="Messengers"
+                  description="Messaging connectors will appear here after Hermes adds desktop integration endpoints."
+                />
+              }
+            />
+            <Route
+              path="voice"
+              element={
+                <PlaceholderTab
+                  title="Voice"
+                  description="Speech and transcription controls are reserved for a future Hermes desktop update."
+                />
+              }
+            />
+            <Route
+              path="mcp-servers"
+              element={
+                <PlaceholderTab
+                  title="MCP Servers"
+                  description="Server registration, auth, and health controls will land here when the renderer gains MCP management APIs."
+                />
+              }
+            />
+            <Route
+              path="account"
+              element={
+                <PlaceholderTab
+                  title="Account"
+                  description="Account-level desktop controls are planned but are not available in Hermes yet."
+                />
+              }
+            />
+            <Route
+              path="other"
+              element={
+                <PlaceholderTab
+                  title="Other"
+                  description="Advanced, privacy, and maintenance settings will be wired here in a later pass."
+                />
+              }
+            />
+          </Route>
         </Route>
         <Route path="*" element={<Navigate to={routes.chat} replace />} />
       </Routes>

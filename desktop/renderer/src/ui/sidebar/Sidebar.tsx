@@ -1,7 +1,10 @@
 import React from "react";
 import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
+import toast from "react-hot-toast";
 import { useAppSelector } from "@store/hooks";
 import { fetchSessions, deleteSession } from "../../services/session-api";
+import { createProfile, fetchProfiles, selectProfile, type ProfileSummary } from "../../services/profile-api";
+import { getSelectedHermesProfile, setSelectedHermesProfile } from "../../services/request-context";
 import { routes } from "../app/routes";
 import { SidebarContent } from "./SidebarContent";
 import css from "./Sidebar.module.css";
@@ -44,8 +47,36 @@ export function Sidebar(props: SidebarProps) {
   const gatewayState = useAppSelector((s) => s.gateway.state);
   const port = gatewayState?.kind === "ready" ? gatewayState.port : 8642;
 
+  const [profiles, setProfiles] = React.useState<ProfileSummary[]>([]);
+  const [profilesLoading, setProfilesLoading] = React.useState(true);
+  const [profilesCreating, setProfilesCreating] = React.useState(false);
+  const [selectedProfileId, setSelectedProfileId] = React.useState<string | null>(
+    () => getSelectedHermesProfile(),
+  );
+  const [profileMenuOpen, setProfileMenuOpen] = React.useState(false);
   const [sessions, setSessions] = React.useState<SessionWithTitle[]>([]);
   const [loading, setLoading] = React.useState(true);
+
+  const loadProfiles = React.useCallback(
+    async (background = false) => {
+      if (!background) setProfilesLoading(true);
+      try {
+        const res = await fetchProfiles(port);
+        const nextProfiles = res.profiles ?? [];
+        const nextSelectedProfile =
+          res.selectedProfile || getSelectedHermesProfile() || res.hostProfile || nextProfiles[0]?.id || null;
+        setProfiles(nextProfiles);
+        setSelectedProfileId(nextSelectedProfile);
+        setSelectedHermesProfile(nextSelectedProfile);
+      } catch (error) {
+        console.error("Failed to load profiles:", error);
+        if (!background) setProfiles([]);
+      } finally {
+        if (!background) setProfilesLoading(false);
+      }
+    },
+    [port],
+  );
 
   const loadSessions = React.useCallback(
     async (background = false) => {
@@ -66,8 +97,18 @@ export function Sidebar(props: SidebarProps) {
         if (!background) setLoading(false);
       }
     },
-    [port],
+    [port, selectedProfileId],
   );
+
+  React.useEffect(() => {
+    void loadProfiles(false);
+  }, [loadProfiles]);
+
+  React.useEffect(() => {
+    const handler = () => void loadProfiles(true);
+    document.addEventListener("hermes-config-changed", handler);
+    return () => document.removeEventListener("hermes-config-changed", handler);
+  }, [loadProfiles]);
 
   const isInitialLoad = React.useRef(true);
   React.useEffect(() => {
@@ -82,6 +123,73 @@ export function Sidebar(props: SidebarProps) {
   const handleNewSession = React.useCallback(() => {
     void navigate(routes.chat, { replace: true, state: { focusComposer: true } });
   }, [navigate]);
+
+  const handleSelectProfile = React.useCallback(
+    async (profileId: string) => {
+      if (!profileId || profileId === selectedProfileId) {
+        setProfileMenuOpen(false);
+        return;
+      }
+      try {
+        await selectProfile(port, profileId);
+        setSelectedProfileId(profileId);
+        setSelectedHermesProfile(profileId);
+        setProfileMenuOpen(false);
+        void navigate(routes.chat, { replace: true });
+        void loadProfiles(true);
+      } catch (error) {
+        console.error("Failed to select profile:", error);
+      }
+    },
+    [loadProfiles, navigate, port, selectedProfileId],
+  );
+
+  const finishProfileCreation = React.useCallback(
+    async (created: Awaited<ReturnType<typeof createProfile>>) => {
+      if (!created.ok || !created.profile?.id) {
+        throw new Error(created.error || "Profile creation failed");
+      }
+      await selectProfile(port, created.profile.id);
+      setSelectedProfileId(created.profile.id);
+      setSelectedHermesProfile(created.profile.id);
+      setProfileMenuOpen(false);
+      toast.success(`Profile "${created.profile.id}" created`);
+      void navigate(routes.chat, { replace: true });
+      await loadProfiles(true);
+    },
+    [loadProfiles, navigate, port],
+  );
+
+  const handleCreateProfile = React.useCallback(async (name: string) => {
+    if (profilesCreating) return;
+    setProfilesCreating(true);
+    try {
+      const created = await createProfile(port, name);
+      await finishProfileCreation(created);
+    } catch (error) {
+      console.error("Failed to create profile:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to create profile");
+    } finally {
+      setProfilesCreating(false);
+    }
+  }, [finishProfileCreation, port, profilesCreating]);
+
+  const handleCloneProfile = React.useCallback(async (name: string) => {
+    if (profilesCreating || !selectedProfileId) return;
+    setProfilesCreating(true);
+    try {
+      const created = await createProfile(port, name, {
+        cloneFrom: selectedProfileId,
+        cloneAll: true,
+      });
+      await finishProfileCreation(created);
+    } catch (error) {
+      console.error("Failed to clone profile:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to clone profile");
+    } finally {
+      setProfilesCreating(false);
+    }
+  }, [finishProfileCreation, port, profilesCreating, selectedProfileId]);
 
   const handleSelectSession = React.useCallback(
     (key: string) => {
@@ -200,6 +308,15 @@ export function Sidebar(props: SidebarProps) {
           <SidebarContent
             onCollapse={() => onOpenChange(false)}
             onNewSession={handleNewSession}
+            profiles={profiles}
+            profilesLoading={profilesLoading}
+            profilesCreating={profilesCreating}
+            selectedProfileId={selectedProfileId}
+            profileMenuOpen={profileMenuOpen}
+            onProfileMenuOpenChange={setProfileMenuOpen}
+            onSelectProfile={handleSelectProfile}
+            onCreateProfile={handleCreateProfile}
+            onCloneProfile={handleCloneProfile}
             sessions={sessions}
             loading={loading}
             currentSessionKey={currentSessionKey}

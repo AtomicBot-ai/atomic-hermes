@@ -1,4 +1,5 @@
 import { getBaseUrl } from "./api";
+import { withHermesHeaders } from "./request-context";
 
 export type ChatCompletionMessage = {
   role: string;
@@ -64,6 +65,12 @@ export function streamChatCompletion(
         return;
       }
 
+      if (eventName === "error") {
+        const payload = JSON.parse(data) as { error?: string; message?: string };
+        callbacks.onError(new Error(payload.error || payload.message || "Unknown stream error"));
+        return;
+      }
+
       const chunk = JSON.parse(data) as {
         session_id?: string;
         choices?: Array<{ delta?: { content?: string }; finish_reason?: string }>;
@@ -83,12 +90,12 @@ export function streamChatCompletion(
 
   (async () => {
     try {
-      const res = await fetch(`${getBaseUrl(port)}/api/v1/chat/completions`, {
+      const res = await fetch(`${getBaseUrl(port)}/api/v1/chat/completions`, withHermesHeaders({
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ messages, stream: true }),
         signal: controller.signal,
-      });
+      }));
 
       if (!res.ok) {
         const text = await res.text().catch(() => "");

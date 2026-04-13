@@ -1,3 +1,5 @@
+import { withHermesHeaders } from "./request-context";
+
 export function getBaseUrl(port: number): string {
   return `http://127.0.0.1:${port}`;
 }
@@ -60,7 +62,7 @@ export type PollTokenResponse = {
 };
 
 async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
+  const res = await fetch(url, withHermesHeaders(init));
   if (!res.ok) {
     const text = await res.text().catch(() => "");
     throw new Error(`HTTP ${res.status}: ${text}`);
@@ -76,9 +78,9 @@ export async function checkCapabilities(
 
 export async function checkHealth(port: number): Promise<boolean> {
   try {
-    const res = await fetch(`${getBaseUrl(port)}/health`, {
+    const res = await fetch(`${getBaseUrl(port)}/health`, withHermesHeaders({
       signal: AbortSignal.timeout(5000),
-    });
+    }));
     return res.ok;
   } catch {
     return false;
@@ -149,12 +151,12 @@ export async function testChat(
   };
   if (model) body.model = model;
 
-  const res = await fetch(`${getBaseUrl(port)}/v1/chat/completions`, {
+  const res = await fetch(`${getBaseUrl(port)}/v1/chat/completions`, withHermesHeaders({
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
     signal: AbortSignal.timeout(30000),
-  });
+  }));
 
   if (!res.ok) {
     const text = await res.text().catch(() => "");

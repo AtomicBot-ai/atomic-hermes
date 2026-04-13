@@ -18,6 +18,7 @@ import json
 import os
 from pathlib import Path
 from unittest.mock import MagicMock, patch, call
+from unittest.mock import AsyncMock
 
 import pytest
 from aiohttp import web
@@ -114,6 +115,18 @@ class TestExtractActiveModel:
         assert model == "some-model"
         assert provider == "fallback-prov"
 
+    def test_top_level_provider_overrides_nested(self):
+        config = {"model": {"default": "claude-haiku-4.5", "provider": "nous"}, "provider": "openrouter"}
+        model, provider = _extract_active_model(config)
+        assert model == "claude-haiku-4.5"
+        assert provider == "openrouter"
+
+    def test_top_level_provider_overrides_empty_nested(self):
+        config = {"model": {"default": "claude-haiku-4.5", "provider": ""}, "provider": "openrouter"}
+        model, provider = _extract_active_model(config)
+        assert model == "claude-haiku-4.5"
+        assert provider == "openrouter"
+
 
 class TestDeepMerge:
     def test_simple_merge(self):
@@ -171,6 +184,123 @@ class TestCapabilities:
 
 
 # ---------------------------------------------------------------------------
+# Profile endpoints
+# ---------------------------------------------------------------------------
+
+
+class TestProfiles:
+    @pytest.mark.asyncio
+    async def test_lists_profiles(self, adapter):
+        mock_profiles = [{
+            "id": "default",
+            "name": "default",
+            "path": "/tmp/.hermes",
+            "isDefault": True,
+            "gatewayRunning": False,
+            "model": None,
+            "provider": None,
+            "hasEnv": False,
+            "skillCount": 0,
+            "aliasPath": None,
+            "stickyDefault": True,
+        }]
+        expected_profiles = [dict(mock_profiles[0], gatewayRunning=True)]
+        with (
+            patch.object(adapter._profile_registry, "list_profiles", return_value=mock_profiles),
+            patch.object(adapter._profile_runtime_manager, "status", return_value=[]),
+        ):
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.get("/api/profiles")
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["profiles"] == expected_profiles
+                assert data["hostProfile"] == adapter._host_profile_id
+
+    @pytest.mark.asyncio
+    async def test_lists_profiles_marks_running_workers(self, adapter):
+        mock_profiles = [
+            {
+                "id": "default",
+                "name": "default",
+                "path": "/tmp/.hermes",
+                "isDefault": True,
+                "gatewayRunning": False,
+                "model": None,
+                "provider": None,
+                "hasEnv": False,
+                "skillCount": 0,
+                "aliasPath": None,
+                "stickyDefault": True,
+            },
+            {
+                "id": "coder",
+                "name": "coder",
+                "path": "/tmp/.hermes/profiles/coder",
+                "isDefault": False,
+                "gatewayRunning": False,
+                "model": None,
+                "provider": None,
+                "hasEnv": False,
+                "skillCount": 0,
+                "aliasPath": None,
+                "stickyDefault": False,
+            },
+        ]
+        worker_status = [{
+            "profile": "coder",
+            "home": "/tmp/.hermes/profiles/coder",
+            "running": True,
+            "pid": 12345,
+            "pendingRequests": 0,
+        }]
+        with (
+            patch.object(adapter._profile_registry, "list_profiles", return_value=mock_profiles),
+            patch.object(adapter._profile_runtime_manager, "status", return_value=worker_status),
+        ):
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.get("/api/profiles")
+                assert resp.status == 200
+                data = await resp.json()
+                profiles_by_id = {profile["id"]: profile for profile in data["profiles"]}
+                assert profiles_by_id["default"]["gatewayRunning"] is True
+                assert profiles_by_id["coder"]["gatewayRunning"] is True
+
+    @pytest.mark.asyncio
+    async def test_select_profile_updates_client_mapping(self, adapter):
+        with patch.object(adapter, "_resolve_profile_home", return_value=Path("/tmp/.hermes/profiles/coder")):
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.post(
+                    "/api/profiles/session/select",
+                    json={"clientId": "client-1", "profile": "coder"},
+                )
+                assert resp.status == 200
+                assert adapter._selected_profiles["client-1"] == "coder"
+                assert resp.headers["X-Hermes-Profile"] == "coder"
+
+    @pytest.mark.asyncio
+    async def test_lists_runtime_status(self, adapter):
+        worker_status = [{
+            "profile": "coder",
+            "home": "/tmp/.hermes/profiles/coder",
+            "running": True,
+            "pid": 12345,
+            "pendingRequests": 1,
+        }]
+        with patch.object(adapter._profile_runtime_manager, "status", return_value=worker_status):
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.get("/api/profiles/runtimes")
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["total"] == 2
+                assert data["runtimes"][1]["profile"] == "coder"
+                assert data["runtimes"][1]["mode"] == "worker"
+
+
+# ---------------------------------------------------------------------------
 # GET /api/config
 # ---------------------------------------------------------------------------
 
@@ -198,6 +328,27 @@ class TestGetConfig:
                     assert data["activeProvider"] == "test-provider"
                     assert "hermesHome" in data
                     assert isinstance(data["providers"], list)
+
+    @pytest.mark.asyncio
+    async def test_routes_non_host_profile_to_worker(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        payload = {
+            "config": {"model": "worker-model"},
+            "activeModel": "worker-model",
+            "activeProvider": "worker-provider",
+            "hermesHome": "/tmp/.hermes/profiles/coder",
+            "hasApiKeys": False,
+            "providers": [],
+        }
+        with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
+            mock_worker.return_value = payload
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.get("/api/config", headers={"X-Hermes-Client-Id": "client-a"})
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["activeModel"] == "worker-model"
+                mock_worker.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_masks_api_keys(self, adapter):
@@ -260,6 +411,21 @@ class TestPatchConfig:
                 )
                 assert resp.status == 200
                 mock_save_env.assert_called_once_with("MY_API_KEY", "sk-new-key")
+
+    @pytest.mark.asyncio
+    async def test_routes_patch_config_to_worker(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
+            mock_worker.return_value = {"ok": True, "message": "Config updated", "restartRequired": False}
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.patch(
+                    "/api/config",
+                    headers={"X-Hermes-Client-Id": "client-a"},
+                    json={"config": {"model": "worker-model"}},
+                )
+                assert resp.status == 200
+                mock_worker.assert_awaited_once()
 
     @pytest.mark.asyncio
     async def test_invalid_json(self, adapter):
@@ -433,6 +599,19 @@ class TestMemory:
             assert data["total"] == 0
             assert data["files"] == []
 
+    @pytest.mark.asyncio
+    async def test_routes_memory_to_worker(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
+            mock_worker.return_value = {"files": [{"name": "prefs.md"}], "total": 1}
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.get("/api/memory", headers={"X-Hermes-Client-Id": "client-a"})
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["files"][0]["name"] == "prefs.md"
+                mock_worker.assert_awaited_once()
+
 
 # ---------------------------------------------------------------------------
 # GET /api/mcp/servers
@@ -540,3 +719,34 @@ class TestAuthEnforcement:
         async with TestClient(TestServer(app)) as cli:
             resp = await cli.post("/api/model-switch", json={"model": "x"})
             assert resp.status == 401
+
+
+# ---------------------------------------------------------------------------
+# Extended chat routing
+# ---------------------------------------------------------------------------
+
+
+class TestExtendedChatRouting:
+    @pytest.mark.asyncio
+    async def test_non_host_profile_chat_uses_worker(self, adapter):
+        adapter._selected_profiles["client-a"] = "coder"
+        with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
+            mock_worker.return_value = {
+                "result": {
+                    "final_response": "Worker response",
+                    "messages": [{"role": "assistant", "content": "Worker response"}],
+                },
+                "usage": {"input_tokens": 1, "output_tokens": 2, "total_tokens": 3},
+            }
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.post(
+                    "/api/v1/chat/completions",
+                    headers={"X-Hermes-Client-Id": "client-a"},
+                    json={"messages": [{"role": "user", "content": "hi"}]},
+                )
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["choices"][0]["message"]["content"] == "Worker response"
+                assert resp.headers["X-Hermes-Profile"] == "coder"
+                mock_worker.assert_awaited_once()

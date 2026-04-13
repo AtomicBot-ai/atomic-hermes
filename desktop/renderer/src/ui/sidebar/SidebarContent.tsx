@@ -1,7 +1,9 @@
 import React from "react";
 import { NavLink } from "react-router-dom";
 import { Brand } from "@shared/kit";
+import type { ProfileSummary } from "../../services/profile-api";
 import { SessionSidebarItem } from "./SessionSidebarItem";
+import { ProfileSidebarSelector } from "./ProfileSidebarSelector";
 import { routes } from "../app/routes";
 import css from "./Sidebar.module.css";
 
@@ -10,6 +12,15 @@ export type SidebarSessionRow = { key: string; title: string };
 export type SidebarContentProps = {
   onCollapse: () => void;
   onNewSession: () => void;
+  profiles: ProfileSummary[];
+  profilesLoading: boolean;
+  profilesCreating: boolean;
+  selectedProfileId: string | null;
+  profileMenuOpen: boolean;
+  onProfileMenuOpenChange: (open: boolean) => void;
+  onSelectProfile: (profileId: string) => void | Promise<void>;
+  onCreateProfile: (name: string) => void | Promise<void>;
+  onCloneProfile: (name: string) => void | Promise<void>;
   sessions: SidebarSessionRow[];
   loading: boolean;
   currentSessionKey: string | null;
@@ -38,6 +49,15 @@ export function SidebarContent(props: SidebarContentProps) {
   const {
     onCollapse,
     onNewSession,
+    profiles,
+    profilesLoading,
+    profilesCreating,
+    selectedProfileId,
+    profileMenuOpen,
+    onProfileMenuOpenChange,
+    onSelectProfile,
+    onCreateProfile,
+    onCloneProfile,
     sessions,
     loading,
     currentSessionKey,
@@ -77,6 +97,17 @@ export function SidebarContent(props: SidebarContentProps) {
           </span>
           <span className={css.UiChatSidebarNavLabel}>New chat</span>
         </div>
+        <ProfileSidebarSelector
+          profiles={profiles}
+          selectedProfileId={selectedProfileId}
+          loading={profilesLoading}
+          creating={profilesCreating}
+          open={profileMenuOpen}
+          onOpenChange={onProfileMenuOpenChange}
+          onSelectProfile={onSelectProfile}
+          onCreateProfile={onCreateProfile}
+          onCloneProfile={onCloneProfile}
+        />
       </div>
 
       <div className={css.UiChatSidebarSessions}>

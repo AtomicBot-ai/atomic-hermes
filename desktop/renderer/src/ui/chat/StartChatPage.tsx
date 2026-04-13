@@ -98,9 +98,10 @@ export function StartChatPage() {
         console.error("StartChatPage: stream error", err);
         setSending(false);
         setStreaming(false);
-        setStreamingMessageId(null);
+        setStreamingRaw(err.message || "An error occurred");
         setPendingUserMessage((prev) => prev || text);
         abortRef.current = null;
+        createdSessionIdRef.current = null;
       },
     });
   }, [input, sending, streaming, port, navigate]);
