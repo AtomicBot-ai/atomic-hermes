@@ -15,6 +15,8 @@ import {
   SettingsIndexRedirect,
   SettingsPage,
 } from "../settings";
+import { SkillsPage } from "../skills/SkillsPage";
+import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
 import a from "./App.module.css";
 
 const SIDEBAR_OPEN_LS_KEY = "hermes:sidebar-open";
@@ -99,6 +101,12 @@ export function App() {
   }, [dispatch]);
 
   React.useEffect(() => {
+    if (state?.kind === "ready") {
+      scheduleWarmHubSkillsCache(state.port);
+    }
+  }, [state]);
+
+  React.useEffect(() => {
     if (!state) return;
 
     if (state.kind === "ready") {
@@ -126,19 +134,12 @@ export function App() {
         <Route path="/" element={<SidebarLayout />}>
           <Route index element={<Navigate to={routes.chat} replace />} />
           <Route path="chat" element={<ChatRoute />} />
+          <Route path="skills" element={<SkillsPage state={state} />} />
           <Route path="settings" element={<SettingsPage state={state} />}>
             <Route index element={<SettingsIndexRedirect />} />
             <Route path="ai-providers" element={<Navigate to={routes.settingsModels} replace />} />
             <Route path="ai-models" element={<AiModelsTab />} />
-            <Route
-              path="skills"
-              element={
-                <PlaceholderTab
-                  title="Skills"
-                  description="Browse and configure optional skills once Hermes exposes the required desktop state."
-                />
-              }
-            />
+            <Route path="skills" element={<Navigate to={routes.skills} replace />} />
             <Route
               path="messengers"
               element={

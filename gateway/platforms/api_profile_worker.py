@@ -163,17 +163,40 @@ class ProfileWorkerRuntime:
         return {"ok": False, "error": result.error_message, "status": 422}
 
     def list_skills(self) -> Dict[str, Any]:
-        from agent.skill_commands import scan_skill_commands
-
-        skills = []
-        for trigger, info in scan_skill_commands().items():
-            skills.append({
-                "trigger": trigger,
-                "name": info.get("name", ""),
-                "description": info.get("description", ""),
-                "path": info.get("skill_dir", ""),
-            })
+        from gateway.platforms.api_extensions import _list_skills_enriched
+        skills = _list_skills_enriched()
         return {"skills": skills, "total": len(skills)}
+
+    def view_skill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        import json as _json
+        from tools.skills_tool import skill_view
+        name = params.get("name", "")
+        raw = skill_view(name)
+        return _json.loads(raw)
+
+    def toggle_skill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        from gateway.platforms.api_extensions import _toggle_skill
+        name = (params.get("name") or "").strip()
+        enabled = params.get("enabled", True)
+        _toggle_skill(name, enabled)
+        return {"ok": True}
+
+    def install_skill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        from gateway.platforms.api_extensions import _install_skill
+        identifier = (params.get("identifier") or "").strip()
+        return _install_skill(identifier)
+
+    def uninstall_skill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        from gateway.platforms.api_extensions import _uninstall_skill
+        name = (params.get("name") or "").strip()
+        return _uninstall_skill(name)
+
+    def search_hub(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        from gateway.platforms.api_extensions import _search_hub
+        query = params.get("q", "")
+        limit = params.get("limit", 20)
+        sort_field = params.get("sort", "downloads")
+        return _search_hub(query, limit, sort_field)
 
     def list_memory(self) -> Dict[str, Any]:
         memory_dir = self.profile_home / "memory"

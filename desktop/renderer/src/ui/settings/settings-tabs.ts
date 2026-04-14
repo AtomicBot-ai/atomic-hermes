@@ -30,10 +30,10 @@ export const SETTINGS_TABS: SettingsTabDef[] = [
   {
     id: "skills",
     path: "skills",
-    href: routes.settingsSkills,
+    href: routes.skills,
     label: "Skills",
     title: "Skills",
-    description: "Enable and configure skills in a future update.",
+    description: "Browse, install, and configure Hermes skills.",
   },
   {
     id: "connectors",

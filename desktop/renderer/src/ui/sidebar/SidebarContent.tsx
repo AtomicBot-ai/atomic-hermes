@@ -134,6 +134,14 @@ export function SidebarContent(props: SidebarContentProps) {
       </div>
 
       <div className={css.UiChatSidebarFooter}>
+        <NavLink to={routes.skills} className={css.UiChatSidebarSettings} aria-label="Skills">
+          <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
+              <path d="M10 1.667l2.245 4.549 5.022.731-3.634 3.542.858 5.002L10 13.175l-4.491 2.316.858-5.002L2.733 6.947l5.022-.731L10 1.667z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+          </span>
+          <span className={css.UiChatSidebarNavLabel}>Skills</span>
+        </NavLink>
         <NavLink to={routes.settings} className={css.UiChatSidebarSettings} aria-label="Settings">
           <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
             <svg

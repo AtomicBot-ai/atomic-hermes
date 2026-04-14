@@ -3,11 +3,12 @@ export const routes = {
   error: "/error",
   setup: "/setup",
   chat: "/chat",
+  skills: "/skills",
   settings: "/settings",
   // Legacy path that now redirects to the unified AI Models screen.
   settingsProviders: "/settings/ai-providers",
   settingsModels: "/settings/ai-models",
-  settingsSkills: "/settings/skills",
+  settingsSkills: "/skills",
   settingsMessengers: "/settings/messengers",
   settingsVoice: "/settings/voice",
   settingsMcpServers: "/settings/mcp-servers",

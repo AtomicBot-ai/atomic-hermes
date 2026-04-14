@@ -3,6 +3,7 @@ import { configReducer } from "./slices/configSlice";
 import { gatewayReducer } from "./slices/gatewaySlice";
 import { onboardingReducer } from "./slices/onboardingSlice";
 import { chatReducer } from "./slices/chatSlice";
+import { skillsReducer } from "./slices/skillsSlice";
 
 export const store = configureStore({
   reducer: {
@@ -10,6 +11,7 @@ export const store = configureStore({
     gateway: gatewayReducer,
     onboarding: onboardingReducer,
     chat: chatReducer,
+    skills: skillsReducer,
   },
 });
 

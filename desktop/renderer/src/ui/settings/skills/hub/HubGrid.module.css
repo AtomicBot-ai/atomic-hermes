@@ -1,0 +1,77 @@
+.card {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.actionRemove {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ef4444;
+}
+
+.cardFooter {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 4px;
+}
+
+.meta {
+  font-size: 11px;
+  color: #6e6e6e;
+}
+
+.badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 6px;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badgeOfficial {
+  background: rgba(59, 130, 246, 0.12);
+  color: #60a5fa;
+}
+
+.badgeTrusted {
+  background: rgba(34, 197, 94, 0.12);
+  color: #4ade80;
+}
+
+.badgeCommunity {
+  background: rgba(168, 85, 247, 0.12);
+  color: #c084fc;
+}
+
+.empty {
+  padding: 32px 0;
+  text-align: center;
+  color: #8e8e8e;
+  font-size: 14px;
+}
+
+.skeleton {
+  height: 110px;
+  background: rgba(255, 255, 255, 0.03);
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+.skeletonBar {
+  width: 60%;
+  height: 14px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.06);
+}
+
+@keyframes pulse {
+  0%,
+  100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}

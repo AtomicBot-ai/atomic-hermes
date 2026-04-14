@@ -1,0 +1,56 @@
+.root {
+  position: relative;
+}
+
+.trigger {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #8e8e8e;
+  font-size: 18px;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  transition: background-color 0.15s ease;
+  line-height: 1;
+  letter-spacing: 2px;
+}
+
+.trigger:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+
+.popover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  z-index: 50;
+  margin-top: 4px;
+  min-width: 120px;
+  border-radius: 10px;
+  padding: 4px;
+  background: #2a2a2a;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+
+.item {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: #ef4444;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 6px;
+  width: 100%;
+  text-align: left;
+  transition: background-color 0.15s ease;
+}
+
+.item:hover {
+  background: rgba(255, 255, 255, 0.06);
+}

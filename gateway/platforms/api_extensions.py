@@ -67,6 +67,152 @@ def _openai_error(
     }
 
 # ---------------------------------------------------------------------------
+# Skills helpers (shared by route handlers and worker)
+# ---------------------------------------------------------------------------
+
+def _list_skills_enriched() -> list:
+    """Return enriched skill list with enabled/category/author/tags/emoji.
+
+    Uses ``_find_all_skills(skip_disabled=True)`` which returns ALL skills
+    regardless of disabled state, then marks each with ``enabled``.
+    """
+    from tools.skills_tool import _parse_frontmatter, _parse_tags, SKILLS_DIR
+    from agent.skill_utils import get_disabled_skill_names, get_external_skills_dirs
+
+    disabled = get_disabled_skill_names()
+
+    skills = []
+    seen_names: set = set()
+
+    dirs_to_scan: list = []
+    if SKILLS_DIR.exists():
+        dirs_to_scan.append(SKILLS_DIR)
+    dirs_to_scan.extend(get_external_skills_dirs())
+
+    for scan_dir in dirs_to_scan:
+        for skill_md in scan_dir.rglob("SKILL.md"):
+            if any(part in (".git", ".github", ".hub") for part in skill_md.parts):
+                continue
+            try:
+                content = skill_md.read_text(encoding="utf-8")[:4000]
+                frontmatter, body = _parse_frontmatter(content)
+
+                name = frontmatter.get("name", skill_md.parent.name)
+                if name in seen_names:
+                    continue
+                seen_names.add(name)
+
+                description = frontmatter.get("description", "")
+                if not description:
+                    for line in body.strip().split("\n"):
+                        line = line.strip()
+                        if line and not line.startswith("#"):
+                            description = line[:200]
+                            break
+
+                skill_dir = str(skill_md.parent)
+                cmd_slug = name.lower().replace(" ", "-").replace("_", "-")
+
+                skills.append({
+                    "trigger": f"/{cmd_slug}" if cmd_slug else "",
+                    "name": name,
+                    "description": description,
+                    "path": skill_dir,
+                    "dirName": Path(skill_dir).name,
+                    "enabled": name not in disabled,
+                    "category": frontmatter.get("category", ""),
+                    "author": frontmatter.get("author", ""),
+                    "tags": _parse_tags(frontmatter.get("tags")),
+                    "emoji": frontmatter.get("emoji", ""),
+                })
+            except Exception:
+                continue
+
+    return skills
+
+
+def _toggle_skill(name: str, enabled: bool) -> None:
+    """Enable or disable a skill by updating config.yaml."""
+    from hermes_cli.skills_config import get_disabled_skills, save_disabled_skills
+    from hermes_cli.config import load_config
+
+    config = load_config()
+    disabled = get_disabled_skills(config)
+    if enabled:
+        disabled.discard(name)
+    else:
+        disabled.add(name)
+    save_disabled_skills(config, disabled)
+
+    try:
+        from agent.prompt_builder import clear_skills_system_prompt_cache
+        clear_skills_system_prompt_cache()
+    except ImportError:
+        pass
+
+
+def _install_skill(identifier: str) -> dict:
+    """Install a skill from the hub."""
+    try:
+        from hermes_cli.skills_hub import do_install
+        do_install(identifier, skip_confirm=True)
+        try:
+            from agent.prompt_builder import clear_skills_system_prompt_cache
+            clear_skills_system_prompt_cache()
+        except ImportError:
+            pass
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def _uninstall_skill(name: str) -> dict:
+    """Uninstall a skill."""
+    try:
+        from hermes_cli.skills_hub import do_uninstall
+        do_uninstall(name, skip_confirm=True)
+        try:
+            from agent.prompt_builder import clear_skills_system_prompt_cache
+            clear_skills_system_prompt_cache()
+        except ImportError:
+            pass
+        return {"ok": True}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+def _search_hub(query: str, limit: int = 20, sort: str = "downloads") -> dict:
+    """Search the skills hub via unified_search (returns SkillMeta objects)."""
+    try:
+        from tools.skills_hub import GitHubAuth, create_source_router, unified_search
+        auth = GitHubAuth()
+        sources = create_source_router(auth)
+        results = unified_search(query, sources, limit=limit)
+        items = []
+        for r in results:
+            items.append({
+                "slug": r.name,
+                "name": r.name,
+                "displayName": r.name,
+                "description": r.description,
+                "summary": r.description,
+                "source": r.source,
+                "identifier": r.identifier,
+                "trust_level": r.trust_level,
+                "repo": r.repo,
+                "tags": r.tags,
+                "installed": False,
+                "author": r.extra.get("author", ""),
+                "emoji": r.extra.get("emoji", ""),
+                "downloads": r.extra.get("downloads"),
+                "stars": r.extra.get("stars"),
+            })
+        return {"ok": True, "results": items, "total": len(items)}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "results": [], "total": 0}
+
+
+# ---------------------------------------------------------------------------
 # Route handlers
 # ---------------------------------------------------------------------------
 
@@ -1167,24 +1313,167 @@ class _ConfigRoutes:
                 return web.json_response({"ok": False, "error": str(e), "skills": []}, status=500)
 
         try:
-            from agent.skill_commands import scan_skill_commands
-            skills_map = scan_skill_commands()
-
-            skills = []
-            for trigger, info in skills_map.items():
-                skills.append({
-                    "trigger": trigger,
-                    "name": info.get("name", ""),
-                    "description": info.get("description", ""),
-                    "path": info.get("skill_dir", ""),
-                })
-
+            skills = _list_skills_enriched()
             return web.json_response({"skills": skills, "total": len(skills)}, headers=self._profile_headers(request))
         except Exception as e:
             logger.exception("[api_extensions] Error listing skills")
             return web.json_response(
                 {"ok": False, "error": str(e), "skills": []}, status=500,
             )
+
+    # -- GET /api/skills/{name} -----------------------------------------------
+
+    async def handle_skill_detail(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+        name = request.match_info.get("name", "")
+        if not name:
+            return web.json_response({"ok": False, "error": "Skill name required"}, status=400)
+
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "view_skill", {"name": name})
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error viewing skill via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        try:
+            import json as _json
+            from tools.skills_tool import skill_view
+            raw = skill_view(name)
+            payload = _json.loads(raw)
+            return web.json_response(payload, headers=self._profile_headers(request))
+        except Exception as e:
+            logger.exception("[api_extensions] Error viewing skill")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+    # -- POST /api/skills/toggle ----------------------------------------------
+
+    async def handle_skills_toggle(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+        name = (body.get("name") or "").strip()
+        if not name:
+            return web.json_response({"ok": False, "error": "name required"}, status=400)
+        enabled = body.get("enabled")
+        if not isinstance(enabled, bool):
+            return web.json_response({"ok": False, "error": "enabled (boolean) required"}, status=400)
+
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "toggle_skill", body)
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error toggling skill via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        try:
+            _toggle_skill(name, enabled)
+            return web.json_response({"ok": True}, headers=self._profile_headers(request))
+        except Exception as e:
+            logger.exception("[api_extensions] Error toggling skill")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+    # -- POST /api/skills/install ---------------------------------------------
+
+    async def handle_skills_install(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+        identifier = (body.get("identifier") or "").strip()
+        if not identifier:
+            return web.json_response({"ok": False, "error": "identifier required"}, status=400)
+
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "install_skill", body)
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error installing skill via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, _install_skill, identifier
+            )
+            return web.json_response(result, headers=self._profile_headers(request))
+        except Exception as e:
+            logger.exception("[api_extensions] Error installing skill")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+    # -- POST /api/skills/uninstall -------------------------------------------
+
+    async def handle_skills_uninstall(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+        name = (body.get("name") or "").strip()
+        if not name:
+            return web.json_response({"ok": False, "error": "name required"}, status=400)
+
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "uninstall_skill", body)
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error uninstalling skill via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        try:
+            result = _uninstall_skill(name)
+            return web.json_response(result, headers=self._profile_headers(request))
+        except Exception as e:
+            logger.exception("[api_extensions] Error uninstalling skill")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+    # -- GET /api/skills/hub-search -------------------------------------------
+
+    async def handle_skills_hub_search(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        query = request.query.get("q", "").strip()
+        limit = min(50, max(1, int(request.query.get("limit", "20"))))
+        sort_field = request.query.get("sort", "downloads").strip()
+
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(
+                    request, "search_hub",
+                    {"q": query, "limit": limit, "sort": sort_field},
+                )
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error searching hub via worker")
+                return web.json_response({"ok": False, "error": str(e), "results": []}, status=500)
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, _search_hub, query, limit, sort_field
+            )
+            return web.json_response(result, headers=self._profile_headers(request))
+        except Exception as e:
+            logger.exception("[api_extensions] Error searching hub")
+            return web.json_response({"ok": False, "error": str(e), "results": []}, status=500)
 
     # -- GET /api/memory ------------------------------------------------------
 
@@ -1507,6 +1796,11 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
     app.router.add_post("/api/model-switch", routes.handle_model_switch)
     app.router.add_get("/api/provider-models", routes.handle_provider_models)
     app.router.add_get("/api/skills", routes.handle_skills)
+    app.router.add_get("/api/skills/hub-search", routes.handle_skills_hub_search)
+    app.router.add_get("/api/skills/{name}", routes.handle_skill_detail)
+    app.router.add_post("/api/skills/toggle", routes.handle_skills_toggle)
+    app.router.add_post("/api/skills/install", routes.handle_skills_install)
+    app.router.add_post("/api/skills/uninstall", routes.handle_skills_uninstall)
     app.router.add_get("/api/memory", routes.handle_memory)
     app.router.add_get("/api/mcp/servers", routes.handle_mcp_servers)
     app.router.add_post("/api/oauth/device-code", routes.handle_oauth_device_code)
