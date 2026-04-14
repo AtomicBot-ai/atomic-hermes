@@ -1,5 +1,5 @@
 import React from "react";
-import { TextInput, SelectDropdown } from "@shared/kit";
+import { TextInput } from "@shared/kit";
 import { useHubSkills } from "./useHubSkills";
 import { HubGrid } from "./HubGrid";
 import s from "./HubTab.module.css";
@@ -8,12 +8,6 @@ type Props = {
   port: number;
   onInstalled?: () => void;
 };
-
-const SORT_OPTIONS: Array<{ value: "downloads" | "stars" | "name"; label: string }> = [
-  { value: "downloads", label: "Most downloaded" },
-  { value: "stars", label: "Most starred" },
-  { value: "name", label: "Alphabetical" },
-];
 
 export function HubTab({ port, onInstalled }: Props) {
   const hub = useHubSkills(port);
@@ -29,13 +23,6 @@ export function HubTab({ port, onInstalled }: Props) {
             isSearch
           />
         </div>
-        <div className={s.sortCol}>
-          <SelectDropdown
-            value={hub.sort}
-            onChange={hub.setSort}
-            options={SORT_OPTIONS}
-          />
-        </div>
       </div>
 
       {hub.error && (
@@ -45,6 +32,7 @@ export function HubTab({ port, onInstalled }: Props) {
       <HubGrid
         items={hub.items}
         loading={hub.loading}
+        loadingMore={hub.loadingMore}
         hasMore={hub.hasMore}
         onLoadMore={hub.loadMore}
         onInstall={hub.install}

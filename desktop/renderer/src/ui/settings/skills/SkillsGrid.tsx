@@ -1,16 +1,14 @@
 import React from "react";
-import { FeatureCta } from "@shared/kit";
-import type { FeatureStatus } from "@shared/kit";
 import type { SkillSummary } from "../../../services/skills-api";
-import { CustomSkillMenu } from "./CustomSkillMenu";
+import { SkillCardMenu } from "./CustomSkillMenu";
+import s from "./SkillsGrid.module.css";
 
 type Props = {
   skills: SkillSummary[];
-  statusMap: Record<string, FeatureStatus>;
   search: string;
-  onConnect: (name: string) => void;
-  onSettings: (name: string) => void;
-  onRemoveCustom?: (name: string) => void;
+  onEdit?: (name: string) => void;
+  onToggle: (name: string) => void;
+  onRemove: (name: string) => void;
 };
 
 function matchesSearch(skill: SkillSummary, query: string): boolean {
@@ -19,13 +17,14 @@ function matchesSearch(skill: SkillSummary, query: string): boolean {
   return (
     skill.name.toLowerCase().includes(q) ||
     skill.description.toLowerCase().includes(q) ||
-    (skill.category || "").toLowerCase().includes(q)
+    (skill.category || "").toLowerCase().includes(q) ||
+    (skill.tags || []).some((t) => t.toLowerCase().includes(q))
   );
 }
 
-export function SkillsGrid({ skills, statusMap, search, onConnect, onSettings, onRemoveCustom }: Props) {
+export function SkillsGrid({ skills, search, onEdit, onToggle, onRemove }: Props) {
   const filtered = React.useMemo(
-    () => skills.filter((s) => matchesSearch(s, search)),
+    () => skills.filter((sk) => matchesSearch(sk, search)),
     [skills, search],
   );
 
@@ -40,41 +39,46 @@ export function SkillsGrid({ skills, statusMap, search, onConnect, onSettings, o
   return (
     <div className="UiSkillsScroll">
       <div className="UiSkillsGrid">
-        {filtered.map((skill) => {
-          const status = statusMap[skill.name] || "connect";
-          const isCustom = !skill.trigger;
-
-          return (
-            <div
-              key={skill.dirName || skill.name}
-              className={`UiSkillCard${status === "disabled" ? " UiSkillCard--disabled" : ""}`}
-            >
-              <div className="UiSkillTopRow">
-                <span className={`UiSkillIcon${isCustom ? " UiSkillIcon--custom" : ""}`}>
-                  {skill.emoji || skill.name.charAt(0).toUpperCase()}
-                  {status === "connected" && (
-                    <span className="UiProviderTileCheck" aria-label="Connected">
-                      ✓
-                    </span>
-                  )}
-                </span>
-                <div className="UiSkillTopRight">
-                  {isCustom && onRemoveCustom ? (
-                    <CustomSkillMenu onRemove={() => onRemoveCustom(skill.name)} />
-                  ) : (
-                    <FeatureCta
-                      status={status}
-                      onConnect={() => onConnect(skill.name)}
-                      onSettings={() => onSettings(skill.name)}
-                    />
-                  )}
-                </div>
+        {filtered.map((skill) => (
+          <div
+            key={skill.dirName || skill.name}
+            className={`UiSkillCard${!skill.enabled ? " UiSkillCard--disabled" : ""}`}
+          >
+            <div className="UiSkillTopRow">
+              <span className={`UiSkillIcon${!skill.trigger ? " UiSkillIcon--custom" : ""}`}>
+                {skill.emoji || skill.name.charAt(0).toUpperCase()}
+                {skill.enabled && (
+                  <span className="UiProviderTileCheck" aria-label="Enabled">
+                    ✓
+                  </span>
+                )}
+              </span>
+              <div className="UiSkillTopRight">
+                <SkillCardMenu
+                  enabled={skill.enabled}
+                  onEdit={onEdit ? () => onEdit(skill.name) : undefined}
+                  onToggle={() => onToggle(skill.name)}
+                  onRemove={() => onRemove(skill.name)}
+                />
               </div>
-              <div className="UiSkillName">{skill.name}</div>
-              <div className="UiSkillDescription">{skill.description}</div>
             </div>
-          );
-        })}
+            <div className="UiSkillName">{skill.name}</div>
+            <div className="UiSkillDescription">{skill.description}</div>
+            {skill.tags && skill.tags.length > 0 && (
+              <div className={s.tags}>
+                {skill.tags.slice(0, 5).map((tag) => (
+                  <span key={tag} className={s.tag}>{tag}</span>
+                ))}
+              </div>
+            )}
+            <div className={s.cardFooter}>
+              {skill.author && <span className={s.meta}>{skill.author}</span>}
+              {skill.category && (
+                <span className={`${s.badge} ${s.badgeCategory}`}>{skill.category}</span>
+              )}
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

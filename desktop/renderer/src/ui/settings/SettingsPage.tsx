@@ -24,10 +24,6 @@ export function SettingsPage({
           <div className={s.UiSettingsHeader}>
             <div className={s.UiSettingsTitleRow}>
               <h1 className={s.UiSettingsTitle}>Settings</h1>
-              <p className={s.UiSettingsSubtitle}>
-                Manage your AI provider credentials, model defaults, and upcoming desktop
-                integrations.
-              </p>
             </div>
             <nav className={s.UiSettingsTabs} aria-label="Settings sections">
               {SETTINGS_TABS.map((tab) => (

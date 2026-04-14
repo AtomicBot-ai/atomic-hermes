@@ -1,4 +1,5 @@
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { TextInput, ConfirmDialog } from "@shared/kit";
 import { useSkillsStatus } from "./useSkillsStatus";
 import { SkillsGrid } from "./SkillsGrid";
@@ -14,6 +15,7 @@ type Props = {
 };
 
 export function SkillsIntegrationsTab({ port, noTitle }: Props) {
+  const navigate = useNavigate();
   const [tab, setTab] = React.useState<SubTab>("installed");
   const [search, setSearch] = React.useState("");
   const [removeTarget, setRemoveTarget] = React.useState<string | null>(null);
@@ -21,14 +23,14 @@ export function SkillsIntegrationsTab({ port, noTitle }: Props) {
   const { skills, loading, error, statusMap, markConnected, markDisabled, refresh } =
     useSkillsStatus(port);
 
-  const handleConnect = React.useCallback(
-    async (name: string) => {
-      await markConnected(name);
+  const handleEdit = React.useCallback(
+    (name: string) => {
+      navigate(`/skills/edit/${encodeURIComponent(name)}`);
     },
-    [markConnected],
+    [navigate],
   );
 
-  const handleSettings = React.useCallback(
+  const handleToggle = React.useCallback(
     async (name: string) => {
       const status = statusMap[name];
       if (status === "connected") {
@@ -91,11 +93,10 @@ export function SkillsIntegrationsTab({ port, noTitle }: Props) {
           {!loading && !error && (
             <SkillsGrid
               skills={skills}
-              statusMap={statusMap}
               search={search}
-              onConnect={handleConnect}
-              onSettings={handleSettings}
-              onRemoveCustom={(name) => setRemoveTarget(name)}
+              onEdit={handleEdit}
+              onToggle={handleToggle}
+              onRemove={(name) => setRemoveTarget(name)}
             />
           )}
         </>

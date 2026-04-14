@@ -90,7 +90,35 @@ function getPythonPath(): string {
 export interface PythonBridge {
   process: ChildProcess;
   port: number;
+  /** Resolves with the dashboard port once the dashboard server is up. */
+  dashboardPort: Promise<number>;
   kill: () => void;
+}
+
+function getServerScript(): string {
+  return app.isPackaged
+    ? path.join(process.resourcesPath, "python-server", "desktop-gateway.py")
+    : path.join(__dirname, "..", "..", "src", "python-server", "desktop-gateway.py");
+}
+
+function createBridge(
+  child: ChildProcess,
+  port: number,
+  dashboardPort: Promise<number>,
+): PythonBridge {
+  return {
+    process: child,
+    port,
+    dashboardPort,
+    kill: () => {
+      if (!child.killed) {
+        child.kill("SIGTERM");
+        setTimeout(() => {
+          if (!child.killed) child.kill("SIGKILL");
+        }, 5_000);
+      }
+    },
+  };
 }
 
 export async function startPythonBackend(): Promise<PythonBridge> {
@@ -98,9 +126,7 @@ export async function startPythonBackend(): Promise<PythonBridge> {
   syncSkills();
 
   const pythonPath = getPythonPath();
-  const serverScript = app.isPackaged
-    ? path.join(process.resourcesPath, "python-server", "desktop-gateway.py")
-    : path.join(__dirname, "..", "..", "src", "python-server", "desktop-gateway.py");
+  const serverScript = getServerScript();
 
   const hermesRoot = getResourcePath("hermes-agent");
   const hermesHome = getHermesHome();
@@ -121,7 +147,14 @@ export async function startPythonBackend(): Promise<PythonBridge> {
     cwd: hermesRoot,
   });
 
-  const port = await new Promise<number>((resolve, reject) => {
+  let dashboardResolve: ((port: number) => void) | null = null;
+  let dashboardReject: ((err: Error) => void) | null = null;
+  const dashboardPort = new Promise<number>((resolve, reject) => {
+    dashboardResolve = resolve;
+    dashboardReject = reject;
+  });
+
+  const gatewayPort = await new Promise<number>((resolve, reject) => {
     const timeout = setTimeout(() => {
       reject(new Error("Gateway did not start within 60s"));
     }, 60_000);
@@ -130,10 +163,17 @@ export async function startPythonBackend(): Promise<PythonBridge> {
 
     child.stdout?.on("data", (data: Buffer) => {
       const text = data.toString();
-      const match = text.match(/HERMES_PORT:(\d+)/);
-      if (match) {
+
+      const gwMatch = text.match(/HERMES_PORT:(\d+)/);
+      if (gwMatch) {
         clearTimeout(timeout);
-        resolve(parseInt(match[1], 10));
+        resolve(parseInt(gwMatch[1], 10));
+      }
+
+      const dbMatch = text.match(/HERMES_DASHBOARD_PORT:(\d+)/);
+      if (dbMatch) {
+        dashboardResolve?.(parseInt(dbMatch[1], 10));
+        dashboardResolve = null;
       }
     });
 
@@ -146,6 +186,7 @@ export async function startPythonBackend(): Promise<PythonBridge> {
     child.on("error", (err) => {
       clearTimeout(timeout);
       reject(new Error(`Failed to spawn Python: ${err.message}`));
+      dashboardReject?.(new Error("Process failed to start"));
     });
 
     child.on("exit", (code) => {
@@ -155,19 +196,9 @@ export async function startPythonBackend(): Promise<PythonBridge> {
           `Python exited with code ${code}.\nStderr: ${stderr.slice(-2048)}`
         )
       );
+      dashboardReject?.(new Error(`Python exited with code ${code}`));
     });
   });
 
-  return {
-    process: child,
-    port,
-    kill: () => {
-      if (!child.killed) {
-        child.kill("SIGTERM");
-        setTimeout(() => {
-          if (!child.killed) child.kill("SIGKILL");
-        }, 5_000);
-      }
-    },
-  };
+  return createBridge(child, gatewayPort, dashboardPort);
 }

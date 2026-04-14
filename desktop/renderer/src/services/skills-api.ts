@@ -61,6 +61,7 @@ export type HubSearchResponse = {
   ok: boolean;
   results: HubSkillItem[];
   total: number;
+  hasMore: boolean;
   error?: string;
 };
 
@@ -119,15 +120,27 @@ export async function uninstallSkill(
   });
 }
 
+export async function updateSkill(
+  port: number,
+  name: string,
+  content: string,
+): Promise<SkillActionResponse> {
+  return fetchJson(`${getBaseUrl(port)}/api/skills/update`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, content }),
+  });
+}
+
 export async function searchHub(
   port: number,
   query: string,
-  limit = 20,
-  sort = "downloads",
+  limit = 30,
+  offset = 0,
 ): Promise<HubSearchResponse> {
   const params = new URLSearchParams();
   if (query) params.set("q", query);
   params.set("limit", String(limit));
-  params.set("sort", sort);
+  params.set("offset", String(offset));
   return fetchJson(`${getBaseUrl(port)}/api/skills/hub-search?${params.toString()}`);
 }

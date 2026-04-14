@@ -34,6 +34,17 @@ function IconPlus() {
   );
 }
 
+function IconDashboard() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <rect x="2.75" y="2.75" width="5.5" height="5.5" rx="1.15" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="9.75" y="2.75" width="5.5" height="3.75" rx="1.15" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="9.75" y="8.5" width="5.5" height="6.75" rx="1.15" stroke="currentColor" strokeWidth="1.25" />
+      <rect x="2.75" y="9.75" width="5.5" height="5.5" rx="1.15" stroke="currentColor" strokeWidth="1.25" />
+    </svg>
+  );
+}
+
 export type SidebarProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -267,6 +278,16 @@ export function Sidebar(props: SidebarProps) {
             </div>
           </div>
           <div className={css.UiChatSidebarNarrowFooter}>
+            <NavLink
+              to={routes.dashboard}
+              className={css.UiChatSidebarNarrowFooterBtn}
+              aria-label="Dashboard"
+              title="Dashboard"
+            >
+              <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+                <IconDashboard />
+              </span>
+            </NavLink>
             <NavLink
               to={routes.settings}
               className={css.UiChatSidebarNarrowFooterBtn}

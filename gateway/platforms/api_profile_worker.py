@@ -191,12 +191,18 @@ class ProfileWorkerRuntime:
         name = (params.get("name") or "").strip()
         return _uninstall_skill(name)
 
+    def update_skill(self, params: Dict[str, Any]) -> Dict[str, Any]:
+        from gateway.platforms.api_extensions import _update_skill
+        name = (params.get("name") or "").strip()
+        content = params.get("content", "")
+        return _update_skill(name, content)
+
     def search_hub(self, params: Dict[str, Any]) -> Dict[str, Any]:
         from gateway.platforms.api_extensions import _search_hub
         query = params.get("q", "")
-        limit = params.get("limit", 20)
-        sort_field = params.get("sort", "downloads")
-        return _search_hub(query, limit, sort_field)
+        limit = params.get("limit", 30)
+        offset = params.get("offset", 0)
+        return _search_hub(query, limit, offset)
 
     def list_memory(self) -> Dict[str, Any]:
         memory_dir = self.profile_home / "memory"
@@ -429,7 +435,11 @@ def run_profile_worker(profile_id: str, profile_home: str, request_queue, respon
                 result = handler(int(params.get("limit", 50)), int(params.get("offset", 0)))
             elif method in {"get_session_messages", "delete_session"}:
                 result = handler(params["session_id"])
-            elif method in {"patch_config", "switch_model", "run_agent"}:
+            elif method in {
+                "patch_config", "switch_model", "run_agent",
+                "view_skill", "toggle_skill", "install_skill",
+                "uninstall_skill", "update_skill", "search_hub",
+            }:
                 result = handler(params)
             else:
                 result = handler()

@@ -12,7 +12,7 @@ export function scheduleWarmHubSkillsCache(port: number): void {
   lastWarmedPort = port;
 
   const run = () => {
-    void searchHub(port, "", 1, "downloads").catch(() => {
+    void searchHub(port, "", 1).catch(() => {
       // Offline, auth, or hub errors — warmup is best-effort only.
     });
   };

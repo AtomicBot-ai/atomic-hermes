@@ -40,7 +40,7 @@
   appearance: none;
   border: none;
   background: transparent;
-  color: #ef4444;
+  color: #ccc;
   font-size: 13px;
   font-weight: 500;
   cursor: pointer;
@@ -53,4 +53,8 @@
 
 .item:hover {
   background: rgba(255, 255, 255, 0.06);
+}
+
+.itemDanger {
+  color: #ef4444;
 }

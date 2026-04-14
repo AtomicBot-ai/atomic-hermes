@@ -70,6 +70,33 @@ def _openai_error(
 # Skills helpers (shared by route handlers and worker)
 # ---------------------------------------------------------------------------
 
+def _get_installed_skill_names() -> set:
+    """Return a set of installed skill names by scanning SKILLS_DIR."""
+    try:
+        from tools.skills_tool import _parse_frontmatter, SKILLS_DIR
+        from agent.skill_utils import get_external_skills_dirs
+
+        names: set = set()
+        dirs_to_scan: list = []
+        if SKILLS_DIR.exists():
+            dirs_to_scan.append(SKILLS_DIR)
+        dirs_to_scan.extend(get_external_skills_dirs())
+
+        for scan_dir in dirs_to_scan:
+            for skill_md in scan_dir.rglob("SKILL.md"):
+                if any(part in (".git", ".github", ".hub") for part in skill_md.parts):
+                    continue
+                try:
+                    content = skill_md.read_text(encoding="utf-8")[:4000]
+                    frontmatter, _ = _parse_frontmatter(content)
+                    names.add(frontmatter.get("name", skill_md.parent.name))
+                except Exception:
+                    continue
+        return names
+    except Exception:
+        return set()
+
+
 def _list_skills_enriched() -> list:
     """Return enriched skill list with enabled/category/author/tags/emoji.
 
@@ -181,13 +208,68 @@ def _uninstall_skill(name: str) -> dict:
         return {"ok": False, "error": str(e)}
 
 
-def _search_hub(query: str, limit: int = 20, sort: str = "downloads") -> dict:
+def _update_skill(name: str, content: str) -> dict:
+    """Update a skill's SKILL.md content on disk."""
+    from tools.skills_tool import SKILLS_DIR, _parse_frontmatter
+    from agent.skill_utils import get_external_skills_dirs
+
+    all_dirs = []
+    if SKILLS_DIR.exists():
+        all_dirs.append(SKILLS_DIR)
+    all_dirs.extend(get_external_skills_dirs())
+
+    if not all_dirs:
+        return {"ok": False, "error": "Skills directory does not exist"}
+
+    skill_md = None
+
+    for search_dir in all_dirs:
+        direct_path = search_dir / name
+        if direct_path.is_dir() and (direct_path / "SKILL.md").exists():
+            skill_md = direct_path / "SKILL.md"
+            break
+
+    if not skill_md:
+        for search_dir in all_dirs:
+            for found in search_dir.rglob("SKILL.md"):
+                if found.parent.name == name:
+                    skill_md = found
+                    break
+            if skill_md:
+                break
+
+    if not skill_md or not skill_md.exists():
+        return {"ok": False, "error": f"Skill '{name}' not found"}
+
+    fm, _ = _parse_frontmatter(content)
+    if not fm.get("name"):
+        return {"ok": False, "error": "YAML frontmatter must contain a 'name' field"}
+
+    try:
+        skill_md.write_text(content, encoding="utf-8")
+    except Exception as e:
+        return {"ok": False, "error": f"Failed to write: {e}"}
+
+    try:
+        from agent.prompt_builder import clear_skills_system_prompt_cache
+        clear_skills_system_prompt_cache()
+    except ImportError:
+        pass
+
+    return {"ok": True}
+
+
+def _search_hub(query: str, limit: int = 30, offset: int = 0) -> dict:
     """Search the skills hub via unified_search (returns SkillMeta objects)."""
     try:
         from tools.skills_hub import GitHubAuth, create_source_router, unified_search
         auth = GitHubAuth()
         sources = create_source_router(auth)
-        results = unified_search(query, sources, limit=limit)
+        fetch_cap = 500
+        results = unified_search(query, sources, limit=fetch_cap)
+
+        installed_names = _get_installed_skill_names()
+
         items = []
         for r in results:
             items.append({
@@ -201,13 +283,16 @@ def _search_hub(query: str, limit: int = 20, sort: str = "downloads") -> dict:
                 "trust_level": r.trust_level,
                 "repo": r.repo,
                 "tags": r.tags,
-                "installed": False,
+                "installed": r.name in installed_names,
                 "author": r.extra.get("author", ""),
                 "emoji": r.extra.get("emoji", ""),
-                "downloads": r.extra.get("downloads"),
-                "stars": r.extra.get("stars"),
+                "downloads": r.extra.get("installs") or r.extra.get("downloads"),
+                "stars": r.extra.get("stargazers_count") or r.extra.get("stars"),
             })
-        return {"ok": True, "results": items, "total": len(items)}
+
+        total = len(items)
+        page = items[offset:offset + limit]
+        return {"ok": True, "results": page, "total": total, "hasMore": offset + limit < total}
     except Exception as e:
         return {"ok": False, "error": str(e), "results": [], "total": 0}
 
@@ -1444,6 +1529,39 @@ class _ConfigRoutes:
             logger.exception("[api_extensions] Error uninstalling skill")
             return web.json_response({"ok": False, "error": str(e)}, status=500)
 
+    # -- POST /api/skills/update -----------------------------------------------
+
+    async def handle_skills_update(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
+
+        name = (body.get("name") or "").strip()
+        if not name:
+            return web.json_response({"ok": False, "error": "name required"}, status=400)
+        content = body.get("content")
+        if not isinstance(content, str) or not content.strip():
+            return web.json_response({"ok": False, "error": "content (string) required"}, status=400)
+
+        if not self._use_host_profile(request):
+            try:
+                payload = await self._profile_call(request, "update_skill", body)
+                return web.json_response(payload, headers=self._profile_headers(request))
+            except Exception as e:
+                logger.exception("[api_extensions] Error updating skill via worker")
+                return web.json_response({"ok": False, "error": str(e)}, status=500)
+
+        try:
+            result = _update_skill(name, content)
+            return web.json_response(result, headers=self._profile_headers(request))
+        except Exception as e:
+            logger.exception("[api_extensions] Error updating skill")
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
+
     # -- GET /api/skills/hub-search -------------------------------------------
 
     async def handle_skills_hub_search(self, request: "web.Request") -> "web.Response":
@@ -1452,14 +1570,14 @@ class _ConfigRoutes:
             return auth_err
 
         query = request.query.get("q", "").strip()
-        limit = min(50, max(1, int(request.query.get("limit", "20"))))
-        sort_field = request.query.get("sort", "downloads").strip()
+        limit = min(100, max(1, int(request.query.get("limit", "30"))))
+        offset = max(0, int(request.query.get("offset", "0")))
 
         if not self._use_host_profile(request):
             try:
                 payload = await self._profile_call(
                     request, "search_hub",
-                    {"q": query, "limit": limit, "sort": sort_field},
+                    {"q": query, "limit": limit, "offset": offset},
                 )
                 return web.json_response(payload, headers=self._profile_headers(request))
             except Exception as e:
@@ -1468,7 +1586,7 @@ class _ConfigRoutes:
 
         try:
             result = await asyncio.get_event_loop().run_in_executor(
-                None, _search_hub, query, limit, sort_field
+                None, _search_hub, query, limit, offset
             )
             return web.json_response(result, headers=self._profile_headers(request))
         except Exception as e:
@@ -1801,6 +1919,7 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
     app.router.add_post("/api/skills/toggle", routes.handle_skills_toggle)
     app.router.add_post("/api/skills/install", routes.handle_skills_install)
     app.router.add_post("/api/skills/uninstall", routes.handle_skills_uninstall)
+    app.router.add_post("/api/skills/update", routes.handle_skills_update)
     app.router.add_get("/api/memory", routes.handle_memory)
     app.router.add_get("/api/mcp/servers", routes.handle_mcp_servers)
     app.router.add_post("/api/oauth/device-code", routes.handle_oauth_device_code)

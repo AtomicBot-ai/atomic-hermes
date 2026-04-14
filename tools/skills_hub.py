@@ -3033,9 +3033,11 @@ def parallel_search_sources(
 def unified_search(query: str, sources: List[SkillSource],
                    source_filter: str = "all", limit: int = 10) -> List[SkillMeta]:
     """Search all sources (in parallel) and merge results."""
+    per_source_limits = {src.source_id(): limit for src in sources}
     all_results, _, _ = parallel_search_sources(
         sources,
         query=query,
+        per_source_limits=per_source_limits,
         source_filter=source_filter,
         overall_timeout=30,
     )

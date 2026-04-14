@@ -6,10 +6,11 @@
   "private": true,
   "scripts": {
     "build:ts": "tsc",
+    "build:dashboard": "npm --prefix ../web install && npm --prefix ../web run build",
     "build:renderer": "vite build --config renderer/vite.config.ts",
-    "build:all": "npm run build:ts && npm run build:renderer",
+    "build:all": "npm run build:dashboard && npm run build:ts && npm run build:renderer",
     "start": "npm run build:all && electron .",
-    "dev": "npm run build:renderer && tsc --watch & electron .",
+    "dev": "bash scripts/bundle-dev.sh && npm run build:dashboard && npm run build:renderer && tsc && (tsc -w --preserveWatchOutput & electron .)",
     "bundle": "bash scripts/bundle-all.sh",
     "bundle:dev": "bash scripts/bundle-dev.sh",
     "dist": "npm run build:all && electron-builder"

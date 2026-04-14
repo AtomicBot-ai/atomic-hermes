@@ -2,10 +2,13 @@ import React from "react";
 import s from "./CustomSkillMenu.module.css";
 
 type Props = {
+  enabled: boolean;
+  onEdit?: () => void;
+  onToggle: () => void;
   onRemove: () => void;
 };
 
-export function CustomSkillMenu({ onRemove }: Props) {
+export function SkillCardMenu({ enabled, onEdit, onToggle, onRemove }: Props) {
   const [open, setOpen] = React.useState(false);
   const ref = React.useRef<HTMLDivElement>(null);
 
@@ -32,9 +35,31 @@ export function CustomSkillMenu({ onRemove }: Props) {
       </button>
       {open && (
         <div className={s.popover}>
+          {onEdit && (
+            <button
+              type="button"
+              className={s.item}
+              onClick={() => {
+                setOpen(false);
+                onEdit();
+              }}
+            >
+              Edit
+            </button>
+          )}
           <button
             type="button"
             className={s.item}
+            onClick={() => {
+              setOpen(false);
+              onToggle();
+            }}
+          >
+            {enabled ? "Disable" : "Enable"}
+          </button>
+          <button
+            type="button"
+            className={`${s.item} ${s.itemDanger}`}
             onClick={() => {
               setOpen(false);
               onRemove();

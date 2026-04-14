@@ -13,6 +13,13 @@ let mainWindow: BrowserWindow | null = null;
 let pythonBridge: PythonBridge | null = null;
 let backendPort: number | null = null;
 
+type DashboardState =
+  | { kind: "starting" }
+  | { kind: "ready"; port: number; url: string }
+  | { kind: "failed"; error: string };
+
+let dashboardState: DashboardState = { kind: "starting" };
+
 function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 960,
@@ -43,6 +50,7 @@ const stateDir = path.join(app.getPath("userData"), "hermes");
 
 ipcMain.handle("get-port", () => backendPort);
 ipcMain.handle("get-hermes-home", () => stateDir);
+ipcMain.handle("get-dashboard-state", () => dashboardState);
 ipcMain.handle("open-external", async (_evt, payload: { url?: string }) => {
   const url = typeof payload.url === "string" ? payload.url.trim() : "";
   if (!url) {
@@ -68,17 +76,35 @@ ipcMain.handle(
   },
 );
 
-app.whenReady().then(async () => {
-  createWindow();
-
+async function startDesktopBackend(): Promise<void> {
   try {
     pythonBridge = await startPythonBackend();
     backendPort = pythonBridge.port;
     mainWindow?.webContents.send("python-ready");
+
+    pythonBridge.dashboardPort
+      .then((port) => {
+        const url = `http://127.0.0.1:${port}`;
+        dashboardState = { kind: "ready", port, url };
+        mainWindow?.webContents.send("dashboard-ready", dashboardState);
+      })
+      .catch((err) => {
+        const error = err?.message || String(err);
+        console.error("Dashboard did not start:", error);
+        dashboardState = { kind: "failed", error };
+        mainWindow?.webContents.send("dashboard-error", error);
+      });
   } catch (err: any) {
     console.error("Failed to start Python backend:", err);
     mainWindow?.webContents.send("python-error", err.message || String(err));
+    dashboardState = { kind: "failed", error: "Gateway process failed to start" };
+    mainWindow?.webContents.send("dashboard-error", dashboardState.error);
   }
+}
+
+app.whenReady().then(async () => {
+  createWindow();
+  await startDesktopBackend();
 });
 
 app.on("window-all-closed", () => {

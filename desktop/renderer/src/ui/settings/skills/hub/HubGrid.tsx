@@ -5,6 +5,7 @@ import s from "./HubGrid.module.css";
 type Props = {
   items: HubSkillItem[];
   loading: boolean;
+  loadingMore: boolean;
   hasMore: boolean;
   onLoadMore: () => void;
   onInstall: (identifier: string) => Promise<void>;
@@ -16,21 +17,39 @@ function SkeletonCard() {
   return <div className={`UiSkillCard ${s.card} ${s.skeleton}`}><div className={s.skeletonBar} /></div>;
 }
 
-export function HubGrid({ items, loading, hasMore, onLoadMore, onInstall, onRemove, onInstalled }: Props) {
-  const sentinelRef = React.useRef<HTMLDivElement>(null);
+export function HubGrid({
+  items, loading, loadingMore, hasMore, onLoadMore,
+  onInstall, onRemove, onInstalled,
+}: Props) {
   const [busyIds, setBusyIds] = React.useState<Set<string>>(new Set());
+  const scrollRef = React.useRef<HTMLDivElement | null>(null);
+  const observerRef = React.useRef<IntersectionObserver | null>(null);
+  const loadMoreRef = React.useRef(onLoadMore);
+  loadMoreRef.current = onLoadMore;
+
+  const sentinelCallbackRef = React.useCallback((node: HTMLDivElement | null) => {
+    if (observerRef.current) {
+      observerRef.current.disconnect();
+      observerRef.current = null;
+    }
+    if (!node || !scrollRef.current) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0]?.isIntersecting) {
+          loadMoreRef.current();
+        }
+      },
+      { root: scrollRef.current, rootMargin: "200px" },
+    );
+    observer.observe(node);
+    observerRef.current = observer;
+  }, []);
 
   React.useEffect(() => {
-    if (!sentinelRef.current || !hasMore) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) onLoadMore();
-      },
-      { rootMargin: "200px" },
-    );
-    observer.observe(sentinelRef.current);
-    return () => observer.disconnect();
-  }, [hasMore, onLoadMore]);
+    return () => {
+      observerRef.current?.disconnect();
+    };
+  }, []);
 
   const handleToggle = React.useCallback(
     async (skill: HubSkillItem) => {
@@ -65,7 +84,7 @@ export function HubGrid({ items, loading, hasMore, onLoadMore, onInstall, onRemo
   }
 
   return (
-    <div className="UiSkillsScroll">
+    <div className="UiSkillsScroll" ref={scrollRef}>
       <div className="UiSkillsGrid">
         {items.map((skill) => {
           const key = skill.slug || skill.name;
@@ -96,14 +115,15 @@ export function HubGrid({ items, loading, hasMore, onLoadMore, onInstall, onRemo
               <div className="UiSkillDescription">
                 {skill.summary || skill.description || ""}
               </div>
+              {skill.tags && skill.tags.length > 0 && (
+                <div className={s.tags}>
+                  {skill.tags.slice(0, 5).map((tag) => (
+                    <span key={tag} className={s.tag}>{tag}</span>
+                  ))}
+                </div>
+              )}
               <div className={s.cardFooter}>
                 {skill.author && <span className={s.meta}>{skill.author}</span>}
-                {typeof skill.stars === "number" && (
-                  <span className={s.meta}>★ {skill.stars}</span>
-                )}
-                {typeof skill.downloads === "number" && (
-                  <span className={s.meta}>↓ {skill.downloads}</span>
-                )}
                 {skill.source === "official" && (
                   <span className={`${s.badge} ${s.badgeOfficial}`}>OFFICIAL</span>
                 )}
@@ -118,11 +138,11 @@ export function HubGrid({ items, loading, hasMore, onLoadMore, onInstall, onRemo
           );
         })}
 
-        {loading &&
+        {(loading || loadingMore) &&
           Array.from({ length: 6 }).map((_, i) => <SkeletonCard key={`skel-${i}`} />)}
       </div>
 
-      {hasMore && <div ref={sentinelRef} style={{ height: 1 }} />}
+      {hasMore && <div ref={sentinelCallbackRef} className={s.sentinel} />}
     </div>
   );
 }

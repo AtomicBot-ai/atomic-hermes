@@ -42,6 +42,11 @@ if ! command -v uv &>/dev/null; then
     exit 1
 fi
 
+if ! command -v npm &>/dev/null; then
+    echo -e "${RED}✗ npm not found. Install Node.js before bundling the Hermes dashboard.${NC}"
+    exit 1
+fi
+
 # ==========================================================================
 # 1. Clean previous build
 # ==========================================================================
@@ -97,7 +102,17 @@ echo -e "${CYAN}→${NC} Installing desktop server dependencies..."
 echo -e "${GREEN}✓${NC} Server deps installed"
 
 # ==========================================================================
-# 4. Copy hermes-agent source
+# 4. Build Hermes web dashboard
+# ==========================================================================
+
+echo -e "${CYAN}→${NC} Building Hermes web dashboard..."
+cd "$REPO_ROOT"
+npm --prefix "$REPO_ROOT/web" install
+npm --prefix "$REPO_ROOT/web" run build
+echo -e "${GREEN}✓${NC} Dashboard built"
+
+# ==========================================================================
+# 5. Copy hermes-agent source
 # ==========================================================================
 
 echo -e "${CYAN}→${NC} Copying hermes-agent source..."
@@ -130,7 +145,7 @@ cp "$REPO_ROOT/pyproject.toml" "$BUILD_DIR/hermes-agent/"
 echo -e "${GREEN}✓${NC} Source copied"
 
 # ==========================================================================
-# 5. Copy skills
+# 6. Copy skills
 # ==========================================================================
 
 echo -e "${CYAN}→${NC} Copying skills..."
@@ -143,7 +158,7 @@ fi
 echo -e "${GREEN}✓${NC} Skills copied"
 
 # ==========================================================================
-# 6. External binaries
+# 7. External binaries
 # ==========================================================================
 
 echo -e "${CYAN}→${NC} Downloading external binaries for macOS ${ARCH}..."
@@ -194,7 +209,7 @@ curl -fsSL "$FFMPEG_URL" -o /tmp/ffmpeg.zip 2>/dev/null && {
 }
 
 # ==========================================================================
-# 7. Node modules for browser tools
+# 8. Node modules for browser tools
 # ==========================================================================
 
 echo -e "${CYAN}→${NC} Installing browser tool node_modules..."
@@ -222,7 +237,7 @@ rm -f "$BUILD_DIR/package.json" "$BUILD_DIR/package-lock.json"
 echo -e "${GREEN}✓${NC} Node modules installed"
 
 # ==========================================================================
-# 8. Patch venv for relocatability
+# 9. Patch venv for relocatability
 # ==========================================================================
 
 echo -e "${CYAN}→${NC} Patching venv for relocatable paths..."
@@ -244,7 +259,7 @@ done
 echo -e "${GREEN}✓${NC} Paths patched"
 
 # ==========================================================================
-# 9. Summary
+# 10. Summary
 # ==========================================================================
 
 echo ""

@@ -46,6 +46,21 @@
   color: #c084fc;
 }
 
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-top: 2px;
+}
+
+.tag {
+  font-size: 10px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  color: #999;
+}
+
 .empty {
   padding: 32px 0;
   text-align: center;
@@ -64,6 +79,11 @@
   height: 14px;
   border-radius: 6px;
   background: rgba(255, 255, 255, 0.06);
+}
+
+.sentinel {
+  height: 1px;
+  width: 100%;
 }
 
 @keyframes pulse {

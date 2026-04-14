@@ -45,6 +45,17 @@ function IconPlus() {
   );
 }
 
+function IconDashboard() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <rect x="3" y="3" width="6" height="6" rx="1.25" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11" y="3" width="6" height="4" rx="1.25" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="11" y="9" width="6" height="8" rx="1.25" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="3" y="11" width="6" height="6" rx="1.25" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export function SidebarContent(props: SidebarContentProps) {
   const {
     onCollapse,
@@ -134,7 +145,13 @@ export function SidebarContent(props: SidebarContentProps) {
       </div>
 
       <div className={css.UiChatSidebarFooter}>
-        <NavLink to={routes.skills} className={css.UiChatSidebarSettings} aria-label="Skills">
+        <NavLink to={routes.dashboard} className={css.UiChatSidebarSettings} aria-label="Dashboard">
+          <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+            <IconDashboard />
+          </span>
+          <span className={css.UiChatSidebarNavLabel}>Dashboard</span>
+        </NavLink>
+        <NavLink to={routes.settingsSkills} className={css.UiChatSidebarSettings} aria-label="Skills">
           <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">
               <path d="M10 1.667l2.245 4.549 5.022.731-3.634 3.542.858 5.002L10 13.175l-4.491 2.316.858-5.002L2.733 6.947l5.022-.731L10 1.667z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>

@@ -1,8 +1,13 @@
-"""Desktop gateway entry point — starts the full Hermes gateway from Electron.
+"""Desktop gateway entry point — starts the full Hermes gateway + web dashboard.
 
-Spawned by Electron as a child process. Finds a free port for the API server,
-configures the gateway to enable it, and prints the listening port to stdout
-so the main process can connect the renderer.
+Spawned by Electron as a single child process. Finds free ports for the API
+server and the web dashboard, starts both in the same asyncio event loop,
+and prints the listening ports to stdout so the main process can connect
+the renderer to the gateway and embed the dashboard in an iframe.
+
+Stdout protocol:
+    HERMES_PORT:<gateway_port>
+    HERMES_DASHBOARD_PORT:<dashboard_port>
 """
 
 from __future__ import annotations
@@ -12,6 +17,7 @@ import logging
 import os
 import socket
 import sys
+import threading
 
 _HERMES_ROOT = os.environ.get("HERMES_AGENT_ROOT", "")
 if _HERMES_ROOT and _HERMES_ROOT not in sys.path:
@@ -33,6 +39,47 @@ def _find_free_port() -> int:
         return s.getsockname()[1]
 
 
+def _start_dashboard_in_thread(port: int) -> None:
+    """Run the Hermes web dashboard (FastAPI/uvicorn) in a daemon thread."""
+    import uvicorn
+
+    try:
+        from hermes_cli.web_server import WEB_DIST, app as dashboard_app
+    except ImportError:
+        logging.getLogger("hermes.desktop").warning(
+            "hermes_cli.web_server not available — dashboard will not start"
+        )
+        return
+
+    if not WEB_DIST.exists():
+        logging.getLogger("hermes.desktop").warning(
+            "Dashboard assets missing (%s) — dashboard will not start", WEB_DIST
+        )
+        return
+
+    config = uvicorn.Config(
+        dashboard_app,
+        host="127.0.0.1",
+        port=port,
+        log_level="warning",
+    )
+    server = uvicorn.Server(config)
+
+    original_startup = server.startup
+
+    async def _startup_with_port(*args, **kwargs):
+        await original_startup(*args, **kwargs)
+        print(f"HERMES_DASHBOARD_PORT:{port}", flush=True)
+
+    server.startup = _startup_with_port
+
+    def _run():
+        server.run()
+
+    t = threading.Thread(target=_run, daemon=True, name="hermes-dashboard")
+    t.start()
+
+
 def main() -> None:
     logging.basicConfig(
         level=logging.INFO,
@@ -44,13 +91,16 @@ def main() -> None:
 
     _load_env()
 
-    port = _find_free_port()
+    gateway_port = _find_free_port()
+    dashboard_port = _find_free_port()
 
     os.environ["API_SERVER_ENABLED"] = "true"
-    os.environ["API_SERVER_PORT"] = str(port)
+    os.environ["API_SERVER_PORT"] = str(gateway_port)
     os.environ["API_SERVER_HOST"] = "127.0.0.1"
     os.environ.setdefault("API_SERVER_CORS_ORIGINS", "*")
     os.environ["HERMES_DESKTOP_MODE"] = "1"
+
+    _start_dashboard_in_thread(dashboard_port)
 
     from gateway.run import start_gateway
 
