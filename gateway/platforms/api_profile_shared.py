@@ -30,9 +30,15 @@ def extract_active_model(config: Dict[str, Any]) -> tuple[str, str]:
 
 
 def deep_merge(base: dict, override: dict) -> dict:
-    """Deep-merge override into base, modifying base in place."""
+    """Deep-merge override into base, modifying base in place.
+
+    A ``None`` value in *override* deletes the corresponding key from
+    *base* (JSON Merge Patch semantics, RFC 7396).
+    """
     for key, value in override.items():
-        if (
+        if value is None:
+            base.pop(key, None)
+        elif (
             key in base
             and isinstance(base[key], dict)
             and isinstance(value, dict)

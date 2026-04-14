@@ -1,6 +1,6 @@
 import React from "react";
 
-import { getConfig, patchConfig, type ConfigResponse } from "../../../services/api";
+import { patchConfig, type ConfigResponse } from "../../../services/api";
 import type { McpServerEntry, McpServerFormData } from "./types";
 
 function getObject(value: unknown): Record<string, unknown> {
@@ -107,15 +107,7 @@ export function useMcpServers(props: {
 
   const removeServer = React.useCallback(
     async (name: string) => {
-      const freshConfig = await getConfig(port);
-      const currentServers = getObject(getObject(freshConfig.config).mcp_servers);
-
-      const filtered: Record<string, unknown> = {};
-      for (const [key, value] of Object.entries(currentServers)) {
-        if (key !== name) filtered[key] = value;
-      }
-
-      await patchConfig(port, { config: { mcp_servers: filtered } });
+      await patchConfig(port, { config: { mcp_servers: { [name]: null } } });
     },
     [port],
   );
