@@ -55,8 +55,8 @@ export const SETTINGS_TABS: SettingsTabDef[] = [
     id: "mcpServers",
     path: "mcp-servers",
     href: routes.settingsMcpServers,
-    label: "MCP Servers",
-    title: "MCP Servers",
+    label: "MCP",
+    title: "MCP",
     description: "Review Model Context Protocol server integrations.",
   },
   {

@@ -170,7 +170,7 @@ export function McpServersTab() {
       <div className={css.McpHeaderRow}>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
           <div className={ps.UiSettingsTabTitle} style={{ marginBottom: 0 }}>
-            MCP Servers
+            MCP
           </div>
           {syncing && (
             <span className={css.McpSyncBadge}>
