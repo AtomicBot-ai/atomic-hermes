@@ -24,6 +24,7 @@ import { SkillEditor } from "../settings/skills/SkillEditor";
 import { DashboardPage } from "../dashboard";
 import { TerminalPage } from "../terminal";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
+import { UpdateBanner } from "../updates/UpdateBanner";
 import a from "./App.module.css";
 
 const SIDEBAR_OPEN_LS_KEY = "hermes:sidebar-open";
@@ -161,6 +162,8 @@ export function App() {
 
   if (state?.kind === "ready") {
     return (
+      <>
+      <UpdateBanner />
       <Routes>
         <Route path="setup/*" element={<SetupPage />} />
         <Route path="/" element={<SidebarLayout />}>
@@ -201,6 +204,7 @@ export function App() {
         </Route>
         <Route path="*" element={<Navigate to={routes.chat} replace />} />
       </Routes>
+      </>
     );
   }
 

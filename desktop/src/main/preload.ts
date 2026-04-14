@@ -50,6 +50,22 @@ contextBridge.exposeInMainWorld("hermesAPI", {
   showNotification: (title: string, body: string): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("show-notification", { title, body }),
 
+  // ── Updater ─────────────────────────────────────────────────────────
+  getAppVersion: (): Promise<string> => ipcRenderer.invoke("get-app-version"),
+  fetchReleaseNotes: (version: string, owner: string, repo: string): Promise<{ ok: boolean; body: string; htmlUrl: string }> =>
+    ipcRenderer.invoke("fetch-release-notes", { version, owner, repo }),
+  checkForUpdate: async (): Promise<void> => { await ipcRenderer.invoke("updater-check"); },
+  downloadUpdate: async (): Promise<void> => { await ipcRenderer.invoke("updater-download"); },
+  installUpdate: async (): Promise<void> => { await ipcRenderer.invoke("updater-install"); },
+  onUpdateAvailable: (cb: (payload: { version: string; releaseDate?: string }) => void): (() => void) =>
+    onIpc("updater-available", cb),
+  onUpdateDownloadProgress: (cb: (payload: { percent: number; bytesPerSecond: number; transferred: number; total: number }) => void): (() => void) =>
+    onIpc("updater-download-progress", cb),
+  onUpdateDownloaded: (cb: (payload: { version: string }) => void): (() => void) =>
+    onIpc("updater-downloaded", cb),
+  onUpdateError: (cb: (payload: { message: string }) => void): (() => void) =>
+    onIpc("updater-error", cb),
+
   // ── Terminal (PTY) ──────────────────────────────────────────────────
   terminalCreate: async (): Promise<{ id: string }> =>
     ipcRenderer.invoke("terminal:create"),

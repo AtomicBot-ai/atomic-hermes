@@ -63,3 +63,7 @@ mini-swe-agent/
 result
 .history
 website/static/api/skills-index.json
+
+# Desktop build artifacts
+desktop/build/
+desktop/release/

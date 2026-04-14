@@ -1,0 +1,236 @@
+/* eslint-disable no-console */
+const { spawnSync } = require("node:child_process");
+const fs = require("node:fs");
+const path = require("node:path");
+
+function run(cmd, args, opts = {}) {
+  const res = spawnSync(cmd, args, { encoding: "utf-8", ...opts });
+  if (res.status !== 0) {
+    const stderr = String(res.stderr || "").trim();
+    const stdout = String(res.stdout || "").trim();
+    throw new Error(`${cmd} ${args.join(" ")} failed: ${stderr || stdout || `exit ${res.status}`}`);
+  }
+  return String(res.stdout || "");
+}
+
+function listDirSafe(p) {
+  try {
+    return fs.readdirSync(p, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+}
+
+function findFirstAppBundle(appOutDir) {
+  for (const entry of listDirSafe(appOutDir)) {
+    if (entry.isDirectory() && entry.name.endsWith(".app")) {
+      return path.join(appOutDir, entry.name);
+    }
+  }
+  return null;
+}
+
+function selectSigningIdentity() {
+  const explicit =
+    (process.env.CSC_NAME && String(process.env.CSC_NAME).trim()) ||
+    (process.env.SIGN_IDENTITY && String(process.env.SIGN_IDENTITY).trim()) ||
+    (process.env.CODESIGN_IDENTITY && String(process.env.CODESIGN_IDENTITY).trim());
+  if (explicit) {
+    return explicit;
+  }
+
+  const out = run("security", ["find-identity", "-p", "codesigning", "-v"], {
+    stdio: ["ignore", "pipe", "pipe"],
+  });
+  const lines = out
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+
+  const pickFirst = (re) => {
+    for (const line of lines) {
+      const m = line.match(re);
+      if (m && m[1]) {
+        return m[1];
+      }
+    }
+    return null;
+  };
+
+  return (
+    pickFirst(/"([^"]*Developer ID Application[^"]*)"/) ||
+    pickFirst(/"([^"]*Apple Distribution[^"]*)"/) ||
+    pickFirst(/"([^"]*Apple Development[^"]*)"/) ||
+    pickFirst(/"([^"]+)"/)
+  );
+}
+
+function shouldTimestamp(identity) {
+  if (!identity || identity === "-") {
+    return false;
+  }
+  return identity.includes("Developer ID Application");
+}
+
+function isMachoBinary(filePath) {
+  const out = run("/usr/bin/file", ["-b", filePath], { stdio: ["ignore", "pipe", "pipe"] });
+  return out.includes("Mach-O");
+}
+
+function shouldConsiderForSigning(filePath, st) {
+  const ext = path.extname(filePath).toLowerCase();
+  if (ext === ".dylib" || ext === ".node" || ext === ".so") {
+    return true;
+  }
+  if ((st.mode & 0o111) !== 0) {
+    return true;
+  }
+  return false;
+}
+
+function walkFiles(rootDir, onFile) {
+  const stack = [rootDir];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    if (!dir) {
+      continue;
+    }
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) {
+        continue;
+      }
+      if (entry.isDirectory()) {
+        stack.push(full);
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+      onFile(full);
+    }
+  }
+}
+
+function findEntitlementsInherit() {
+  const appRoot = path.resolve(__dirname, "..");
+  const entPath = path.join(appRoot, "entitlements.mac.inherit.plist");
+  if (fs.existsSync(entPath)) {
+    return entPath;
+  }
+  return null;
+}
+
+function codesignFile(filePath, identity, entitlements) {
+  const args = ["--force", "--sign", identity];
+
+  if (identity !== "-") {
+    args.push("--options", "runtime");
+  }
+
+  if (entitlements) {
+    args.push("--entitlements", entitlements);
+  }
+
+  if (shouldTimestamp(identity)) {
+    args.push("--timestamp");
+  } else {
+    args.push("--timestamp=none");
+  }
+
+  args.push(filePath);
+
+  run("/usr/bin/codesign", args, { stdio: "inherit" });
+}
+
+/**
+ * electron-builder afterPack hook.
+ *
+ * Signs extraResources Mach-O binaries (Python, ripgrep, Node, native addons)
+ * BEFORE electron-builder applies the final app bundle signature on macOS.
+ */
+module.exports = async function afterPack(context) {
+  if (context.electronPlatformName !== "darwin") {
+    return;
+  }
+
+  let identity;
+  try {
+    identity = selectSigningIdentity();
+  } catch {
+    identity = null;
+  }
+
+  if (!identity) {
+    console.log(
+      "[hermes-desktop] afterPack: no codesign identity found (skipping extraResources signing)"
+    );
+    return;
+  }
+
+  const appOutDir = context.appOutDir;
+  const appBundle = findFirstAppBundle(appOutDir);
+  if (!appBundle) {
+    throw new Error(`[hermes-desktop] Failed to locate .app bundle in: ${appOutDir}`);
+  }
+
+  const resourcesDir = path.join(appBundle, "Contents", "Resources");
+  const candidateRoots = [
+    "python",
+    "hermes-venv",
+    "bin",
+    "node_modules",
+    "skills",
+    "python-server",
+  ].map((name) => path.join(resourcesDir, name));
+  const roots = candidateRoots.filter((p) => fs.existsSync(p));
+
+  if (roots.length === 0) {
+    console.log("[hermes-desktop] afterPack: no extraResources roots found to sign (skipping)");
+    return;
+  }
+
+  const entitlements = findEntitlementsInherit();
+  console.log(`[hermes-desktop] afterPack: signing extraResources with identity: ${identity}`);
+  if (entitlements) {
+    console.log(`[hermes-desktop] afterPack: using entitlements: ${path.basename(entitlements)}`);
+  }
+  let signed = 0;
+  let considered = 0;
+
+  for (const root of roots) {
+    walkFiles(root, (filePath) => {
+      let st;
+      try {
+        st = fs.statSync(filePath);
+      } catch {
+        return;
+      }
+      if (!shouldConsiderForSigning(filePath, st)) {
+        return;
+      }
+      considered += 1;
+      try {
+        if (!isMachoBinary(filePath)) {
+          return;
+        }
+      } catch {
+        return;
+      }
+      codesignFile(filePath, identity, entitlements);
+      signed += 1;
+    });
+  }
+
+  console.log(
+    `[hermes-desktop] afterPack: signed ${signed} Mach-O files (considered ${considered}) under: ${roots
+      .map((p) => path.basename(p))
+      .join(", ")}`
+  );
+};

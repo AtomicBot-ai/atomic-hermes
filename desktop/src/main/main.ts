@@ -9,6 +9,15 @@ import {
 } from "./onboarding-state";
 import { registerTerminalIpcHandlers } from "./terminal/ipc";
 import { killAllTerminals } from "./terminal/pty-manager";
+import {
+  initAutoUpdater,
+  disposeAutoUpdater,
+  checkForUpdates,
+  downloadUpdate,
+  installUpdate,
+  getAppVersion,
+} from "./updater";
+import { killUpdateSplash } from "./update-splash";
 
 app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
 
@@ -38,9 +47,7 @@ function createWindow(): void {
     },
   });
 
-  const rendererPath = app.isPackaged
-    ? path.join(__dirname, "..", "renderer", "dist", "index.html")
-    : path.join(__dirname, "..", "..", "renderer", "dist", "index.html");
+  const rendererPath = path.join(__dirname, "..", "..", "renderer", "dist", "index.html");
 
   mainWindow.loadFile(rendererPath);
 
@@ -122,6 +129,52 @@ registerTerminalIpcHandlers({
   stateDir,
 });
 
+// ── Updater IPC ──────────────────────────────────────────────────────
+
+ipcMain.handle("get-app-version", () => getAppVersion());
+
+ipcMain.handle("updater-check", async () => {
+  await checkForUpdates();
+  return { ok: true };
+});
+
+ipcMain.handle("updater-download", async () => {
+  await downloadUpdate();
+  return { ok: true };
+});
+
+ipcMain.handle("updater-install", () => {
+  installUpdate();
+  return { ok: true };
+});
+
+ipcMain.handle(
+  "fetch-release-notes",
+  async (_evt, p: { version?: string; owner?: string; repo?: string }) => {
+    const version = typeof p?.version === "string" ? p.version : "";
+    const owner = typeof p?.owner === "string" ? p.owner : "";
+    const repo = typeof p?.repo === "string" ? p.repo : "";
+    if (!version || !owner || !repo) {
+      return { ok: false, body: "", htmlUrl: "" };
+    }
+    const tag = version.startsWith("v") ? version : `v${version}`;
+    const url = `https://api.github.com/repos/${owner}/${repo}/releases/tags/${tag}`;
+    try {
+      const res = await fetch(url, {
+        headers: { Accept: "application/vnd.github+json" },
+      });
+      if (!res.ok) {
+        return { ok: false, body: "", htmlUrl: "" };
+      }
+      const data = (await res.json()) as { body?: string; html_url?: string };
+      return { ok: true, body: data.body ?? "", htmlUrl: data.html_url ?? "" };
+    } catch (err) {
+      console.warn("[ipc/updater] fetch-release-notes failed:", err);
+      return { ok: false, body: "", htmlUrl: "" };
+    }
+  },
+);
+
 async function startDesktopBackend(): Promise<void> {
   try {
     pythonBridge = await startPythonBackend();
@@ -156,6 +209,10 @@ async function startDesktopBackend(): Promise<void> {
 
 app.whenReady().then(async () => {
   createWindow();
+  killUpdateSplash();
+  if (app.isPackaged) {
+    initAutoUpdater(() => mainWindow);
+  }
   await startDesktopBackend();
 });
 
@@ -165,6 +222,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  disposeAutoUpdater();
   killAllTerminals();
   pythonBridge?.kill();
 });
