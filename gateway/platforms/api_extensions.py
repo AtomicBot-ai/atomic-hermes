@@ -2156,6 +2156,613 @@ class _ConfigRoutes:
                 status=500,
             )
 
+    # ------------------------------------------------------------------
+    # Logs
+    # ------------------------------------------------------------------
+
+    async def handle_get_logs(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        file_name = request.query.get("file", "agent")
+        lines_count = min(int(request.query.get("lines", "100")), 500)
+        level = request.query.get("level")
+        component = request.query.get("component")
+
+        def _read():
+            from hermes_cli.logs import _read_tail, LOG_FILES
+            from hermes_logging import COMPONENT_PREFIXES
+
+            log_name = LOG_FILES.get(file_name)
+            if not log_name:
+                return None
+            log_path = _get_hermes_home() / "logs" / log_name
+            if not log_path.exists():
+                return []
+
+            has_filters = bool(level or component)
+            min_level = level if level and level != "ALL" else None
+            comp_prefixes = None
+            if component and component != "all":
+                comp_prefixes = COMPONENT_PREFIXES.get(component)
+
+            return _read_tail(
+                log_path,
+                lines_count,
+                has_filters=has_filters,
+                min_level=min_level,
+                component_prefixes=comp_prefixes,
+            )
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(None, _read)
+        except Exception as e:
+            logger.exception("[api_extensions] logs read error")
+            return web.json_response(
+                {"file": file_name, "lines": [], "error": str(e)}, status=500
+            )
+
+        if result is None:
+            return web.json_response(
+                {"error": f"Unknown log file: {file_name}"}, status=400
+            )
+
+        return web.json_response({"file": file_name, "lines": result})
+
+    # -- GET /api/messengers --------------------------------------------------
+
+    _MESSENGER_REGISTRY: List[Dict[str, Any]] = [
+        {
+            "id": "telegram",
+            "name": "Telegram",
+            "description": "Connect a Telegram bot to receive and send messages",
+            "pip_extra": "messaging",
+            "import_check": "telegram",
+            "required_env": ["TELEGRAM_BOT_TOKEN"],
+            "optional_env": [
+                "TELEGRAM_ALLOWED_USERS",
+                "TELEGRAM_REQUIRE_MENTION",
+                "TELEGRAM_HOME_CHANNEL",
+            ],
+        },
+        {
+            "id": "discord",
+            "name": "Discord",
+            "description": "Connect a Discord bot to interact with your server",
+            "pip_extra": "messaging",
+            "import_check": "discord",
+            "required_env": ["DISCORD_BOT_TOKEN"],
+            "optional_env": [
+                "DISCORD_ALLOWED_USERS",
+                "DISCORD_REQUIRE_MENTION",
+                "DISCORD_ALLOWED_CHANNELS",
+                "DISCORD_HOME_CHANNEL",
+            ],
+        },
+        {
+            "id": "slack",
+            "name": "Slack",
+            "description": "Connect a Slack workspace via Socket Mode",
+            "pip_extra": "slack",
+            "import_check": "slack_bolt",
+            "required_env": ["SLACK_BOT_TOKEN", "SLACK_APP_TOKEN"],
+            "optional_env": [
+                "SLACK_REQUIRE_MENTION",
+                "SLACK_FREE_RESPONSE_CHANNELS",
+                "SLACK_HOME_CHANNEL",
+            ],
+        },
+        {
+            "id": "signal",
+            "name": "Signal",
+            "description": "Connect Signal via signal-cli for private messaging",
+            "pip_extra": None,
+            "import_check": None,
+            "required_env": ["SIGNAL_HTTP_URL", "SIGNAL_ACCOUNT"],
+            "optional_env": ["SIGNAL_HOME_CHANNEL"],
+            "external_dep": "signal-cli HTTP daemon",
+        },
+        {
+            "id": "whatsapp",
+            "name": "WhatsApp",
+            "description": "Connect WhatsApp via a Node.js bridge",
+            "pip_extra": None,
+            "import_check": None,
+            "required_env": ["WHATSAPP_ENABLED"],
+            "optional_env": [
+                "WHATSAPP_MODE",
+                "WHATSAPP_REQUIRE_MENTION",
+            ],
+            "external_dep": "Node.js bridge",
+        },
+        {
+            "id": "matrix",
+            "name": "Matrix",
+            "description": "Connect to a Matrix homeserver for decentralized messaging",
+            "pip_extra": "matrix",
+            "import_check": "mautrix",
+            "required_env": ["MATRIX_HOMESERVER"],
+            "optional_env": [
+                "MATRIX_ACCESS_TOKEN",
+                "MATRIX_PASSWORD",
+                "MATRIX_USER_ID",
+                "MATRIX_ENCRYPTION",
+            ],
+        },
+        {
+            "id": "email",
+            "name": "Email",
+            "description": "Connect email via IMAP/SMTP",
+            "pip_extra": None,
+            "import_check": None,
+            "required_env": [
+                "EMAIL_ADDRESS",
+                "EMAIL_PASSWORD",
+                "EMAIL_IMAP_HOST",
+                "EMAIL_SMTP_HOST",
+            ],
+            "optional_env": ["EMAIL_IMAP_PORT", "EMAIL_SMTP_PORT"],
+        },
+        {
+            "id": "homeassistant",
+            "name": "Home Assistant",
+            "description": "Connect to Home Assistant for smart home automation",
+            "pip_extra": "homeassistant",
+            "import_check": "aiohttp",
+            "required_env": ["HASS_TOKEN"],
+            "optional_env": ["HASS_URL"],
+        },
+        {
+            "id": "sms",
+            "name": "SMS (Twilio)",
+            "description": "Send and receive SMS via Twilio",
+            "pip_extra": "sms",
+            "import_check": "aiohttp",
+            "required_env": [
+                "TWILIO_ACCOUNT_SID",
+                "TWILIO_AUTH_TOKEN",
+                "TWILIO_PHONE_NUMBER",
+            ],
+            "optional_env": ["SMS_WEBHOOK_URL", "SMS_WEBHOOK_PORT"],
+        },
+        {
+            "id": "dingtalk",
+            "name": "DingTalk",
+            "description": "Connect a DingTalk chatbot via Stream Mode",
+            "pip_extra": "dingtalk",
+            "import_check": "dingtalk_stream",
+            "required_env": ["DINGTALK_CLIENT_ID", "DINGTALK_CLIENT_SECRET"],
+            "optional_env": [],
+        },
+        {
+            "id": "feishu",
+            "name": "Feishu / Lark",
+            "description": "Connect a Feishu or Lark bot",
+            "pip_extra": "feishu",
+            "import_check": "lark_oapi",
+            "required_env": ["FEISHU_APP_ID", "FEISHU_APP_SECRET"],
+            "optional_env": ["FEISHU_VERIFICATION_TOKEN"],
+        },
+        {
+            "id": "mattermost",
+            "name": "Mattermost",
+            "description": "Connect to a Mattermost server",
+            "pip_extra": None,
+            "import_check": "aiohttp",
+            "required_env": ["MATTERMOST_TOKEN", "MATTERMOST_URL"],
+            "optional_env": [],
+        },
+        {
+            "id": "bluebubbles",
+            "name": "BlueBubbles (iMessage)",
+            "description": "Connect iMessage via BlueBubbles on macOS",
+            "pip_extra": None,
+            "import_check": "aiohttp",
+            "required_env": ["BLUEBUBBLES_SERVER_URL", "BLUEBUBBLES_PASSWORD"],
+            "optional_env": [],
+        },
+    ]
+
+    async def handle_get_messengers(self, request: "web.Request") -> "web.Response":
+        """Return status for every supported messenger platform."""
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        def _build_status() -> List[Dict[str, Any]]:
+            from hermes_cli.config import load_env
+
+            env = load_env()
+            merged_env = {**os.environ, **env}
+            logger.debug("[api_extensions] messengers env keys: %s", [k for k in merged_env if "TELEGRAM" in k or "DISCORD" in k or "SLACK" in k])
+
+            running_platforms: set = set()
+            try:
+                from gateway.status import read_runtime_status
+                rt = read_runtime_status() or {}
+                for plat_id, info in (rt.get("platforms") or {}).items():
+                    if isinstance(info, dict) and info.get("state") == "connected":
+                        running_platforms.add(plat_id)
+            except Exception:
+                pass
+
+            results = []
+            for entry in self._MESSENGER_REGISTRY:
+                import_mod = entry.get("import_check")
+                deps_installed = True
+                if import_mod:
+                    try:
+                        __import__(import_mod)
+                    except ImportError:
+                        deps_installed = False
+
+                required = entry.get("required_env", [])
+                configured = all(
+                    bool(merged_env.get(k, "").strip()) for k in required
+                )
+
+                results.append({
+                    "id": entry["id"],
+                    "name": entry["name"],
+                    "description": entry["description"],
+                    "depsInstalled": deps_installed,
+                    "configured": configured,
+                    "running": entry["id"] in running_platforms,
+                    "pipExtra": entry.get("pip_extra"),
+                    "requiredEnv": required,
+                    "optionalEnv": entry.get("optional_env", []),
+                    "externalDep": entry.get("external_dep"),
+                })
+            return results
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(
+                None, _build_status
+            )
+            return web.json_response({"platforms": result})
+        except Exception as e:
+            logger.exception("[api_extensions] Error reading messenger status")
+            return web.json_response(
+                {"ok": False, "error": str(e)}, status=500
+            )
+
+    # -- POST /api/messengers/install -----------------------------------------
+
+    async def handle_messengers_install(
+        self, request: "web.Request"
+    ) -> "web.Response":
+        """Install pip dependencies for a messenger platform."""
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response(
+                {"ok": False, "error": "Invalid JSON"}, status=400
+            )
+
+        platform_id = body.get("platform", "")
+        entry = next(
+            (e for e in self._MESSENGER_REGISTRY if e["id"] == platform_id), None
+        )
+        if not entry:
+            return web.json_response(
+                {"ok": False, "error": f"Unknown platform: {platform_id}"},
+                status=400,
+            )
+
+        pip_extra = entry.get("pip_extra")
+        if not pip_extra:
+            ext_dep = entry.get("external_dep", "external tools")
+            return web.json_response({
+                "ok": False,
+                "error": f"{entry['name']} does not need pip packages. It requires {ext_dep}.",
+                "needsExternal": True,
+                "externalDep": ext_dep,
+            })
+
+        import subprocess
+        import sys
+
+        pip_bin = os.path.join(os.path.dirname(sys.executable), "pip")
+        if not os.path.isfile(pip_bin):
+            pip_bin = sys.executable
+            pip_args = [pip_bin, "-m", "pip"]
+        else:
+            pip_args = [pip_bin]
+
+        hermes_root = os.environ.get("HERMES_AGENT_ROOT", "")
+        if hermes_root and os.path.isfile(os.path.join(hermes_root, "pyproject.toml")):
+            install_spec = f"-e {hermes_root}[{pip_extra}]"
+            cmd = [*pip_args, "install", "-e", f"{hermes_root}[{pip_extra}]"]
+        else:
+            install_spec = f"hermes-agent[{pip_extra}]"
+            cmd = [*pip_args, "install", f"hermes-agent[{pip_extra}]"]
+
+        logger.info(
+            "[api_extensions] Installing messenger deps: %s", install_spec
+        )
+
+        def _run_pip():
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                text=True,
+                timeout=300,
+            )
+            return proc.returncode, proc.stdout, proc.stderr
+
+        try:
+            code, stdout, stderr = await asyncio.get_event_loop().run_in_executor(
+                None, _run_pip
+            )
+            success = code == 0
+            return web.json_response({
+                "ok": success,
+                "platform": platform_id,
+                "pipExtra": pip_extra,
+                "output": stdout[-2000:] if stdout else "",
+                "error": stderr[-2000:] if stderr and not success else "",
+            })
+        except Exception as e:
+            logger.exception("[api_extensions] pip install failed")
+            return web.json_response(
+                {"ok": False, "error": str(e)}, status=500
+            )
+
+    # -- POST /api/gateway/restart --------------------------------------------
+
+    _RESTART_EXIT_CODE = 75
+
+    async def handle_gateway_restart(
+        self, request: "web.Request"
+    ) -> "web.Response":
+        """Request gateway restart by exiting the Python process.
+
+        In desktop mode, Electron detects exit code 75 and auto-restarts
+        the Python backend.  On fresh start the gateway picks up the
+        updated .env and starts all newly-configured platforms.
+        """
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        try:
+            logger.info("[api_extensions] Gateway restart requested via API — exiting with code %d", self._RESTART_EXIT_CODE)
+
+            async def _delayed_exit():
+                await asyncio.sleep(0.5)
+                os._exit(self._RESTART_EXIT_CODE)
+
+            asyncio.ensure_future(_delayed_exit())
+            return web.json_response({
+                "ok": True,
+                "message": "Gateway restarting...",
+            })
+        except Exception as e:
+            logger.exception("[api_extensions] Gateway restart failed")
+            return web.json_response(
+                {"ok": False, "error": str(e)}, status=500
+            )
+
+    # ------------------------------------------------------------------
+    # Backup / Restore
+    # ------------------------------------------------------------------
+
+    async def handle_backup_create(self, request: "web.Request") -> "web.Response":
+        """Create a zip backup of the Hermes home directory.
+
+        Returns ``{ok, path, size}`` on success.  The zip is written to
+        ``~/hermes-backup-<timestamp>.zip`` (same default as the CLI).
+        """
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        body = {}
+        try:
+            body = await request.json()
+        except Exception:
+            pass
+        output_path = body.get("output") if body else None
+
+        def _create():
+            import tempfile
+            from datetime import datetime
+            from hermes_cli.backup import run_backup as _cli_run_backup
+            import argparse
+
+            args = argparse.Namespace(
+                output=output_path,
+                quick=False,
+                label=None,
+            )
+            # run_backup prints to stdout and calls sys.exit on error;
+            # we replicate the core logic inline instead.
+            from hermes_constants import get_default_hermes_root, display_hermes_home
+            from hermes_cli.backup import (
+                _should_exclude,
+                _EXCLUDED_DIRS,
+                _safe_copy_db,
+                _format_size,
+            )
+            import zipfile
+
+            hermes_root = get_default_hermes_root()
+            if not hermes_root.is_dir():
+                return {"ok": False, "error": f"Hermes home not found at {hermes_root}"}
+
+            if output_path:
+                out = Path(output_path).expanduser().resolve()
+                if out.is_dir():
+                    stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+                    out = out / f"hermes-backup-{stamp}.zip"
+            else:
+                stamp = datetime.now().strftime("%Y-%m-%d-%H%M%S")
+                out = Path.home() / f"hermes-backup-{stamp}.zip"
+
+            if out.suffix.lower() != ".zip":
+                out = out.with_suffix(out.suffix + ".zip")
+            out.parent.mkdir(parents=True, exist_ok=True)
+
+            files_to_add = []
+            for dirpath, dirnames, filenames in os.walk(hermes_root, followlinks=False):
+                dp = Path(dirpath)
+                dirnames[:] = [d for d in dirnames if d not in _EXCLUDED_DIRS]
+                for fname in filenames:
+                    fpath = dp / fname
+                    rel = fpath.relative_to(hermes_root)
+                    if _should_exclude(rel):
+                        continue
+                    try:
+                        if fpath.resolve() == out.resolve():
+                            continue
+                    except (OSError, ValueError):
+                        pass
+                    files_to_add.append((fpath, rel))
+
+            if not files_to_add:
+                return {"ok": False, "error": "No files to back up"}
+
+            with zipfile.ZipFile(out, "w", zipfile.ZIP_DEFLATED, compresslevel=6) as zf:
+                for abs_path, rel_path in files_to_add:
+                    try:
+                        if abs_path.suffix == ".db":
+                            with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+                                tmp_db = Path(tmp.name)
+                            if _safe_copy_db(abs_path, tmp_db):
+                                zf.write(tmp_db, arcname=str(rel_path))
+                                tmp_db.unlink(missing_ok=True)
+                            else:
+                                tmp_db.unlink(missing_ok=True)
+                        else:
+                            zf.write(abs_path, arcname=str(rel_path))
+                    except (PermissionError, OSError):
+                        continue
+
+            return {
+                "ok": True,
+                "path": str(out),
+                "size": out.stat().st_size,
+                "fileCount": len(files_to_add),
+            }
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(None, _create)
+            return web.json_response(result)
+        except Exception as e:
+            logger.exception("[api_extensions] backup create error")
+            return web.json_response(
+                {"ok": False, "error": str(e)}, status=500
+            )
+
+    async def handle_backup_restore(self, request: "web.Request") -> "web.Response":
+        """Restore from a Hermes backup zip.
+
+        Accepts ``{base64: "<data>", filename: "..."}`` or multipart
+        form upload.  Writes the payload to a temp file and runs the
+        import logic from ``hermes_cli.backup``.
+        """
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        import base64 as b64mod
+        import tempfile
+
+        tmp_path = None
+        try:
+            body = await request.json()
+            raw_b64 = body.get("base64", "")
+            filename = body.get("filename", "restore.zip")
+            if not raw_b64:
+                return web.json_response(
+                    {"ok": False, "error": "base64 payload is required"},
+                    status=400,
+                )
+            data = b64mod.b64decode(raw_b64)
+            suffix = ".zip" if filename.lower().endswith(".zip") else ".tar.gz"
+            fd, tmp_path = tempfile.mkstemp(suffix=suffix)
+            os.write(fd, data)
+            os.close(fd)
+        except Exception as e:
+            if tmp_path and os.path.exists(tmp_path):
+                os.unlink(tmp_path)
+            return web.json_response(
+                {"ok": False, "error": f"Failed to decode payload: {e}"},
+                status=400,
+            )
+
+        def _restore():
+            import zipfile
+            from hermes_cli.backup import _validate_backup_zip, _detect_prefix
+            from hermes_constants import get_default_hermes_root
+
+            zip_path = Path(tmp_path)
+            if not zipfile.is_zipfile(zip_path):
+                return {"ok": False, "error": "Not a valid zip file"}
+
+            hermes_root = get_default_hermes_root()
+
+            with zipfile.ZipFile(zip_path, "r") as zf:
+                ok, reason = _validate_backup_zip(zf)
+                if not ok:
+                    return {"ok": False, "error": reason}
+
+                prefix = _detect_prefix(zf)
+                members = [n for n in zf.namelist() if not n.endswith("/")]
+
+                hermes_root.mkdir(parents=True, exist_ok=True)
+                restored = 0
+                errors = []
+
+                for member in members:
+                    if prefix and member.startswith(prefix):
+                        rel = member[len(prefix):]
+                    else:
+                        rel = member
+                    if not rel:
+                        continue
+
+                    target = hermes_root / rel
+                    try:
+                        target.resolve().relative_to(hermes_root.resolve())
+                    except ValueError:
+                        errors.append(f"{rel}: path traversal blocked")
+                        continue
+
+                    try:
+                        target.parent.mkdir(parents=True, exist_ok=True)
+                        with zf.open(member) as src, open(target, "wb") as dst:
+                            dst.write(src.read())
+                        restored += 1
+                    except (PermissionError, OSError) as exc:
+                        errors.append(f"{rel}: {exc}")
+
+            return {
+                "ok": True,
+                "restored": restored,
+                "errors": errors[:10] if errors else [],
+            }
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(None, _restore)
+            return web.json_response(result)
+        except Exception as e:
+            logger.exception("[api_extensions] backup restore error")
+            return web.json_response(
+                {"ok": False, "error": str(e)}, status=500
+            )
+        finally:
+            if tmp_path and os.path.exists(tmp_path):
+                try:
+                    os.unlink(tmp_path)
+                except OSError:
+                    pass
+
 
 # ---------------------------------------------------------------------------
 # Registration entry point
@@ -2193,10 +2800,18 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
     app.router.add_post("/api/oauth/device-code", routes.handle_oauth_device_code)
     app.router.add_post("/api/oauth/poll-token", routes.handle_oauth_poll_token)
 
+    app.router.add_get("/api/logs", routes.handle_get_logs)
     app.router.add_get("/api/sessions", routes.handle_list_sessions)
     app.router.add_get(
         "/api/sessions/{session_id}/messages", routes.handle_session_messages
     )
     app.router.add_delete("/api/sessions/{session_id}", routes.handle_delete_session)
 
-    logger.info("[api_extensions] Registered %d config/setup routes", 19)
+    app.router.add_get("/api/messengers", routes.handle_get_messengers)
+    app.router.add_post("/api/messengers/install", routes.handle_messengers_install)
+    app.router.add_post("/api/gateway/restart", routes.handle_gateway_restart)
+
+    app.router.add_post("/api/backup/create", routes.handle_backup_create)
+    app.router.add_post("/api/backup/restore", routes.handle_backup_restore)
+
+    logger.info("[api_extensions] Registered %d config/setup routes", 24)

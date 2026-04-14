@@ -73,6 +73,10 @@
   margin: 24px 0 36px;
 }
 
+.UiSettingsContentInner {
+  margin-top: 12px;
+}
+
 .UiSettingsPanel {
   display: flex;
   flex-direction: column;

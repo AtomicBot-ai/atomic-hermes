@@ -1,6 +1,7 @@
 import { createSlice, createAsyncThunk } from "@reduxjs/toolkit";
 
 type OnboardingState = {
+  loaded: boolean;
   onboarded: boolean;
 };
 
@@ -44,6 +45,7 @@ export const setOnboarded = createAsyncThunk(
 );
 
 const initialState: OnboardingState = {
+  loaded: false,
   onboarded: false,
 };
 
@@ -52,6 +54,7 @@ const onboardingSlice = createSlice({
   initialState,
   reducers: {
     _setOnboardedState(state, action: { payload: boolean }) {
+      state.loaded = true;
       state.onboarded = action.payload;
     },
   },

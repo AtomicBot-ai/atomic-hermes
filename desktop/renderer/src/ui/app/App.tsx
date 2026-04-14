@@ -11,11 +11,14 @@ import { ChatPage } from "../chat/ChatPage";
 import { StartChatPage } from "../chat/StartChatPage";
 import {
   AiModelsTab,
+  LogsTab,
   McpServersTab,
+  OtherTab,
   PlaceholderTab,
   SettingsIndexRedirect,
   SettingsPage,
 } from "../settings";
+import { ConnectorsTab } from "../settings/connectors/ConnectorsTab";
 import { SkillsSettingsTab } from "../settings/skills/SkillsSettingsTab";
 import { SkillEditor } from "../settings/skills/SkillEditor";
 import { DashboardPage } from "../dashboard";
@@ -34,6 +37,18 @@ function readSidebarOpenFromStorage(): boolean {
   } catch {
     return true;
   }
+}
+
+function OtherTabRoute() {
+  const [error, setError] = React.useState<string | null>(null);
+  return (
+    <>
+      {error && (
+        <div style={{ color: "#ff6b6b", fontSize: 13, padding: "8px 0" }}>{error}</div>
+      )}
+      <OtherTab onError={setError} />
+    </>
+  );
 }
 
 function LoadingScreen() {
@@ -95,9 +110,11 @@ function SidebarLayout() {
 export function App() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
+  const onboardingLoaded = useAppSelector((s) => s.onboarding.loaded);
   const onboarded = useAppSelector((s) => s.onboarding.onboarded);
   const navigate = useNavigate();
   const didAutoNavRef = React.useRef(false);
+  const wasRestartingRef = React.useRef(false);
 
   React.useEffect(() => {
     void dispatch(initGatewayState());
@@ -114,7 +131,14 @@ export function App() {
     if (!state) return;
 
     if (state.kind === "ready") {
-      if (didAutoNavRef.current) return;
+      if (!onboardingLoaded) return;
+      if (didAutoNavRef.current) {
+        if (wasRestartingRef.current) {
+          wasRestartingRef.current = false;
+          void navigate(routes.settingsMessengers, { replace: true });
+        }
+        return;
+      }
       didAutoNavRef.current = true;
       if (!onboarded) {
         void navigate(routes.setup, { replace: true });
@@ -129,7 +153,11 @@ export function App() {
     if (state.kind === "starting") {
       void navigate(routes.loading, { replace: true });
     }
-  }, [state, navigate, onboarded]);
+    if (state.kind === "restarting") {
+      wasRestartingRef.current = true;
+      void navigate(routes.loading, { replace: true });
+    }
+  }, [state, navigate, onboardingLoaded, onboarded]);
 
   if (state?.kind === "ready") {
     return (
@@ -147,15 +175,7 @@ export function App() {
             <Route path="ai-providers" element={<Navigate to={routes.settingsModels} replace />} />
             <Route path="ai-models" element={<AiModelsTab />} />
             <Route path="skills" element={<SkillsSettingsTab />} />
-            <Route
-              path="messengers"
-              element={
-                <PlaceholderTab
-                  title="Messengers"
-                  description="Messaging connectors will appear here after Hermes adds desktop integration endpoints."
-                />
-              }
-            />
+            <Route path="messengers" element={<ConnectorsTab />} />
             <Route
               path="voice"
               element={
@@ -166,6 +186,7 @@ export function App() {
               }
             />
             <Route path="mcp-servers" element={<McpServersTab />} />
+            <Route path="logs" element={<LogsTab />} />
             <Route
               path="account"
               element={
@@ -175,15 +196,7 @@ export function App() {
                 />
               }
             />
-            <Route
-              path="other"
-              element={
-                <PlaceholderTab
-                  title="Other"
-                  description="Advanced, privacy, and maintenance settings will be wired here in a later pass."
-                />
-              }
-            />
+            <Route path="other" element={<OtherTabRoute />} />
           </Route>
         </Route>
         <Route path="*" element={<Navigate to={routes.chat} replace />} />

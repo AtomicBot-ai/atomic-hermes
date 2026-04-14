@@ -6,6 +6,7 @@ export type SettingsTabId =
   | "connectors"
   | "voice"
   | "mcpServers"
+  | "logs"
   | "other";
 
 export type SettingsTabDef = {
@@ -57,6 +58,14 @@ export const SETTINGS_TABS: SettingsTabDef[] = [
     label: "MCP Servers",
     title: "MCP Servers",
     description: "Review Model Context Protocol server integrations.",
+  },
+  {
+    id: "logs",
+    path: "logs",
+    href: routes.settingsLogs,
+    label: "Logs",
+    title: "Logs",
+    description: "View live agent, gateway, and error logs.",
   },
   {
     id: "other",

@@ -279,17 +279,20 @@ def _openai_error(message: str, err_type: str = "invalid_request_error", param: 
 
 
 if AIOHTTP_AVAILABLE:
+    _LARGE_BODY_PATHS = frozenset({"/api/backup/restore"})
+
     @web.middleware
     async def body_limit_middleware(request, handler):
         """Reject overly large request bodies early based on Content-Length."""
         if request.method in ("POST", "PUT", "PATCH"):
-            cl = request.headers.get("Content-Length")
-            if cl is not None:
-                try:
-                    if int(cl) > MAX_REQUEST_BYTES:
-                        return web.json_response(_openai_error("Request body too large.", code="body_too_large"), status=413)
-                except ValueError:
-                    return web.json_response(_openai_error("Invalid Content-Length header.", code="invalid_content_length"), status=400)
+            if request.path not in _LARGE_BODY_PATHS:
+                cl = request.headers.get("Content-Length")
+                if cl is not None:
+                    try:
+                        if int(cl) > MAX_REQUEST_BYTES:
+                            return web.json_response(_openai_error("Request body too large.", code="body_too_large"), status=413)
+                    except ValueError:
+                        return web.json_response(_openai_error("Invalid Content-Length header.", code="invalid_content_length"), status=400)
         return await handler(request)
 else:
     body_limit_middleware = None  # type: ignore[assignment]
@@ -2036,7 +2039,7 @@ class APIServerAdapter(BasePlatformAdapter):
 
         try:
             mws = [mw for mw in (cors_middleware, body_limit_middleware, security_headers_middleware) if mw is not None]
-            self._app = web.Application(middlewares=mws)
+            self._app = web.Application(middlewares=mws, client_max_size=500 * 1024 * 1024)
             self._app["api_server_adapter"] = self
             self._app.router.add_get("/health", self._handle_health)
             self._app.router.add_get("/v1/health", self._handle_health)

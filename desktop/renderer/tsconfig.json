@@ -16,7 +16,9 @@
       "@store/*": ["./src/store/*"],
       "@shared/*": ["./src/ui/shared/*"],
       "@styles/*": ["./src/ui/styles/*"],
-      "@ui/*": ["./src/ui/*"]
+      "@ui/*": ["./src/ui/*"],
+      "@ipc/*": ["./src/ipc/*"],
+      "@lib/*": ["./src/lib/*"]
     }
   },
   "include": ["src/**/*"],

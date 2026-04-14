@@ -17,6 +17,8 @@ export default defineConfig({
       "@shared": path.resolve(__dirname, "src/ui/shared"),
       "@styles": path.resolve(__dirname, "src/ui/styles"),
       "@ui": path.resolve(__dirname, "src/ui"),
+      "@ipc": path.resolve(__dirname, "src/ipc"),
+      "@lib": path.resolve(__dirname, "src/lib"),
     },
   },
   build: {

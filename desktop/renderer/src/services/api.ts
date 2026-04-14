@@ -170,6 +170,29 @@ export async function testChat(
   return { ok: true, reply: reply || "Chat test succeeded." };
 }
 
+export type LogsResponse = {
+  file: string;
+  lines: string[];
+};
+
+export async function getLogs(
+  port: number,
+  params: {
+    file?: string;
+    lines?: number;
+    level?: string;
+    component?: string;
+  },
+): Promise<LogsResponse> {
+  const qs = new URLSearchParams();
+  if (params.file) qs.set("file", params.file);
+  if (params.lines) qs.set("lines", String(params.lines));
+  if (params.level && params.level !== "ALL") qs.set("level", params.level);
+  if (params.component && params.component !== "all")
+    qs.set("component", params.component);
+  return fetchJson(`${getBaseUrl(port)}/api/logs?${qs.toString()}`);
+}
+
 export async function requestDeviceCode(
   port: number,
   provider: "nous" | "openai-codex",
@@ -191,5 +214,40 @@ export async function pollOAuthToken(
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ provider, deviceCode, ...extra }),
+  });
+}
+
+export type BackupCreateResponse = {
+  ok: boolean;
+  path?: string;
+  size?: number;
+  fileCount?: number;
+  error?: string;
+};
+
+export async function createBackup(port: number): Promise<BackupCreateResponse> {
+  return fetchJson(`${getBaseUrl(port)}/api/backup/create`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({}),
+  });
+}
+
+export type BackupRestoreResponse = {
+  ok: boolean;
+  restored?: number;
+  errors?: string[];
+  error?: string;
+};
+
+export async function restoreBackup(
+  port: number,
+  base64: string,
+  filename: string,
+): Promise<BackupRestoreResponse> {
+  return fetchJson(`${getBaseUrl(port)}/api/backup/restore`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ base64, filename }),
   });
 }

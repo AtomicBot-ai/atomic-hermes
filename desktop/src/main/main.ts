@@ -1,4 +1,5 @@
-import { app, BrowserWindow, ipcMain, shell } from "electron";
+import { app, BrowserWindow, ipcMain, session, shell } from "electron";
+import * as fs from "fs";
 import * as path from "path";
 import { startPythonBackend, PythonBridge } from "./python-bridge";
 import {
@@ -78,6 +79,25 @@ ipcMain.handle(
   },
 );
 
+ipcMain.handle("reset-and-close", async () => {
+  pythonBridge?.kill();
+  pythonBridge = null;
+  backendPort = null;
+
+  killAllTerminals();
+
+  fs.rmSync(stateDir, { recursive: true, force: true });
+
+  await session.defaultSession.clearStorageData();
+
+  setTimeout(() => {
+    app.relaunch();
+    app.quit();
+  }, 50);
+
+  return { ok: true };
+});
+
 registerTerminalIpcHandlers({
   getMainWindow: () => mainWindow,
   stateDir,
@@ -88,6 +108,12 @@ async function startDesktopBackend(): Promise<void> {
     pythonBridge = await startPythonBackend();
     backendPort = pythonBridge.port;
     mainWindow?.webContents.send("python-ready");
+
+    pythonBridge.onRestartExit(() => {
+      console.log("Gateway requested restart (exit 75), restarting backend...");
+      mainWindow?.webContents.send("python-restarting");
+      void startDesktopBackend();
+    });
 
     pythonBridge.dashboardPort
       .then((port) => {

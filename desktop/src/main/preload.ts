@@ -26,6 +26,9 @@ contextBridge.exposeInMainWorld("hermesAPI", {
   onPythonReady: (cb: () => void) => {
     ipcRenderer.on("python-ready", () => cb());
   },
+  onPythonRestarting: (cb: () => void) => {
+    ipcRenderer.on("python-restarting", () => cb());
+  },
   onDashboardError: (cb: (error: string) => void) => {
     ipcRenderer.on("dashboard-error", (_event, error: string) => cb(error));
   },
@@ -42,6 +45,8 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("onboarding-get-state"),
   setOnboardingState: (onboarded: boolean): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("onboarding-set-state", { onboarded }),
+  resetAndClose: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("reset-and-close"),
 
   // ── Terminal (PTY) ──────────────────────────────────────────────────
   terminalCreate: async (): Promise<{ id: string }> =>

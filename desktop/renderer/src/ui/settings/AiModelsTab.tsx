@@ -84,6 +84,7 @@ export function AiModelsTab() {
         value: item.id,
         label: item.name,
         icon: resolveProviderIconUrl(item.id),
+        emoji: item.emoji,
         description: item.desc,
         badge: getProviderBadge(item),
       })),

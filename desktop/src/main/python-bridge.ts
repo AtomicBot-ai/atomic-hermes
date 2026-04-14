@@ -87,12 +87,16 @@ function getPythonPath(): string {
   return "python3";
 }
 
+export const RESTART_EXIT_CODE = 75;
+
 export interface PythonBridge {
   process: ChildProcess;
   port: number;
   /** Resolves with the dashboard port once the dashboard server is up. */
   dashboardPort: Promise<number>;
   kill: () => void;
+  /** Register a callback that fires when the process exits with the restart code. */
+  onRestartExit: (cb: () => void) => void;
 }
 
 function getServerScript(): string {
@@ -106,11 +110,20 @@ function createBridge(
   port: number,
   dashboardPort: Promise<number>,
 ): PythonBridge {
+  let restartCb: (() => void) | null = null;
+
+  child.on("exit", (code) => {
+    if (code === RESTART_EXIT_CODE && restartCb) {
+      restartCb();
+    }
+  });
+
   return {
     process: child,
     port,
     dashboardPort,
     kill: () => {
+      restartCb = null;
       if (!child.killed) {
         child.kill("SIGTERM");
         setTimeout(() => {
@@ -118,6 +131,7 @@ function createBridge(
         }, 5_000);
       }
     },
+    onRestartExit: (cb) => { restartCb = cb; },
   };
 }
 

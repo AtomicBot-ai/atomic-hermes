@@ -15,6 +15,7 @@ export const routes = {
   settingsMessengers: "/settings/messengers",
   settingsVoice: "/settings/voice",
   settingsMcpServers: "/settings/mcp-servers",
+  settingsLogs: "/settings/logs",
   settingsOther: "/settings/other",
 } as const;
 

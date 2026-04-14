@@ -6,6 +6,7 @@ export type RichOption<T extends string = string> = {
   value: T;
   label: string;
   icon?: string;
+  emoji?: string;
   description?: string;
   meta?: string;
   badge?: { text: string; variant: string };
@@ -111,6 +112,8 @@ export function RichSelect<T extends string>(props: {
             alt=""
             aria-hidden="true"
           />
+        ) : selected?.emoji ? (
+          <span className={s.triggerIcon} aria-hidden="true">{selected.emoji}</span>
         ) : null}
         <span
           className={`${s.triggerLabel} ${!selected ? s.triggerPlaceholder : ""}`}
@@ -171,6 +174,8 @@ export function RichSelect<T extends string>(props: {
                           alt=""
                           aria-hidden="true"
                         />
+                      ) : opt.emoji && !props.onlySelectedIcon ? (
+                        <span className={s.optionIcon} aria-hidden="true">{opt.emoji}</span>
                       ) : null}
                       <div className={s.optionContent}>
                         <div className={s.optionHeader}>
