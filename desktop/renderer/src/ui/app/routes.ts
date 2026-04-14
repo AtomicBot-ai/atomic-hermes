@@ -4,6 +4,7 @@ export const routes = {
   setup: "/setup",
   chat: "/chat",
   dashboard: "/dashboard",
+  terminal: "/terminal",
   skills: "/skills",
   skillEdit: "/skills/edit/:name",
   settings: "/settings",
@@ -14,7 +15,6 @@ export const routes = {
   settingsMessengers: "/settings/messengers",
   settingsVoice: "/settings/voice",
   settingsMcpServers: "/settings/mcp-servers",
-  settingsAccount: "/settings/account",
   settingsOther: "/settings/other",
 } as const;
 

@@ -11,6 +11,7 @@ import { ChatPage } from "../chat/ChatPage";
 import { StartChatPage } from "../chat/StartChatPage";
 import {
   AiModelsTab,
+  McpServersTab,
   PlaceholderTab,
   SettingsIndexRedirect,
   SettingsPage,
@@ -18,6 +19,7 @@ import {
 import { SkillsSettingsTab } from "../settings/skills/SkillsSettingsTab";
 import { SkillEditor } from "../settings/skills/SkillEditor";
 import { DashboardPage } from "../dashboard";
+import { TerminalPage } from "../terminal";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
 import a from "./App.module.css";
 
@@ -137,6 +139,7 @@ export function App() {
           <Route index element={<Navigate to={routes.chat} replace />} />
           <Route path="chat" element={<ChatRoute />} />
           <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="terminal" element={<TerminalPage />} />
           <Route path="skills" element={<Navigate to={routes.settingsSkills} replace />} />
           <Route path="skills/edit/:name" element={<SkillEditor />} />
           <Route path="settings" element={<SettingsPage state={state} />}>
@@ -162,15 +165,7 @@ export function App() {
                 />
               }
             />
-            <Route
-              path="mcp-servers"
-              element={
-                <PlaceholderTab
-                  title="MCP Servers"
-                  description="Server registration, auth, and health controls will land here when the renderer gains MCP management APIs."
-                />
-              }
-            />
+            <Route path="mcp-servers" element={<McpServersTab />} />
             <Route
               path="account"
               element={

@@ -4,6 +4,7 @@ import { Brand } from "@shared/kit";
 import type { ProfileSummary } from "../../services/profile-api";
 import { SessionSidebarItem } from "./SessionSidebarItem";
 import { ProfileSidebarSelector } from "./ProfileSidebarSelector";
+import { useTerminalSidebarVisible } from "../shared/hooks/useTerminalSidebarVisible";
 import { routes } from "../app/routes";
 import css from "./Sidebar.module.css";
 
@@ -56,7 +57,17 @@ function IconDashboard() {
   );
 }
 
-export function SidebarContent(props: SidebarContentProps) {
+function IconTerminal() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M6 8l3 2.5L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M11 13h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+export function SidebarContent(props: SidebarContentProps & { showTerminal?: boolean }) {
   const {
     onCollapse,
     onNewSession,
@@ -74,6 +85,7 @@ export function SidebarContent(props: SidebarContentProps) {
     currentSessionKey,
     onSelectSession,
     onDeleteSession,
+    showTerminal,
   } = props;
 
   return (
@@ -151,6 +163,14 @@ export function SidebarContent(props: SidebarContentProps) {
           </span>
           <span className={css.UiChatSidebarNavLabel}>Dashboard</span>
         </NavLink>
+        {showTerminal && (
+          <NavLink to={routes.terminal} className={css.UiChatSidebarSettings} aria-label="Terminal">
+            <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+              <IconTerminal />
+            </span>
+            <span className={css.UiChatSidebarNavLabel}>Terminal</span>
+          </NavLink>
+        )}
         <NavLink to={routes.settingsSkills} className={css.UiChatSidebarSettings} aria-label="Skills">
           <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">

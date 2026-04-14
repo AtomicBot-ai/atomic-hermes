@@ -6,6 +6,8 @@ import {
   writeOnboardedState,
   clearOnboardedState,
 } from "./onboarding-state";
+import { registerTerminalIpcHandlers } from "./terminal/ipc";
+import { killAllTerminals } from "./terminal/pty-manager";
 
 app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
 
@@ -76,6 +78,11 @@ ipcMain.handle(
   },
 );
 
+registerTerminalIpcHandlers({
+  getMainWindow: () => mainWindow,
+  stateDir,
+});
+
 async function startDesktopBackend(): Promise<void> {
   try {
     pythonBridge = await startPythonBackend();
@@ -113,6 +120,7 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  killAllTerminals();
   pythonBridge?.kill();
 });
 

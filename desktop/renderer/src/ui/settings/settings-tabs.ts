@@ -6,7 +6,6 @@ export type SettingsTabId =
   | "connectors"
   | "voice"
   | "mcpServers"
-  | "account"
   | "other";
 
 export type SettingsTabDef = {
@@ -58,14 +57,6 @@ export const SETTINGS_TABS: SettingsTabDef[] = [
     label: "MCP Servers",
     title: "MCP Servers",
     description: "Review Model Context Protocol server integrations.",
-  },
-  {
-    id: "account",
-    path: "account",
-    href: routes.settingsAccount,
-    label: "Account",
-    title: "Account",
-    description: "Account-level features will arrive in a future update.",
   },
   {
     id: "other",

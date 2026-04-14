@@ -5,6 +5,7 @@ import { useAppSelector } from "@store/hooks";
 import { fetchSessions, deleteSession } from "../../services/session-api";
 import { createProfile, fetchProfiles, selectProfile, type ProfileSummary } from "../../services/profile-api";
 import { getSelectedHermesProfile, setSelectedHermesProfile } from "../../services/request-context";
+import { useTerminalSidebarVisible } from "../shared/hooks/useTerminalSidebarVisible";
 import { routes } from "../app/routes";
 import { SidebarContent } from "./SidebarContent";
 import css from "./Sidebar.module.css";
@@ -45,6 +46,16 @@ function IconDashboard() {
   );
 }
 
+function IconTerminal() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <rect x="2.25" y="3.25" width="13.5" height="11.5" rx="1.75" stroke="currentColor" strokeWidth="1.25" />
+      <path d="M5.5 7.25l2.5 2L5.5 11.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
+      <path d="M10 11.25h2.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 export type SidebarProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -57,6 +68,7 @@ export function Sidebar(props: SidebarProps) {
   const currentSessionKey = searchParams.get("session") ?? null;
   const gatewayState = useAppSelector((s) => s.gateway.state);
   const port = gatewayState?.kind === "ready" ? gatewayState.port : 8642;
+  const [showTerminal] = useTerminalSidebarVisible();
 
   const [profiles, setProfiles] = React.useState<ProfileSummary[]>([]);
   const [profilesLoading, setProfilesLoading] = React.useState(true);
@@ -288,6 +300,18 @@ export function Sidebar(props: SidebarProps) {
                 <IconDashboard />
               </span>
             </NavLink>
+            {showTerminal && (
+              <NavLink
+                to={routes.terminal}
+                className={css.UiChatSidebarNarrowFooterBtn}
+                aria-label="Terminal"
+                title="Terminal"
+              >
+                <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+                  <IconTerminal />
+                </span>
+              </NavLink>
+            )}
             <NavLink
               to={routes.settings}
               className={css.UiChatSidebarNarrowFooterBtn}
@@ -343,6 +367,7 @@ export function Sidebar(props: SidebarProps) {
             currentSessionKey={currentSessionKey}
             onSelectSession={handleSelectSession}
             onDeleteSession={handleDeleteSession}
+            showTerminal={showTerminal}
           />
         </div>
       </div>
