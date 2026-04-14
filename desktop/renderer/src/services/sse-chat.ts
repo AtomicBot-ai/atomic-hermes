@@ -11,6 +11,7 @@ export type StreamCallbacks = {
   onReasoningDelta?: (text: string) => void;
   onToolProgress?: (label: string) => void;
   onSessionId?: (sessionId: string) => void;
+  onCompletionId?: (completionId: string) => void;
   onDone: (fullText: string) => void;
   onError: (error: Error) => void;
 };
@@ -107,6 +108,10 @@ export function streamChatCompletion(
       if (sessionId) {
         callbacks.onSessionId?.(sessionId);
       }
+      const completionId = res.headers.get("X-Hermes-Completion-Id");
+      if (completionId) {
+        callbacks.onCompletionId?.(completionId);
+      }
 
       const reader = res.body?.getReader();
       if (!reader) {
@@ -153,4 +158,18 @@ export function streamChatCompletion(
   })();
 
   return controller;
+}
+
+export async function cancelChatCompletion(
+  port: number,
+  completionId: string,
+): Promise<void> {
+  try {
+    await fetch(
+      `${getBaseUrl(port)}/api/v1/chat/completions/${encodeURIComponent(completionId)}/cancel`,
+      withHermesHeaders({ method: "POST" }),
+    );
+  } catch {
+    // Best-effort: server may already be done
+  }
 }

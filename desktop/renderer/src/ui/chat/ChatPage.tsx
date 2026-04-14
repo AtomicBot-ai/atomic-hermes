@@ -19,7 +19,7 @@ import {
 import { parseThinkingContent } from "../../lib/parse-thinking";
 import { buildChatSessionSystemMessage, loadChatSessionSeed } from "../../services/chat-session";
 import { fetchSessionMessages } from "../../services/session-api";
-import { streamChatCompletion } from "../../services/sse-chat";
+import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
 import ct from "./ChatTranscript.module.css";
@@ -50,6 +50,7 @@ export function ChatPage() {
   const scrollRef = useRef<HTMLDivElement>(null);
   const composerRef = useRef<ChatComposerRef>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const completionIdRef = useRef<string | null>(null);
   const prevSessionRef = useRef<string>("");
   const prevLoadingRef = useRef(false);
 
@@ -124,6 +125,7 @@ export function ChatPage() {
 
     dispatch(streamStarted());
     setAnchorVersion((value) => value + 1);
+    completionIdRef.current = null;
     abortRef.current = streamChatCompletion(port, requestMessages, {
       onDelta(delta) {
         dispatch(streamDelta(delta));
@@ -137,10 +139,14 @@ export function ChatPage() {
       onSessionId() {
         // session_id derived by gateway, sidebar will refresh
       },
+      onCompletionId(id) {
+        completionIdRef.current = id;
+      },
       onDone() {
         dispatch(streamFinished());
         setAnchorVersion((value) => value + 1);
         abortRef.current = null;
+        completionIdRef.current = null;
       },
       onError(err) {
         console.error("Stream error:", err);
@@ -151,15 +157,21 @@ export function ChatPage() {
           content: `Error: ${err.message}`,
         }));
         abortRef.current = null;
+        completionIdRef.current = null;
       },
     });
   }, [input, sending, streaming, messages, port, dispatch, sessionSeed]);
 
   const handleStop = useCallback(() => {
+    const cid = completionIdRef.current;
+    if (cid) {
+      void cancelChatCompletion(port, cid);
+    }
     abortRef.current?.abort();
     abortRef.current = null;
+    completionIdRef.current = null;
     dispatch(streamAborted());
-  }, [dispatch]);
+  }, [dispatch, port]);
 
   const displayMessages: DisplayMessage[] = messages
     .filter((m): m is ChatMessage & { role: "user" | "assistant" } =>

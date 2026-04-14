@@ -7,7 +7,7 @@ import {
   createChatSessionSeed,
   saveChatSessionSeed,
 } from "../../services/chat-session";
-import { streamChatCompletion } from "../../services/sse-chat";
+import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
 import { routes } from "../app/routes";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
@@ -24,6 +24,7 @@ export function StartChatPage() {
   const [pendingUserMessage, setPendingUserMessage] = useState("");
   const composerRef = useRef<ChatComposerRef>(null);
   const abortRef = useRef<AbortController | null>(null);
+  const completionIdRef = useRef<string | null>(null);
   const createdSessionIdRef = useRef<string | null>(null);
   const sessionSeedRef = useRef(createChatSessionSeed());
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -63,10 +64,14 @@ export function StartChatPage() {
       { role: "user", content: text },
     ];
 
+    completionIdRef.current = null;
     abortRef.current = streamChatCompletion(port, messages, {
       onSessionId(sessionId) {
         saveChatSessionSeed(sessionId, sessionSeedRef.current);
         createdSessionIdRef.current = sessionId;
+      },
+      onCompletionId(id) {
+        completionIdRef.current = id;
       },
       onDelta(delta) {
         setStreaming(true);
@@ -87,6 +92,7 @@ export function StartChatPage() {
         setSending(false);
         setStreaming(false);
         abortRef.current = null;
+        completionIdRef.current = null;
         if (createdSessionIdRef.current) {
           void navigate(
             `${routes.chat}?session=${encodeURIComponent(createdSessionIdRef.current)}`,
@@ -101,13 +107,19 @@ export function StartChatPage() {
         setStreamingRaw(err.message || "An error occurred");
         setPendingUserMessage((prev) => prev || text);
         abortRef.current = null;
+        completionIdRef.current = null;
         createdSessionIdRef.current = null;
       },
     });
   }, [input, sending, streaming, port, navigate]);
 
   const handleStop = useCallback(() => {
+    const cid = completionIdRef.current;
+    if (cid) {
+      void cancelChatCompletion(port, cid);
+    }
     createdSessionIdRef.current = null;
+    completionIdRef.current = null;
     abortRef.current?.abort();
     abortRef.current = null;
     setSending(false);
@@ -116,7 +128,7 @@ export function StartChatPage() {
     setStreamingActions([]);
     setStreamingMessageId(null);
     sessionSeedRef.current = createChatSessionSeed();
-  }, []);
+  }, [port]);
 
   const displayMessages: DisplayMessage[] = pendingUserMessage
     ? [{ id: "pending-user", role: "user", content: pendingUserMessage }]

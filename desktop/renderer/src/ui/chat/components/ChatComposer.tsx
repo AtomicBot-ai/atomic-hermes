@@ -108,7 +108,7 @@ export const ChatComposer = React.forwardRef<ChatComposerRef, ChatComposerProps>
           <div className={s.UiChatComposerButtonBlock}>
             <div />
             <div className={s.UiChatComposerButtonGroup}>
-              {streaming && onStop ? (
+              {(streaming || disabled) && onStop ? (
                 <button
                   type="button"
                   className={`${s.UiChatSendButton} ${s.UiChatStopButton}`}
