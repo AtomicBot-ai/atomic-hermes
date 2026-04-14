@@ -57,6 +57,32 @@ jobs:
       - name: Bundle hermes resources
         run: bash desktop/scripts/bundle-all.sh
 
+      # Remove broken symlinks and fake .app dirs that cause codesign --verify to fail.
+      # Python venvs create absolute symlinks that break after relocation;
+      # some npm packages (puppeteer-stealth) contain *.app dirs that aren't real bundles.
+      - name: Clean bundle for codesign
+        run: |
+          set -euo pipefail
+          BUILD="desktop/build"
+
+          # Remove broken symlinks
+          BROKEN=$(find "$BUILD" -type l ! -exec test -e {} \; -print 2>/dev/null || true)
+          if [ -n "$BROKEN" ]; then
+            echo "Removing broken symlinks:"
+            echo "$BROKEN"
+            echo "$BROKEN" | xargs rm -f
+          fi
+
+          # Rename fake .app directories (no Contents/Info.plist)
+          find "$BUILD" -type d -name "*.app" -print0 2>/dev/null | while IFS= read -r -d '' d; do
+            if [ ! -f "$d/Contents/Info.plist" ]; then
+              echo "Renaming fake .app: $d"
+              mv "$d" "${d%.app}.app-dir"
+            fi
+          done
+
+          echo "Bundle clean for codesign"
+
       - name: Install desktop dependencies
         working-directory: desktop
         run: npm ci

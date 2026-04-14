@@ -228,31 +228,58 @@ module.exports = async function afterPack(context) {
     return;
   }
 
+  console.log("[hermes-desktop] afterPack v3: starting bundle cleanup...");
+
   const appOutDir = context.appOutDir;
   const appBundle = findFirstAppBundle(appOutDir);
   if (!appBundle) {
     throw new Error(`[hermes-desktop] Failed to locate .app bundle in: ${appOutDir}`);
   }
 
-  // Clean the ENTIRE .app bundle — codesign --verify --deep --strict scans everything.
-  const brokenLinks = removeBrokenSymlinks(appBundle);
-  if (brokenLinks > 0) {
-    console.log(`[hermes-desktop] afterPack: removed ${brokenLinks} broken symlinks from bundle`);
+  console.log(`[hermes-desktop] afterPack: cleaning bundle at ${appBundle}`);
+
+  // Use shell `find` as a reliable cross-check for broken symlinks.
+  // Node.js readdirSync + isSymbolicLink can miss edge cases on certain fs layouts.
+  try {
+    const findResult = spawnSync("find", [appBundle, "-type", "l", "!",  "-exec", "test", "-e", "{}", ";", "-print"], {
+      encoding: "utf-8",
+      stdio: ["ignore", "pipe", "pipe"],
+      timeout: 60000,
+    });
+    const brokenList = (findResult.stdout || "").trim().split("\n").filter(Boolean);
+    if (brokenList.length > 0) {
+      console.log(`[hermes-desktop] afterPack: find detected ${brokenList.length} broken symlinks:`);
+      for (const link of brokenList.slice(0, 20)) {
+        console.log(`  broken: ${link}`);
+      }
+      if (brokenList.length > 20) {
+        console.log(`  ... and ${brokenList.length - 20} more`);
+      }
+      for (const link of brokenList) {
+        try { fs.unlinkSync(link); } catch { /* already gone */ }
+      }
+      console.log(`[hermes-desktop] afterPack: removed ${brokenList.length} broken symlinks via find`);
+    } else {
+      console.log("[hermes-desktop] afterPack: no broken symlinks found via find");
+    }
+  } catch (e) {
+    console.log(`[hermes-desktop] afterPack: find fallback failed (${e.message}), using Node.js walker`);
+    const brokenLinks = removeBrokenSymlinks(appBundle);
+    console.log(`[hermes-desktop] afterPack: removed ${brokenLinks} broken symlinks via Node.js walker`);
   }
 
   const resourcesDir = path.join(appBundle, "Contents", "Resources");
 
   // Rename fake .app directories (e.g. puppeteer chrome.app) that aren't real bundles.
   const fakeApps = renameFakeAppBundles(resourcesDir);
-  if (fakeApps > 0) {
-    console.log(`[hermes-desktop] afterPack: renamed ${fakeApps} fake .app directories`);
-  }
+  console.log(`[hermes-desktop] afterPack: renamed ${fakeApps} fake .app directories`);
 
   // Signing extraResources
   let identity;
   try {
     identity = selectSigningIdentity();
-  } catch {
+  } catch (e) {
+    console.log(`[hermes-desktop] afterPack: selectSigningIdentity error: ${e.message}`);
     identity = null;
   }
 
