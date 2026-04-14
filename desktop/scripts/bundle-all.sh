@@ -237,7 +237,44 @@ rm -f "$BUILD_DIR/package.json" "$BUILD_DIR/package-lock.json"
 echo -e "${GREEN}✓${NC} Node modules installed"
 
 # ==========================================================================
-# 9. Patch venv for relocatability
+# 9. Strip unnecessary files (reduces codesign time dramatically)
+# ==========================================================================
+
+echo -e "${CYAN}→${NC} Stripping unnecessary files from bundle..."
+
+STRIPPED=0
+
+# __pycache__ and .pyc — not needed at runtime (Python regenerates them)
+while IFS= read -r -d '' d; do
+    rm -rf "$d"
+    STRIPPED=$((STRIPPED + 1))
+done < <(find "$BUILD_DIR/python" "$BUILD_DIR/hermes-venv" -type d -name "__pycache__" -print0 2>/dev/null)
+
+find "$BUILD_DIR/python" "$BUILD_DIR/hermes-venv" -name "*.pyc" -delete 2>/dev/null || true
+
+# Test directories inside site-packages
+while IFS= read -r -d '' d; do
+    rm -rf "$d"
+    STRIPPED=$((STRIPPED + 1))
+done < <(find "$BUILD_DIR/hermes-venv/lib" -type d \( -name "tests" -o -name "test" -o -name "testing" \) -print0 2>/dev/null)
+
+# Static libraries (.a) — only needed for linking, not runtime
+find "$BUILD_DIR/python" "$BUILD_DIR/hermes-venv" -name "*.a" -delete 2>/dev/null || true
+
+# Python stdlib test suite (large, never used)
+rm -rf "$BUILD_DIR/python/lib/python"*/test 2>/dev/null || true
+rm -rf "$BUILD_DIR/python/lib/python"*/unittest 2>/dev/null || true
+
+# .dist-info directories (pip metadata, not needed at runtime)
+while IFS= read -r -d '' d; do
+    rm -rf "$d"
+    STRIPPED=$((STRIPPED + 1))
+done < <(find "$BUILD_DIR/hermes-venv/lib" -type d -name "*.dist-info" -print0 2>/dev/null)
+
+echo -e "${GREEN}✓${NC} Stripped $STRIPPED directories"
+
+# ==========================================================================
+# 10. Patch venv for relocatability
 # ==========================================================================
 
 echo -e "${CYAN}→${NC} Patching venv for relocatable paths..."
@@ -259,7 +296,7 @@ done
 echo -e "${GREEN}✓${NC} Paths patched"
 
 # ==========================================================================
-# 10. Summary
+# 11. Summary
 # ==========================================================================
 
 echo ""
