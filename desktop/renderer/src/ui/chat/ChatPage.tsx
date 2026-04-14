@@ -13,6 +13,7 @@ import {
   streamFinished,
   streamAborted,
   sessionChanged,
+  approvalRequested,
   nextMsgId,
   type ChatMessage,
 } from "@store/slices/chatSlice";
@@ -22,6 +23,7 @@ import { fetchSessionMessages } from "../../services/session-api";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
+import { ExecApprovalModal } from "./ExecApprovalModal";
 import ct from "./ChatTranscript.module.css";
 
 export function ChatPage() {
@@ -136,6 +138,9 @@ export function ChatPage() {
       onToolProgress(label) {
         dispatch(streamToolProgress(label));
       },
+      onExecApprovalRequested(data) {
+        dispatch(approvalRequested(data));
+      },
       onSessionId() {
         // session_id derived by gateway, sidebar will refresh
       },
@@ -204,6 +209,8 @@ export function ChatPage() {
           onStop={handleStop}
         />
       </div>
+
+      <ExecApprovalModal />
     </div>
   );
 }

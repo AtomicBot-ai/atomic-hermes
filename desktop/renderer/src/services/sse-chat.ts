@@ -6,12 +6,19 @@ export type ChatCompletionMessage = {
   content: string;
 };
 
+export type ExecApprovalData = {
+  command: string;
+  description: string;
+  sessionId: string;
+};
+
 export type StreamCallbacks = {
   onDelta: (text: string) => void;
   onReasoningDelta?: (text: string) => void;
   onToolProgress?: (label: string) => void;
   onSessionId?: (sessionId: string) => void;
   onCompletionId?: (completionId: string) => void;
+  onExecApprovalRequested?: (data: ExecApprovalData) => void;
   onDone: (fullText: string) => void;
   onError: (error: Error) => void;
 };
@@ -62,6 +69,22 @@ export function streamChatCompletion(
         if (label) {
           const prefix = toolProgress?.emoji ? `${toolProgress.emoji} ` : "";
           callbacks.onToolProgress?.(`${prefix}${label}`);
+        }
+        return;
+      }
+
+      if (eventName === "exec_approval_requested") {
+        const payload = JSON.parse(data) as {
+          command?: string;
+          description?: string;
+          session_id?: string;
+        };
+        if (payload.command) {
+          callbacks.onExecApprovalRequested?.({
+            command: payload.command,
+            description: payload.description ?? "",
+            sessionId: payload.session_id ?? "",
+          });
         }
         return;
       }

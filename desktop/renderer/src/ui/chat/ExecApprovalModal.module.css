@@ -1,0 +1,138 @@
+/* ── Exec Approval Modal (overrides on UiModalOverlay / UiModalCard) ── */
+
+.ExecApprovalOverlay {
+  z-index: 950;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+}
+
+.ExecApprovalCard {
+  width: 460px;
+  max-height: min(80vh, 600px);
+  padding: 20px 24px;
+  gap: 16px;
+  display: flex;
+  flex-direction: column;
+}
+
+.ExecApprovalBody {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 0;
+}
+
+.ExecApprovalHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.ExecApprovalHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ExecApprovalCloseBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.4);
+  cursor: pointer;
+  transition:
+    background 0.15s,
+    color 0.15s;
+}
+
+.ExecApprovalCloseBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.ExecApprovalTitle {
+  font-size: 18px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.ExecApprovalSub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.45);
+  margin-top: 2px;
+}
+
+.ExecApprovalCommand {
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", Menlo, monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #a3e635;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 12px 14px;
+  word-break: break-all;
+  white-space: pre-wrap;
+}
+
+.ExecApprovalMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.ExecApprovalMetaRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.ExecApprovalMetaLabel {
+  color: rgba(255, 255, 255, 0.4);
+  min-width: 72px;
+  flex-shrink: 0;
+}
+
+.ExecApprovalMetaValue {
+  color: rgba(255, 255, 255, 0.75);
+  word-break: break-all;
+}
+
+.ExecApprovalError {
+  font-size: 12px;
+  color: rgba(255, 122, 0, 0.95);
+  background: rgba(255, 122, 0, 0.08);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+}
+
+.ExecApprovalActions {
+  display: flex;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.ExecApprovalActions :global(.UiActionButton) {
+  flex: 1;
+  width: auto;
+}
+
+.ExecApprovalDenyBtn {
+  background: rgba(255, 70, 70, 0.15);
+  color: #ff6b6b;
+}
+
+.ExecApprovalDenyBtn:hover:enabled {
+  background: rgba(255, 70, 70, 0.25);
+}

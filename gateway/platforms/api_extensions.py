@@ -451,6 +451,7 @@ class _ConfigRoutes:
         reasoning_callback=None,
         tool_progress_callback=None,
         agent_ref: Optional[list] = None,
+        approval_stream_q=None,
     ) -> Dict[str, Any]:
         """Run a chat completion through the shared agent stack."""
         loop = asyncio.get_running_loop()
@@ -465,11 +466,35 @@ class _ConfigRoutes:
             )
             if agent_ref is not None:
                 agent_ref[0] = agent
-            return agent.run_conversation(
-                user_message=user_message,
-                conversation_history=history,
-                task_id="default",
-            )
+
+            if approval_stream_q is not None:
+                from tools.approval import (
+                    register_gateway_notify,
+                    reset_current_session_key,
+                    set_current_session_key,
+                    unregister_gateway_notify,
+                )
+
+                def _approval_notify(approval_data: dict) -> None:
+                    approval_stream_q.put(("exec_approval_requested", approval_data))
+
+                token = set_current_session_key(session_id)
+                register_gateway_notify(session_id, _approval_notify)
+                try:
+                    return agent.run_conversation(
+                        user_message=user_message,
+                        conversation_history=history,
+                        task_id="default",
+                    )
+                finally:
+                    unregister_gateway_notify(session_id)
+                    reset_current_session_key(token)
+            else:
+                return agent.run_conversation(
+                    user_message=user_message,
+                    conversation_history=history,
+                    task_id="default",
+                )
 
         return await loop.run_in_executor(None, _run)
 
@@ -577,6 +602,15 @@ class _ConfigRoutes:
                                         extra={"session_id": session_id},
                                     ),
                                 )
+                            elif kind == "exec_approval_requested":
+                                await _write_event(
+                                    "exec_approval_requested",
+                                    {
+                                        "command": payload.get("command", ""),
+                                        "description": payload.get("description", ""),
+                                        "session_id": session_id,
+                                    },
+                                )
                         break
                     continue
 
@@ -615,6 +649,15 @@ class _ConfigRoutes:
                             delta={"tool_progress": payload},
                             extra={"session_id": session_id},
                         ),
+                    )
+                elif kind == "exec_approval_requested":
+                    await _write_event(
+                        "exec_approval_requested",
+                        {
+                            "command": payload.get("command", ""),
+                            "description": payload.get("description", ""),
+                            "session_id": session_id,
+                        },
                     )
 
             result = await agent_task
@@ -1012,6 +1055,7 @@ class _ConfigRoutes:
                     reasoning_callback=_on_reasoning_delta,
                     tool_progress_callback=_on_tool_progress,
                     agent_ref=agent_ref,
+                    approval_stream_q=stream_q,
                 )
             )
             return await self._write_extended_chat_completion_stream(
@@ -1106,6 +1150,46 @@ class _ConfigRoutes:
             "[api_extensions] Completion cancelled by client: %s", completion_id
         )
         return web.json_response({"status": "cancelled"})
+
+    # -- POST /api/approval/resolve -------------------------------------------
+
+    async def handle_approval_resolve(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        try:
+            body = await request.json()
+        except Exception:
+            return web.json_response(
+                _openai_error("Invalid JSON body"), status=400
+            )
+
+        session_id = body.get("session_id", "")
+        decision = body.get("decision", "")
+        if not session_id or decision not in ("allow-once", "allow-always", "deny"):
+            return web.json_response(
+                _openai_error(
+                    "session_id and decision (allow-once|allow-always|deny) required"
+                ),
+                status=400,
+            )
+
+        decision_map = {
+            "allow-once": "once",
+            "allow-always": "always",
+            "deny": "deny",
+        }
+        choice = decision_map[decision]
+
+        from tools.approval import resolve_gateway_approval
+
+        count = resolve_gateway_approval(session_id, choice)
+        logger.info(
+            "[api_extensions] Approval resolved: session=%s decision=%s resolved=%d",
+            session_id, choice, count,
+        )
+        return web.json_response({"status": "resolved", "resolved": count})
 
     # -- GET /api/capabilities ------------------------------------------------
 
@@ -2814,4 +2898,6 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
     app.router.add_post("/api/backup/create", routes.handle_backup_create)
     app.router.add_post("/api/backup/restore", routes.handle_backup_restore)
 
-    logger.info("[api_extensions] Registered %d config/setup routes", 24)
+    app.router.add_post("/api/approval/resolve", routes.handle_approval_resolve)
+
+    logger.info("[api_extensions] Registered %d config/setup routes", 25)

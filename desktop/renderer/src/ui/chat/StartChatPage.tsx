@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAppSelector } from "@store/hooks";
+import { useAppSelector, useAppDispatch } from "@store/hooks";
+import { approvalRequested } from "@store/slices/chatSlice";
 import { parseThinkingContent } from "../../lib/parse-thinking";
 import {
   buildChatSessionSystemMessage,
@@ -11,9 +12,11 @@ import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-c
 import { routes } from "../app/routes";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
+import { ExecApprovalModal } from "./ExecApprovalModal";
 import ct from "./ChatTranscript.module.css";
 
 export function StartChatPage() {
+  const dispatch = useAppDispatch();
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [streaming, setStreaming] = useState(false);
@@ -88,6 +91,9 @@ export function StartChatPage() {
         setSending(false);
         setStreamingActions((prev) => [...prev, label]);
       },
+      onExecApprovalRequested(data) {
+        dispatch(approvalRequested(data));
+      },
       onDone() {
         setSending(false);
         setStreaming(false);
@@ -111,7 +117,7 @@ export function StartChatPage() {
         createdSessionIdRef.current = null;
       },
     });
-  }, [input, sending, streaming, port, navigate]);
+  }, [input, sending, streaming, port, navigate, dispatch]);
 
   const handleStop = useCallback(() => {
     const cid = completionIdRef.current;
@@ -170,6 +176,8 @@ export function StartChatPage() {
           onStop={handleStop}
         />
       </div>
+
+      <ExecApprovalModal />
     </div>
   );
 }

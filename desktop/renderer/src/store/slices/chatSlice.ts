@@ -9,6 +9,12 @@ export type ChatMessage = {
   actions?: string[];
 };
 
+export type PendingApproval = {
+  command: string;
+  description: string;
+  sessionId: string;
+};
+
 type ChatState = {
   messages: ChatMessage[];
   activeSessionKey: string | null;
@@ -20,6 +26,7 @@ type ChatState = {
   streamingActions: string[];
   streamingRaw: string;
   streamingMessageId: string | null;
+  pendingApproval: PendingApproval | null;
 };
 
 const initialState: ChatState = {
@@ -33,6 +40,7 @@ const initialState: ChatState = {
   streamingActions: [],
   streamingRaw: "",
   streamingMessageId: null,
+  pendingApproval: null,
 };
 
 let msgCounter = 0;
@@ -54,6 +62,7 @@ const chatSlice = createSlice({
       state.streamingRaw = "";
       state.streamingMessageId = null;
       state.sending = false;
+      state.pendingApproval = null;
     },
     messagesLoaded(state, action: PayloadAction<ChatMessage[]>) {
       state.messages = action.payload;
@@ -141,6 +150,13 @@ const chatSlice = createSlice({
       state.streamingRaw = "";
       state.streamingMessageId = null;
       state.sending = false;
+      state.pendingApproval = null;
+    },
+    approvalRequested(state, action: PayloadAction<PendingApproval>) {
+      state.pendingApproval = action.payload;
+    },
+    approvalResolved(state) {
+      state.pendingApproval = null;
     },
   },
 });
@@ -158,6 +174,8 @@ export const {
   streamFinished,
   streamAborted,
   clearChat,
+  approvalRequested,
+  approvalResolved,
 } = chatSlice.actions;
 
 export const chatReducer = chatSlice.reducer;

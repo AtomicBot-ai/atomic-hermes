@@ -1,11 +1,43 @@
 import React from "react";
 
+import { useSettingsState } from "../settings-context";
+import { getConfig, patchConfig } from "../../../services/api";
 import type { SecurityLevel } from "./types";
 import s from "../OtherTab.module.css";
 
+const APPROVAL_MODE_TO_LEVEL: Record<string, SecurityLevel> = {
+  manual: "balanced",
+  smart: "balanced",
+  off: "permissive",
+};
+
+const LEVEL_TO_APPROVAL_MODE: Record<SecurityLevel, string> = {
+  balanced: "manual",
+  permissive: "off",
+};
+
 export function SecuritySection({ onError }: { onError: (msg: string | null) => void }) {
+  const { port } = useSettingsState();
   const [securityLevel, setSecurityLevel] = React.useState<SecurityLevel>("balanced");
   const [securityBusy, setSecurityBusy] = React.useState(false);
+  const [loaded, setLoaded] = React.useState(false);
+
+  React.useEffect(() => {
+    let cancelled = false;
+    getConfig(port)
+      .then((res) => {
+        if (cancelled) return;
+        const mode = (res.config?.approvals as Record<string, unknown> | undefined)?.mode;
+        if (typeof mode === "string" && mode in APPROVAL_MODE_TO_LEVEL) {
+          setSecurityLevel(APPROVAL_MODE_TO_LEVEL[mode]);
+        }
+        setLoaded(true);
+      })
+      .catch(() => {
+        if (!cancelled) setLoaded(true);
+      });
+    return () => { cancelled = true; };
+  }, [port]);
 
   const handleSecurityLevelChange = React.useCallback(
     async (level: SecurityLevel) => {
@@ -14,18 +46,20 @@ export function SecuritySection({ onError }: { onError: (msg: string | null) => 
       setSecurityBusy(true);
       onError(null);
       try {
-        // TODO: wire gateway RPC (exec.approvals.get / exec.approvals.set)
-        // and config.patch to persist the security level.
-        // For now the select updates local state only.
-        await new Promise((r) => setTimeout(r, 100));
-      } catch {
+        const res = await patchConfig(port, {
+          config: { approvals: { mode: LEVEL_TO_APPROVAL_MODE[level] } },
+        });
+        if (!res.ok) {
+          throw new Error(res.error || "Unknown error");
+        }
+      } catch (err) {
         setSecurityLevel(prev);
-        onError("Failed to update security level");
+        onError(`Failed to update security level: ${err instanceof Error ? err.message : String(err)}`);
       } finally {
         setSecurityBusy(false);
       }
     },
-    [onError, securityLevel],
+    [onError, securityLevel, port],
   );
 
   return (
@@ -42,7 +76,7 @@ export function SecuritySection({ onError }: { onError: (msg: string | null) => 
           <select
             className={s.UiSettingsOtherSelect}
             value={securityLevel}
-            disabled={securityBusy}
+            disabled={securityBusy || !loaded}
             onChange={(e) => void handleSecurityLevelChange(e.target.value as SecurityLevel)}
           >
             <option value="balanced">Balanced</option>

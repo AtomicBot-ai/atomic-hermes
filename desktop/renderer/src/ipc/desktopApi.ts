@@ -1,12 +1,5 @@
 /**
- * Typed wrapper around the Electron preload IPC bridge.
- *
- * In the current Hermes desktop build the bridge is not yet wired,
- * so getDesktopApiOrNull() always returns null and callers degrade
- * gracefully (buttons disabled, error messages shown).
- *
- * TODO: wire the real Electron preload bridge and expose it on
- * `window.hermesDesktop` via contextBridge.exposeInMainWorld.
+ * Typed wrapper around the Electron preload IPC bridge (`window.hermesAPI`).
  */
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
@@ -29,7 +22,7 @@ export interface DesktopApi {
 export const DESKTOP_API_UNAVAILABLE = "Desktop API not available";
 
 export function getDesktopApi(): DesktopApi {
-  const api = (window as any).hermesDesktop as DesktopApi | undefined;
+  const api = (window as any).hermesAPI as DesktopApi | undefined;
   if (!api) {
     throw new Error("Desktop API not available — not running inside Electron");
   }
@@ -37,9 +30,9 @@ export function getDesktopApi(): DesktopApi {
 }
 
 export function getDesktopApiOrNull(): DesktopApi | null {
-  return ((window as any).hermesDesktop as DesktopApi | undefined) ?? null;
+  return ((window as any).hermesAPI as DesktopApi | undefined) ?? null;
 }
 
 export function isDesktopApiAvailable(): boolean {
-  return (window as any).hermesDesktop != null;
+  return (window as any).hermesAPI != null;
 }
