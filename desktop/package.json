@@ -15,7 +15,11 @@
     "bundle": "bash scripts/bundle-all.sh",
     "bundle:dev": "bash scripts/bundle-dev.sh",
     "dist": "npm run build:all && electron-builder",
-    "dist:local": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist -- --publish never"
+    "dist:local": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist -- --publish never",
+    "release": "bash scripts/release.sh",
+    "release:patch": "bash scripts/release.sh patch",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major"
   },
   "dependencies": {
     "electron-store": "^8.2.0",

@@ -40,6 +40,11 @@ function hasNotaryAuthEnv() {
   return Boolean(key && keyId && issuer);
 }
 
+function repoRootFromHere() {
+  // desktop/scripts -> repo root
+  return path.resolve(__dirname, "..", "..");
+}
+
 function appRootFromHere() {
   return path.resolve(__dirname, "..");
 }
@@ -145,23 +150,14 @@ module.exports = async function afterAllArtifactBuild(context) {
     );
   }
 
-  console.log(`[hermes-desktop] afterAllArtifactBuild: notarizing DMG: ${dmgPath}`);
-
-  const notaryArgs = ["notarytool", "submit", dmgPath, "--wait"];
-  if (process.env.NOTARYTOOL_PROFILE) {
-    notaryArgs.push("--keychain-profile", process.env.NOTARYTOOL_PROFILE.trim());
-  } else {
-    notaryArgs.push(
-      "--key", process.env.NOTARYTOOL_KEY.trim(),
-      "--key-id", process.env.NOTARYTOOL_KEY_ID.trim(),
-      "--issuer", process.env.NOTARYTOOL_ISSUER.trim()
+  const repoRoot = repoRootFromHere();
+  const notarizeScript = path.join(repoRoot, "scripts", "notarize-mac-artifact.sh");
+  if (!fs.existsSync(notarizeScript)) {
+    throw new Error(
+      `[hermes-desktop] afterAllArtifactBuild: notarize script not found: ${notarizeScript}`
     );
   }
 
-  run("xcrun", notaryArgs, { stdio: "inherit", env: process.env });
-
-  console.log("[hermes-desktop] afterAllArtifactBuild: stapling ticket to DMG...");
-  run("xcrun", ["stapler", "staple", dmgPath], { stdio: "inherit" });
-
-  console.log("[hermes-desktop] afterAllArtifactBuild: DMG notarization complete");
+  console.log(`[hermes-desktop] afterAllArtifactBuild: notarizing DMG: ${dmgPath}`);
+  run("bash", [notarizeScript, dmgPath], { stdio: "inherit", env: process.env });
 };

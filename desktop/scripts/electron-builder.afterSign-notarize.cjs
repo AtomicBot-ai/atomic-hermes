@@ -41,14 +41,20 @@ function hasNotaryAuthEnv() {
   return Boolean(key && keyId && issuer);
 }
 
+function repoRootFromHere() {
+  // desktop/scripts -> repo root
+  return path.resolve(__dirname, "..", "..");
+}
+
 /**
  * electron-builder afterSign hook.
  *
- * Notarizes the signed .app bundle via xcrun notarytool.
- * Only runs when NOTARIZE=1 is set — local builds skip this entirely.
+ * Notarization strategy:
+ * - Create a temporary zip of the signed .app (ditto keeps resource forks)
+ * - Submit via the repo's notarytool wrapper (supports keychain profile or API key)
+ * - Staple ticket into the .app (STAPLE_APP_PATH)
  *
- * Auth: either NOTARYTOOL_PROFILE (keychain profile) or
- * NOTARYTOOL_KEY + NOTARYTOOL_KEY_ID + NOTARYTOOL_ISSUER (API key).
+ * Only runs when NOTARIZE=1 is set — local builds skip this entirely.
  */
 module.exports = async function afterSign(context) {
   if (context.electronPlatformName !== "darwin") {
@@ -76,6 +82,12 @@ module.exports = async function afterSign(context) {
     throw new Error(`[hermes-desktop] afterSign: failed to locate .app bundle in: ${appOutDir}`);
   }
 
+  const repoRoot = repoRootFromHere();
+  const notarizeScript = path.join(repoRoot, "scripts", "notarize-mac-artifact.sh");
+  if (!fs.existsSync(notarizeScript)) {
+    throw new Error(`[hermes-desktop] afterSign: notarize script not found: ${notarizeScript}`);
+  }
+
   const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "hermes-notary-"));
   const appName = path.basename(appBundle, ".app");
   const zipPath = path.join(tmpDir, `${appName}.notary.zip`);
@@ -87,25 +99,14 @@ module.exports = async function afterSign(context) {
     });
 
     console.log("[hermes-desktop] afterSign: submitting to notary service (xcrun notarytool)...");
-
-    const notaryArgs = ["notarytool", "submit", zipPath, "--wait"];
-
-    if (process.env.NOTARYTOOL_PROFILE) {
-      notaryArgs.push("--keychain-profile", process.env.NOTARYTOOL_PROFILE.trim());
-    } else {
-      notaryArgs.push(
-        "--key", process.env.NOTARYTOOL_KEY.trim(),
-        "--key-id", process.env.NOTARYTOOL_KEY_ID.trim(),
-        "--issuer", process.env.NOTARYTOOL_ISSUER.trim()
-      );
-    }
-
-    run("xcrun", notaryArgs, { stdio: "inherit", env: process.env });
-
-    console.log("[hermes-desktop] afterSign: stapling ticket to .app...");
-    run("xcrun", ["stapler", "staple", appBundle], { stdio: "inherit" });
-
-    console.log("[hermes-desktop] afterSign: notarization complete");
+    run(
+      "bash",
+      [
+        "-lc",
+        `STAPLE_APP_PATH="${appBundle.replace(/"/g, '\\"')}" "${notarizeScript.replace(/"/g, '\\"')}" "${zipPath.replace(/"/g, '\\"')}"`,
+      ],
+      { stdio: "inherit", env: process.env }
+    );
   } finally {
     try {
       fs.rmSync(tmpDir, { recursive: true, force: true });
