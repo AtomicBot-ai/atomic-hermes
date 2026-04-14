@@ -1,17 +1,13 @@
 import React from "react";
-import { NavLink } from "react-router-dom";
 
 import { getDesktopApiOrNull, DESKTOP_API_UNAVAILABLE } from "@ipc/desktopApi";
-import { routes } from "../../app/routes";
 import { openExternal } from "@shared/utils/openExternal";
-import { useTerminalSidebarVisible } from "@shared/hooks/useTerminalSidebarVisible";
 import { errorToMessage } from "@lib/error-format";
 import s from "../OtherTab.module.css";
 import { APP_VERSION } from "@lib/app-version";
 
 export function AppInfoSection({ onError }: { onError: (msg: string | null) => void }) {
   const [launchAtStartup, setLaunchAtStartup] = React.useState(false);
-  const [terminalSidebar, setTerminalSidebar] = useTerminalSidebarVisible();
 
   React.useEffect(() => {
     const api = getDesktopApiOrNull();
@@ -38,8 +34,6 @@ export function AppInfoSection({ onError }: { onError: (msg: string | null) => v
     },
     [onError],
   );
-
-  const api = getDesktopApiOrNull();
 
   return (
     <>
@@ -113,35 +107,6 @@ export function AppInfoSection({ onError }: { onError: (msg: string | null) => v
         </div>
       </section>
 
-      {/* Terminal */}
-      <section className={s.UiSettingsOtherSection}>
-        <h3 className={s.UiSettingsOtherSectionTitle}>Terminal</h3>
-        <div className={s.UiSettingsOtherCard}>
-          <div className={s.UiSettingsOtherRow}>
-            <span className={s.UiSettingsOtherRowLabel}>Show in sidebar</span>
-            <span className={s.UiSettingsOtherAppRowValue}>
-              <label className={s.UiSettingsOtherToggle} aria-label="Show terminal in sidebar">
-                <input
-                  type="checkbox"
-                  checked={terminalSidebar}
-                  onChange={(e) => setTerminalSidebar(e.target.checked)}
-                />
-                <span className={s.UiSettingsOtherToggleTrack}>
-                  <span className={s.UiSettingsOtherToggleThumb} />
-                </span>
-              </label>
-            </span>
-          </div>
-          <div className={s.UiSettingsOtherRow}>
-            <NavLink to={routes.terminal} className={s.UiSettingsOtherLink}>
-              Open Terminal
-            </NavLink>
-          </div>
-        </div>
-        <p className={s.UiSettingsOtherHint}>
-          Built-in terminal with Hermes and bundled tools in PATH.
-        </p>
-      </section>
     </>
   );
 }
