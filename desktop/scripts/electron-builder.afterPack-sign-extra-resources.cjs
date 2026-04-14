@@ -149,17 +149,106 @@ function codesignFile(filePath, identity, entitlements) {
   run("/usr/bin/codesign", args, { stdio: "inherit" });
 }
 
+function removeBrokenSymlinks(rootDir) {
+  let removed = 0;
+  const stack = [rootDir];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    if (!dir) {
+      continue;
+    }
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (entry.isSymbolicLink()) {
+        try {
+          fs.statSync(full);
+        } catch {
+          fs.unlinkSync(full);
+          removed += 1;
+        }
+        continue;
+      }
+      if (entry.isDirectory()) {
+        stack.push(full);
+      }
+    }
+  }
+  return removed;
+}
+
+function renameFakeAppBundles(rootDir) {
+  let renamed = 0;
+  const stack = [rootDir];
+  while (stack.length > 0) {
+    const dir = stack.pop();
+    if (!dir) {
+      continue;
+    }
+    let entries;
+    try {
+      entries = fs.readdirSync(dir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+    for (const entry of entries) {
+      const full = path.join(dir, entry.name);
+      if (!entry.isDirectory()) {
+        continue;
+      }
+      if (entry.name.endsWith(".app")) {
+        const infoPlist = path.join(full, "Contents", "Info.plist");
+        if (!fs.existsSync(infoPlist)) {
+          const newName = full.replace(/\.app$/, ".app-dir");
+          fs.renameSync(full, newName);
+          renamed += 1;
+          continue;
+        }
+      }
+      stack.push(full);
+    }
+  }
+  return renamed;
+}
+
 /**
  * electron-builder afterPack hook.
  *
- * Signs extraResources Mach-O binaries (Python, ripgrep, Node, native addons)
- * BEFORE electron-builder applies the final app bundle signature on macOS.
+ * 1. Removes broken symlinks and fake .app bundles that cause codesign --verify to fail.
+ * 2. Signs extraResources Mach-O binaries (Python, ripgrep, Node, native addons)
+ *    BEFORE electron-builder applies the final app bundle signature on macOS.
  */
 module.exports = async function afterPack(context) {
   if (context.electronPlatformName !== "darwin") {
     return;
   }
 
+  const appOutDir = context.appOutDir;
+  const appBundle = findFirstAppBundle(appOutDir);
+  if (!appBundle) {
+    throw new Error(`[hermes-desktop] Failed to locate .app bundle in: ${appOutDir}`);
+  }
+
+  const resourcesDir = path.join(appBundle, "Contents", "Resources");
+
+  // Clean broken symlinks — codesign --verify --deep --strict rejects them.
+  const brokenLinks = removeBrokenSymlinks(resourcesDir);
+  if (brokenLinks > 0) {
+    console.log(`[hermes-desktop] afterPack: removed ${brokenLinks} broken symlinks`);
+  }
+
+  // Rename fake .app directories (e.g. puppeteer chrome.app) that aren't real bundles.
+  const fakeApps = renameFakeAppBundles(resourcesDir);
+  if (fakeApps > 0) {
+    console.log(`[hermes-desktop] afterPack: renamed ${fakeApps} fake .app directories`);
+  }
+
+  // Signing extraResources
   let identity;
   try {
     identity = selectSigningIdentity();
@@ -174,13 +263,6 @@ module.exports = async function afterPack(context) {
     return;
   }
 
-  const appOutDir = context.appOutDir;
-  const appBundle = findFirstAppBundle(appOutDir);
-  if (!appBundle) {
-    throw new Error(`[hermes-desktop] Failed to locate .app bundle in: ${appOutDir}`);
-  }
-
-  const resourcesDir = path.join(appBundle, "Contents", "Resources");
   const candidateRoots = [
     "python",
     "hermes-venv",
