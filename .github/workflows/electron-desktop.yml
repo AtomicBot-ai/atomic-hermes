@@ -129,7 +129,9 @@ jobs:
       # Build with --publish never. Uploads are handled separately via gh CLI
       # to avoid electron-builder HTTP timeouts during long notarization waits.
       - name: Build with electron-builder
+        id: electron-build
         working-directory: desktop
+        continue-on-error: true
         run: |
           ulimit -n 524288
           npx electron-builder --publish never
@@ -141,6 +143,39 @@ jobs:
           NOTARIZE: ${{ secrets.NOTARYTOOL_KEY != '' && secrets.MACOS_CSC_LINK != '' && '1' || '' }}
           NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
           NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
+
+      - name: Diagnose codesign failure
+        if: steps.electron-build.outcome == 'failure'
+        working-directory: desktop
+        run: |
+          set -x
+          APP="release/mac-arm64/Atomic Hermes.app"
+          if [ ! -d "$APP" ]; then
+            echo "App bundle not found at $APP"
+            ls -la release/ 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "=== ALL symlinks in bundle ==="
+          find "$APP" -type l -exec sh -c 'echo "LINK: $1 -> $(readlink "$1")  [exists=$(test -e "$1" && echo yes || echo NO)]"' _ {} \;
+
+          echo ""
+          echo "=== Broken symlinks ==="
+          find "$APP" -type l ! -exec test -e {} \; -print
+
+          echo ""
+          echo "=== Absolute-path symlinks ==="
+          find "$APP" -type l -exec sh -c 'target=$(readlink "$1"); case "$target" in /*) echo "ABS: $1 -> $target" ;; esac' _ {} \;
+
+          echo ""
+          echo "=== Attempting codesign verify for detailed output ==="
+          codesign --verify --deep --strict --verbose=4 "$APP" 2>&1 || true
+
+          exit 1
+
+      - name: Fail if electron-builder failed
+        if: steps.electron-build.outcome == 'failure'
+        run: exit 1
 
       # Generate latest-mac.yml for electron-updater (normally created by --publish always).
       - name: Generate latest-mac.yml

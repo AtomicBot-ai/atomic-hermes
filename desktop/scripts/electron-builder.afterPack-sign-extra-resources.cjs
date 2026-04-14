@@ -228,7 +228,7 @@ module.exports = async function afterPack(context) {
     return;
   }
 
-  console.log("[hermes-desktop] afterPack v3: starting bundle cleanup...");
+  console.log("[hermes-desktop] afterPack v4: starting bundle cleanup...");
 
   const appOutDir = context.appOutDir;
   const appBundle = findFirstAppBundle(appOutDir);
@@ -238,32 +238,72 @@ module.exports = async function afterPack(context) {
 
   console.log(`[hermes-desktop] afterPack: cleaning bundle at ${appBundle}`);
 
-  // Use shell `find` as a reliable cross-check for broken symlinks.
-  // Node.js readdirSync + isSymbolicLink can miss edge cases on certain fs layouts.
+  // Enumerate ALL symlinks in the bundle for diagnostics.
+  // codesign --verify rejects: broken targets, absolute paths outside bundle, cycles.
   try {
-    const findResult = spawnSync("find", [appBundle, "-type", "l", "!",  "-exec", "test", "-e", "{}", ";", "-print"], {
+    const allLinksResult = spawnSync("find", [appBundle, "-type", "l"], {
       encoding: "utf-8",
       stdio: ["ignore", "pipe", "pipe"],
-      timeout: 60000,
+      timeout: 120000,
     });
-    const brokenList = (findResult.stdout || "").trim().split("\n").filter(Boolean);
-    if (brokenList.length > 0) {
-      console.log(`[hermes-desktop] afterPack: find detected ${brokenList.length} broken symlinks:`);
-      for (const link of brokenList.slice(0, 20)) {
-        console.log(`  broken: ${link}`);
+    const allLinks = (allLinksResult.stdout || "").trim().split("\n").filter(Boolean);
+    console.log(`[hermes-desktop] afterPack: total symlinks in bundle: ${allLinks.length}`);
+
+    let broken = 0;
+    let absolute = 0;
+    let outsideBundle = 0;
+
+    for (const link of allLinks) {
+      let target;
+      try {
+        target = fs.readlinkSync(link);
+      } catch {
+        continue;
       }
-      if (brokenList.length > 20) {
-        console.log(`  ... and ${brokenList.length - 20} more`);
+
+      const isAbsolute = path.isAbsolute(target);
+      let targetExists = false;
+      try {
+        fs.statSync(link);
+        targetExists = true;
+      } catch {
+        targetExists = false;
       }
-      for (const link of brokenList) {
+
+      // Resolve the actual destination
+      let resolvedTarget;
+      try {
+        resolvedTarget = isAbsolute ? target : path.resolve(path.dirname(link), target);
+      } catch {
+        resolvedTarget = target;
+      }
+      const isOutsideBundle = !resolvedTarget.startsWith(appBundle);
+
+      if (!targetExists) {
+        broken += 1;
+        console.log(`  BROKEN: ${link} -> ${target}`);
         try { fs.unlinkSync(link); } catch { /* already gone */ }
+      } else if (isAbsolute && isOutsideBundle) {
+        outsideBundle += 1;
+        console.log(`  OUTSIDE-BUNDLE: ${link} -> ${target}`);
+        try { fs.unlinkSync(link); } catch { /* already gone */ }
+      } else if (isAbsolute) {
+        absolute += 1;
+        // Convert absolute in-bundle symlink to relative
+        const relTarget = path.relative(path.dirname(link), resolvedTarget);
+        console.log(`  ABS->REL: ${link}: ${target} -> ${relTarget}`);
+        try {
+          fs.unlinkSync(link);
+          fs.symlinkSync(relTarget, link);
+        } catch (e) {
+          console.log(`    failed to convert: ${e.message}`);
+        }
       }
-      console.log(`[hermes-desktop] afterPack: removed ${brokenList.length} broken symlinks via find`);
-    } else {
-      console.log("[hermes-desktop] afterPack: no broken symlinks found via find");
     }
+
+    console.log(`[hermes-desktop] afterPack: symlink summary — broken=${broken}, absolute-in-bundle=${absolute}, outside-bundle=${outsideBundle}, ok=${allLinks.length - broken - absolute - outsideBundle}`);
   } catch (e) {
-    console.log(`[hermes-desktop] afterPack: find fallback failed (${e.message}), using Node.js walker`);
+    console.log(`[hermes-desktop] afterPack: symlink scan failed (${e.message}), using Node.js walker`);
     const brokenLinks = removeBrokenSymlinks(appBundle);
     console.log(`[hermes-desktop] afterPack: removed ${brokenLinks} broken symlinks via Node.js walker`);
   }
