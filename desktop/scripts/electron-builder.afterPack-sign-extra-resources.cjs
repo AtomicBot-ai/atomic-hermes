@@ -234,13 +234,13 @@ module.exports = async function afterPack(context) {
     throw new Error(`[hermes-desktop] Failed to locate .app bundle in: ${appOutDir}`);
   }
 
-  const resourcesDir = path.join(appBundle, "Contents", "Resources");
-
-  // Clean broken symlinks — codesign --verify --deep --strict rejects them.
-  const brokenLinks = removeBrokenSymlinks(resourcesDir);
+  // Clean the ENTIRE .app bundle — codesign --verify --deep --strict scans everything.
+  const brokenLinks = removeBrokenSymlinks(appBundle);
   if (brokenLinks > 0) {
-    console.log(`[hermes-desktop] afterPack: removed ${brokenLinks} broken symlinks`);
+    console.log(`[hermes-desktop] afterPack: removed ${brokenLinks} broken symlinks from bundle`);
   }
+
+  const resourcesDir = path.join(appBundle, "Contents", "Resources");
 
   // Rename fake .app directories (e.g. puppeteer chrome.app) that aren't real bundles.
   const fakeApps = renameFakeAppBundles(resourcesDir);
