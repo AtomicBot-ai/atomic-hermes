@@ -282,7 +282,18 @@ while IFS= read -r -d '' d; do
     fi
 done < <(find "$BUILD_DIR/node_modules" -type d -name "*.app" -print0 2>/dev/null)
 
-echo -e "${GREEN}✓${NC} Stripped $STRIPPED directories"
+# Broken symlinks — codesign --verify --deep --strict rejects bundles containing them.
+# Python venvs create symlinks with absolute paths that break after relocation.
+BROKEN_LINKS=0
+while IFS= read -r -d '' link; do
+    rm -f "$link"
+    BROKEN_LINKS=$((BROKEN_LINKS + 1))
+done < <(find "$BUILD_DIR" -type l ! -exec test -e {} \; -print0 2>/dev/null)
+if [ "$BROKEN_LINKS" -gt 0 ]; then
+    echo -e "  ${YELLOW}⚠${NC} Removed $BROKEN_LINKS broken symlinks"
+fi
+
+echo -e "${GREEN}✓${NC} Stripped $STRIPPED directories, $BROKEN_LINKS broken symlinks"
 
 # ==========================================================================
 # 10. Patch venv for relocatability
@@ -305,6 +316,17 @@ for script in "$BUILD_DIR/hermes-venv/bin/"*; do
 done
 
 echo -e "${GREEN}✓${NC} Paths patched"
+
+# Final pass: remove any broken symlinks created by patching or relocation.
+# codesign --verify --deep --strict rejects bundles with dangling symlinks.
+FINAL_BROKEN=0
+while IFS= read -r -d '' link; do
+    rm -f "$link"
+    FINAL_BROKEN=$((FINAL_BROKEN + 1))
+done < <(find "$BUILD_DIR" -type l ! -exec test -e {} \; -print0 2>/dev/null)
+if [ "$FINAL_BROKEN" -gt 0 ]; then
+    echo -e "  ${YELLOW}⚠${NC} Removed $FINAL_BROKEN broken symlinks (post-patch)"
+fi
 
 # ==========================================================================
 # 11. Summary
