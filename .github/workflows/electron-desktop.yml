@@ -36,6 +36,14 @@ jobs:
           node-version: 22.x
           check-latest: true
 
+      # Python 3.11 is required for two reasons:
+      # 1. bundle-all.sh uses uv to install Python 3.11 and create the hermes venv
+      # 2. node-gyp inside electron-builder needs distutils (removed in Python 3.12+)
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
       - name: Install uv
         uses: astral-sh/setup-uv@v5
 
@@ -43,6 +51,7 @@ jobs:
         run: |
           node -v
           npm -v
+          python3 --version
           uv --version
 
       - name: Bundle hermes resources
