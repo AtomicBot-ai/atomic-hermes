@@ -271,6 +271,17 @@ while IFS= read -r -d '' d; do
     STRIPPED=$((STRIPPED + 1))
 done < <(find "$BUILD_DIR/hermes-venv/lib" -type d -name "*.dist-info" -print0 2>/dev/null)
 
+# Fake .app directories in node_modules (e.g. puppeteer-extra-plugin-stealth/evasions/chrome.app).
+# macOS codesign treats any *.app directory as an app bundle and fails if it isn't one.
+while IFS= read -r -d '' d; do
+    if [ ! -f "$d/Contents/Info.plist" ]; then
+        NEWNAME="${d%.app}.app-dir"
+        echo -e "  ${YELLOW}⚠${NC} Renaming fake .app bundle: $(basename "$d")"
+        mv "$d" "$NEWNAME"
+        STRIPPED=$((STRIPPED + 1))
+    fi
+done < <(find "$BUILD_DIR/node_modules" -type d -name "*.app" -print0 2>/dev/null)
+
 echo -e "${GREEN}✓${NC} Stripped $STRIPPED directories"
 
 # ==========================================================================
