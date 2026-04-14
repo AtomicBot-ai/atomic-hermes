@@ -308,6 +308,22 @@ if [ -f "$PYVENV_CFG" ]; then
     sed -i '' "s|home = .*|home = ../python/bin|" "$PYVENV_CFG" 2>/dev/null || true
 fi
 
+# Fix venv bin symlinks: python -m venv creates them with absolute paths
+# pointing to the build dir. Replace with relative paths so the bundle
+# is self-contained and codesign doesn't reject outside-bundle targets.
+VENV_BIN="$BUILD_DIR/hermes-venv/bin"
+for link in "$VENV_BIN/python3" "$VENV_BIN/python" "$VENV_BIN/python3.11"; do
+    if [ -L "$link" ]; then
+        rm -f "$link"
+    fi
+done
+# Create a relative symlink chain: python3 -> ../../python/bin/python3
+# python and python3.11 are convenience aliases pointing to python3.
+ln -s "../../python/bin/python3" "$VENV_BIN/python3"
+ln -s "python3" "$VENV_BIN/python"
+ln -s "python3" "$VENV_BIN/python3.11"
+echo -e "  ${GREEN}✓${NC} Venv bin symlinks patched to relative paths"
+
 # Patch shebangs in venv bin scripts
 for script in "$BUILD_DIR/hermes-venv/bin/"*; do
     if [ -f "$script" ] && head -1 "$script" | grep -q "^#!.*python"; then

@@ -289,7 +289,6 @@ module.exports = async function afterPack(context) {
         try { fs.unlinkSync(link); } catch { /* already gone */ }
       } else if (isAbsolute) {
         absolute += 1;
-        // Convert absolute in-bundle symlink to relative
         const relTarget = path.relative(path.dirname(link), resolvedTarget);
         console.log(`  ABS->REL: ${link}: ${target} -> ${relTarget}`);
         try {
@@ -309,6 +308,28 @@ module.exports = async function afterPack(context) {
   }
 
   const resourcesDir = path.join(appBundle, "Contents", "Resources");
+
+  // Rebuild venv python symlinks if they were removed during cleanup.
+  // The correct chain: python3 -> ../../python/bin/python3, python -> python3, python3.11 -> python3
+  const venvBin = path.join(resourcesDir, "hermes-venv", "bin");
+  const pythonBin = path.join(resourcesDir, "python", "bin", "python3");
+  if (fs.existsSync(venvBin) && fs.existsSync(pythonBin)) {
+    const links = { "python3": "../../python/bin/python3", "python": "python3", "python3.11": "python3" };
+    for (const [name, target] of Object.entries(links)) {
+      const linkPath = path.join(venvBin, name);
+      try {
+        const existing = fs.readlinkSync(linkPath);
+        if (existing === target) continue;
+        fs.unlinkSync(linkPath);
+      } catch { /* doesn't exist or not a symlink */ }
+      try {
+        fs.symlinkSync(target, linkPath);
+        console.log(`[hermes-desktop] afterPack: recreated symlink ${name} -> ${target}`);
+      } catch (e) {
+        console.log(`[hermes-desktop] afterPack: failed to create symlink ${name}: ${e.message}`);
+      }
+    }
+  }
 
   // Rename fake .app directories (e.g. puppeteer chrome.app) that aren't real bundles.
   const fakeApps = renameFakeAppBundles(resourcesDir);
