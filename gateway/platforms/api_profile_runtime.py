@@ -87,17 +87,29 @@ class ProfileRuntimeManager:
     async def call(self, profile_id: str, profile_home: Path, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
         worker = await self.ensure_worker(profile_id, profile_home)
         async with worker.lock:
-            loop = asyncio.get_running_loop()
-            request_id = uuid.uuid4().hex
-            future = loop.create_future()
-            worker.pending[request_id] = future
-            worker.request_queue.put({
-                "kind": "call",
-                "request_id": request_id,
-                "method": method,
-                "params": params or {},
-            })
-            return await future
+            return await self._send_call(worker, method, params)
+
+    async def call_unlocked(self, profile_id: str, profile_home: Path, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        """Send a call without acquiring the worker lock.
+
+        Use for messages that must be delivered while stream() holds the lock
+        (e.g. approval resolution during an active agent stream).
+        """
+        worker = await self.ensure_worker(profile_id, profile_home)
+        return await self._send_call(worker, method, params)
+
+    async def _send_call(self, worker: _WorkerHandle, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        loop = asyncio.get_running_loop()
+        request_id = uuid.uuid4().hex
+        future = loop.create_future()
+        worker.pending[request_id] = future
+        worker.request_queue.put({
+            "kind": "call",
+            "request_id": request_id,
+            "method": method,
+            "params": params or {},
+        })
+        return await future
 
     async def stream(self, profile_id: str, profile_home: Path, params: Dict[str, Any]):
         worker = await self.ensure_worker(profile_id, profile_home)

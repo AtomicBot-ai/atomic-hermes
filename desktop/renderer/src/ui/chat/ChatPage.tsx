@@ -21,6 +21,7 @@ import { parseThinkingContent } from "../../lib/parse-thinking";
 import { buildChatSessionSystemMessage, loadChatSessionSeed } from "../../services/chat-session";
 import { fetchSessionMessages } from "../../services/session-api";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
+import { notifyIfHidden } from "../../lib/desktop-notifications";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
 import { ExecApprovalModal } from "./ExecApprovalModal";
@@ -140,6 +141,8 @@ export function ChatPage() {
       },
       onExecApprovalRequested(data) {
         dispatch(approvalRequested(data));
+        const detail = data.description ? `${data.description}\n${data.command}` : data.command;
+        notifyIfHidden("Approval required", detail);
       },
       onSessionId() {
         // session_id derived by gateway, sidebar will refresh
@@ -147,8 +150,9 @@ export function ChatPage() {
       onCompletionId(id) {
         completionIdRef.current = id;
       },
-      onDone() {
+      onDone(fullText) {
         dispatch(streamFinished());
+        notifyIfHidden("Task complete", fullText || "Hermes has finished the task");
         setAnchorVersion((value) => value + 1);
         abortRef.current = null;
         completionIdRef.current = null;

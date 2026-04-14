@@ -303,7 +303,7 @@ class ProfileWorkerRuntime:
             },
         }
 
-    def stream_agent(self, request_id: str, response_queue, params: Dict[str, Any]) -> None:
+    def stream_agent(self, request_id: str, response_queue, params: Dict[str, Any], request_queue=None) -> None:
         stream_q: "queue.Queue[tuple[str, Any] | None]" = queue.Queue()
 
         def emit(kind: str, payload: Any) -> None:
@@ -345,6 +345,13 @@ class ProfileWorkerRuntime:
 
         def _run_agent_sync() -> None:
             try:
+                from tools.approval import (
+                    register_gateway_notify,
+                    reset_current_session_key,
+                    set_current_session_key,
+                    unregister_gateway_notify,
+                )
+
                 agent = self._create_agent(
                     ephemeral_system_prompt=params.get("ephemeral_system_prompt"),
                     session_id=params.get("session_id"),
@@ -352,11 +359,23 @@ class ProfileWorkerRuntime:
                     reasoning_callback=on_reasoning_delta,
                     tool_progress_callback=on_tool_progress,
                 )
-                result = agent.run_conversation(
-                    user_message=params["user_message"],
-                    conversation_history=params.get("conversation_history", []),
-                    task_id="default",
-                )
+                sid = params.get("session_id") or ""
+
+                def _approval_notify(approval_data: dict) -> None:
+                    stream_q.put(("exec_approval_requested", approval_data))
+
+                token = set_current_session_key(sid)
+                register_gateway_notify(sid, _approval_notify)
+                try:
+                    result = agent.run_conversation(
+                        user_message=params["user_message"],
+                        conversation_history=params.get("conversation_history", []),
+                        task_id="default",
+                    )
+                finally:
+                    unregister_gateway_notify(sid)
+                    reset_current_session_key(token)
+
                 result_box["payload"] = {
                     "result": result,
                     "usage": {
@@ -371,6 +390,22 @@ class ProfileWorkerRuntime:
         worker_thread = threading.Thread(target=_run_agent_sync, daemon=True)
         worker_thread.start()
         while worker_thread.is_alive() or not stream_q.empty():
+            if request_queue is not None:
+                try:
+                    msg = request_queue.get_nowait()
+                    if msg is not None and msg.get("method") == "resolve_approval":
+                        from tools.approval import resolve_gateway_approval
+                        p = msg.get("params", {})
+                        count = resolve_gateway_approval(p.get("session_id", ""), p.get("choice", "deny"))
+                        response_queue.put({
+                            "request_id": msg["request_id"],
+                            "kind": "response",
+                            "result": {"resolved": count},
+                        })
+                    elif msg is not None:
+                        request_queue.put(msg)
+                except queue.Empty:
+                    pass
             try:
                 queued = stream_q.get(timeout=0.1)
             except queue.Empty:
@@ -421,8 +456,15 @@ def run_profile_worker(profile_id: str, profile_home: str, request_queue, respon
         method = message["method"]
         params = message.get("params", {})
         try:
+            if method == "resolve_approval":
+                from tools.approval import resolve_gateway_approval
+                session_id = params.get("session_id", "")
+                choice = params.get("choice", "deny")
+                count = resolve_gateway_approval(session_id, choice)
+                response_queue.put({"request_id": request_id, "kind": "response", "result": {"resolved": count}})
+                continue
             if method == "stream_agent":
-                runtime.stream_agent(request_id, response_queue, params)
+                runtime.stream_agent(request_id, response_queue, params, request_queue=request_queue)
                 continue
             handler = getattr(runtime, method)
             if method in {"oauth_device_code"}:

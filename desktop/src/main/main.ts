@@ -1,4 +1,4 @@
-import { app, BrowserWindow, ipcMain, session, shell } from "electron";
+import { app, BrowserWindow, ipcMain, Notification, session, shell } from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import { startPythonBackend, PythonBridge } from "./python-bridge";
@@ -97,6 +97,25 @@ ipcMain.handle("reset-and-close", async () => {
 
   return { ok: true };
 });
+
+ipcMain.handle(
+  "show-notification",
+  (_evt, payload: { title: string; body: string }) => {
+    if (!Notification.isSupported()) return { ok: false };
+    const notif = new Notification({
+      title: payload.title,
+      body: payload.body,
+    });
+    notif.on("click", () => {
+      if (mainWindow) {
+        mainWindow.show();
+        mainWindow.focus();
+      }
+    });
+    notif.show();
+    return { ok: true };
+  },
+);
 
 registerTerminalIpcHandlers({
   getMainWindow: () => mainWindow,

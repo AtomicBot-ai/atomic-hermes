@@ -10,6 +10,7 @@ import {
 } from "../../services/chat-session";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
 import { routes } from "../app/routes";
+import { notifyIfHidden } from "../../lib/desktop-notifications";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
 import { ExecApprovalModal } from "./ExecApprovalModal";
@@ -93,8 +94,11 @@ export function StartChatPage() {
       },
       onExecApprovalRequested(data) {
         dispatch(approvalRequested(data));
+        const detail = data.description ? `${data.description}\n${data.command}` : data.command;
+        notifyIfHidden("Approval required", detail);
       },
-      onDone() {
+      onDone(fullText) {
+        notifyIfHidden("Task complete", fullText || "Hermes has finished the task");
         setSending(false);
         setStreaming(false);
         abortRef.current = null;

@@ -836,6 +836,15 @@ class _ConfigRoutes:
                                 extra={"session_id": session_id},
                             ),
                         )
+                    elif kind == "exec_approval_requested":
+                        await _write_event(
+                            "exec_approval_requested",
+                            {
+                                "command": payload.get("command", "") if isinstance(payload, dict) else "",
+                                "description": payload.get("description", "") if isinstance(payload, dict) else "",
+                                "session_id": session_id,
+                            },
+                        )
                     continue
                 final_result = message["result"]["result"]
         except Exception as exc:
@@ -1182,9 +1191,23 @@ class _ConfigRoutes:
         }
         choice = decision_map[decision]
 
-        from tools.approval import resolve_gateway_approval
+        if self._use_host_profile(request):
+            from tools.approval import resolve_gateway_approval
 
-        count = resolve_gateway_approval(session_id, choice)
+            count = resolve_gateway_approval(session_id, choice)
+        else:
+            try:
+                profile_id = self._profile_id(request)
+                payload = await self._adapter._worker_call_unlocked(
+                    profile_id,
+                    "resolve_approval",
+                    {"session_id": session_id, "choice": choice},
+                )
+                count = payload.get("resolved", 0)
+            except Exception as exc:
+                logger.warning("[api_extensions] Worker approval resolve failed: %s", exc)
+                count = 0
+
         logger.info(
             "[api_extensions] Approval resolved: session=%s decision=%s resolved=%d",
             session_id, choice, count,

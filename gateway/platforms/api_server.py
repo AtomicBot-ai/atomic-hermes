@@ -492,6 +492,15 @@ class APIServerAdapter(BasePlatformAdapter):
             params,
         )
 
+    async def _worker_call_unlocked(self, profile_id: str, method: str, params: Optional[Dict[str, Any]] = None) -> Any:
+        """Execute a call without waiting for stream lock (for mid-stream messages like approval resolve)."""
+        return await self._profile_runtime_manager.call_unlocked(
+            profile_id,
+            self._resolve_profile_home(profile_id),
+            method,
+            params,
+        )
+
     async def _worker_stream(self, profile_id: str, params: Dict[str, Any]):
         """Stream agent events from an isolated worker."""
         async for message in self._profile_runtime_manager.stream(

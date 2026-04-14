@@ -47,6 +47,8 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("onboarding-set-state", { onboarded }),
   resetAndClose: (): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("reset-and-close"),
+  showNotification: (title: string, body: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("show-notification", { title, body }),
 
   // ── Terminal (PTY) ──────────────────────────────────────────────────
   terminalCreate: async (): Promise<{ id: string }> =>
