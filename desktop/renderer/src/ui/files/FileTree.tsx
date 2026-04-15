@@ -88,14 +88,16 @@ type ContextMenuProps = {
   x: number;
   y: number;
   isDir: boolean;
+  isFavorite: boolean;
   onNewFile: () => void;
   onNewFolder: () => void;
   onRename: () => void;
   onDelete: () => void;
+  onToggleFavorite: () => void;
   onClose: () => void;
 };
 
-function ContextMenu({ x, y, isDir, onNewFile, onNewFolder, onRename, onDelete, onClose }: ContextMenuProps) {
+function ContextMenu({ x, y, isDir, isFavorite, onNewFile, onNewFolder, onRename, onDelete, onToggleFavorite, onClose }: ContextMenuProps) {
   const ref = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -108,6 +110,10 @@ function ContextMenu({ x, y, isDir, onNewFile, onNewFolder, onRename, onDelete, 
 
   return (
     <div ref={ref} className={s.ContextMenu} style={{ left: x, top: y }}>
+      <button type="button" className={s.ContextMenuItem} onClick={onToggleFavorite}>
+        {isFavorite ? "Remove from Favorites" : "Add to Favorites"}
+      </button>
+      <div className={s.ContextMenuDivider} />
       {isDir && (
         <>
           <button type="button" className={s.ContextMenuItem} onClick={onNewFile}>New File</button>
@@ -157,6 +163,9 @@ function InlineInput({ initial, onSubmit, onCancel }: {
   );
 }
 
+// Module-level set of expanded directory paths — survives unmount/remount
+const _expandedPaths = new Set<string>();
+
 // ── Tree Node ──────────────────────────────────────────────────────────
 
 type TreeNodeProps = {
@@ -165,13 +174,15 @@ type TreeNodeProps = {
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
   onTreeChanged: () => void;
+  onToggleFavorite?: (path: string, type: "file" | "dir") => void;
+  favoritePaths?: Set<string>;
   depth: number;
 };
 
-function TreeNode({ entry, parentPath, selectedPath, onSelectFile, onTreeChanged, depth }: TreeNodeProps) {
+function TreeNode({ entry, parentPath, selectedPath, onSelectFile, onTreeChanged, onToggleFavorite, favoritePaths, depth }: TreeNodeProps) {
   const fullPath = parentPath ? `${parentPath}/${entry.name}` : entry.name;
   const isDir = entry.type === "dir";
-  const [expanded, setExpanded] = React.useState(false);
+  const [expanded, setExpanded] = React.useState(isDir && _expandedPaths.has(fullPath));
   const [children, setChildren] = React.useState<DirEntry[] | null>(null);
   const [loading, setLoading] = React.useState(false);
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number } | null>(null);
@@ -194,14 +205,26 @@ function TreeNode({ entry, parentPath, selectedPath, onSelectFile, onTreeChanged
     }
   }, [fullPath]);
 
+  // Auto-load children for directories that were expanded before unmount
+  React.useEffect(() => {
+    if (isDir && expanded && children === null) {
+      void loadChildren();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleToggle = React.useCallback(() => {
     if (!isDir) return;
     const next = !expanded;
     setExpanded(next);
+    if (next) {
+      _expandedPaths.add(fullPath);
+    } else {
+      _expandedPaths.delete(fullPath);
+    }
     if (next && children === null) {
       void loadChildren();
     }
-  }, [isDir, expanded, children, loadChildren]);
+  }, [isDir, expanded, children, loadChildren, fullPath]);
 
   const handleClick = React.useCallback(() => {
     if (isDir) {
@@ -299,6 +322,11 @@ function TreeNode({ entry, parentPath, selectedPath, onSelectFile, onTreeChanged
           x={contextMenu.x}
           y={contextMenu.y}
           isDir={isDir}
+          isFavorite={favoritePaths?.has(fullPath) ?? false}
+          onToggleFavorite={() => {
+            setContextMenu(null);
+            onToggleFavorite?.(fullPath, isDir ? "dir" : "file");
+          }}
           onNewFile={() => {
             setContextMenu(null);
             if (isDir) {
@@ -335,6 +363,8 @@ function TreeNode({ entry, parentPath, selectedPath, onSelectFile, onTreeChanged
               selectedPath={selectedPath}
               onSelectFile={onSelectFile}
               onTreeChanged={() => void loadChildren()}
+              onToggleFavorite={onToggleFavorite}
+              favoritePaths={favoritePaths}
               depth={depth + 1}
             />
           ))}
@@ -366,9 +396,11 @@ export type FileTreeProps = {
   selectedPath: string | null;
   onSelectFile: (path: string) => void;
   refreshKey: number;
+  onToggleFavorite?: (path: string, type: "file" | "dir") => void;
+  favoritePaths?: Set<string>;
 };
 
-export function FileTree({ selectedPath, onSelectFile, refreshKey }: FileTreeProps) {
+export function FileTree({ selectedPath, onSelectFile, refreshKey, onToggleFavorite, favoritePaths }: FileTreeProps) {
   const [entries, setEntries] = React.useState<DirEntry[]>([]);
   const [loading, setLoading] = React.useState(true);
   const [contextMenu, setContextMenu] = React.useState<{ x: number; y: number } | null>(null);
@@ -416,10 +448,7 @@ export function FileTree({ selectedPath, onSelectFile, refreshKey }: FileTreePro
   }, [creating, loadRoot]);
 
   return (
-    <div className={s.FileTree} role="tree" onContextMenu={handleRootContextMenu}>
-      <div className={s.FileTreeHeader}>
-        <span className={s.FileTreeTitle}>HERMES HOME</span>
-      </div>
+    <div className={s.FileTreeInner} role="tree" onContextMenu={handleRootContextMenu}>
       <div className={s.FileTreeContent}>
         {loading ? (
           <div className={s.TreeLoading}>Loading...</div>
@@ -433,6 +462,8 @@ export function FileTree({ selectedPath, onSelectFile, refreshKey }: FileTreePro
                 selectedPath={selectedPath}
                 onSelectFile={onSelectFile}
                 onTreeChanged={loadRoot}
+                onToggleFavorite={onToggleFavorite}
+                favoritePaths={favoritePaths}
                 depth={0}
               />
             ))}
@@ -458,6 +489,8 @@ export function FileTree({ selectedPath, onSelectFile, refreshKey }: FileTreePro
           x={contextMenu.x}
           y={contextMenu.y}
           isDir={true}
+          isFavorite={false}
+          onToggleFavorite={() => setContextMenu(null)}
           onNewFile={() => { setContextMenu(null); setCreating("file"); }}
           onNewFolder={() => { setContextMenu(null); setCreating("dir"); }}
           onRename={() => setContextMenu(null)}

@@ -1,6 +1,6 @@
 import React from "react";
 import { Navigate, Outlet, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
-import { SpinningSplashLogo } from "@shared/kit";
+import { Brand, SpinningSplashLogo } from "@shared/kit";
 import { useAppDispatch, useAppSelector } from "@store/hooks";
 import { initGatewayState } from "@store/slices/gatewaySlice";
 import { loadOnboardingState } from "@store/slices/onboardingSlice";
@@ -11,7 +11,6 @@ import { ChatPage } from "../chat/ChatPage";
 import { StartChatPage } from "../chat/StartChatPage";
 import {
   AiModelsTab,
-  LogsTab,
   McpServersTab,
   OtherTab,
   PlaceholderTab,
@@ -22,6 +21,7 @@ import { ConnectorsTab } from "../settings/connectors/ConnectorsTab";
 import { SkillsSettingsTab } from "../settings/skills/SkillsSettingsTab";
 import { SkillEditor } from "../settings/skills/SkillEditor";
 import { DashboardPage } from "../dashboard";
+import { LogsPage } from "../logs";
 import { TerminalPage } from "../terminal";
 import { FilesPage } from "../files";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
@@ -109,6 +109,42 @@ function SidebarLayout() {
   );
 }
 
+export function FullscreenTopbar(props: {
+  title: string;
+  children?: React.ReactNode;
+}) {
+  const navigate = useNavigate();
+  return (
+    <div className={a.UiTopbar}>
+      <div className={a.UiTopbarLeft}>
+        <Brand />
+        <span className={a.UiTopbarTitle}>{props.title}</span>
+      </div>
+      <div className={a.UiTopbarActions}>
+        {props.children}
+        <button
+          type="button"
+          className={a.UiTopbarBackButton}
+          onClick={() => void navigate(-1)}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none">
+            <path d="M12.25 7H1.75M1.75 7L6.125 2.625M1.75 7L6.125 11.375" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          </svg>
+          <span>Back</span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
+export function FullscreenShell(props: { children: React.ReactNode }) {
+  return (
+    <div className={a.UiAppShell}>
+      {props.children}
+    </div>
+  );
+}
+
 export function App() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
@@ -170,7 +206,6 @@ export function App() {
         <Route path="/" element={<SidebarLayout />}>
           <Route index element={<Navigate to={routes.chat} replace />} />
           <Route path="chat" element={<ChatRoute />} />
-          <Route path="dashboard" element={<DashboardPage />} />
           <Route path="terminal" element={<TerminalPage />} />
           <Route path="files" element={<FilesPage />} />
           <Route path="skills" element={<Navigate to={routes.settingsSkills} replace />} />
@@ -191,7 +226,6 @@ export function App() {
               }
             />
             <Route path="mcp-servers" element={<McpServersTab />} />
-            <Route path="logs" element={<LogsTab />} />
             <Route
               path="account"
               element={
@@ -204,6 +238,8 @@ export function App() {
             <Route path="other" element={<OtherTabRoute />} />
           </Route>
         </Route>
+        <Route path="dashboard" element={<DashboardPage />} />
+        <Route path="logs" element={<LogsPage />} />
         <Route path="*" element={<Navigate to={routes.chat} replace />} />
       </Routes>
       </>

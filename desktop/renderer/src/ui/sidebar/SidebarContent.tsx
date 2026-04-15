@@ -81,6 +81,15 @@ function IconTerminal() {
   );
 }
 
+function IconLogs() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M6 6h8M6 10h8M6 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="3" y="3" width="14" height="14" rx="2.25" stroke="currentColor" strokeWidth="1.5" />
+    </svg>
+  );
+}
+
 export function SidebarContent(props: SidebarContentProps & { showTerminal?: boolean }) {
   const {
     onCollapse,
@@ -190,6 +199,12 @@ export function SidebarContent(props: SidebarContentProps & { showTerminal?: boo
             <IconFiles />
           </span>
           <span className={css.UiChatSidebarNavLabel}>Files</span>
+        </NavLink>
+        <NavLink to={routes.logs} className={css.UiChatSidebarSettings} aria-label="Logs">
+          <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+            <IconLogs />
+          </span>
+          <span className={css.UiChatSidebarNavLabel}>Logs</span>
         </NavLink>
         <NavLink to={routes.settingsSkills} className={css.UiChatSidebarSettings} aria-label="Skills">
           <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">

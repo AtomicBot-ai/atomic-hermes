@@ -15,6 +15,8 @@
 .UiAppPage {
   flex: 1 1 auto;
   min-height: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .UiChatLayoutMain {
@@ -78,16 +80,14 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
 }
 
-.UiDashboardHeader {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 12px;
-  padding: 16px 18px 0;
+.UiDashboardIframe {
+  flex: 1 1 auto;
+  width: 100%;
+  border: 0;
+  display: block;
+  background: #0f1318;
 }
 
 .UiOpenExternalButton {
@@ -109,21 +109,69 @@
   border-color: rgba(230, 237, 243, 0.24);
 }
 
-.UiIframeWrap {
-  flex: 1 1 auto;
-  min-height: 0;
-  margin: 0 12px 12px;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-xl);
-  overflow: hidden;
-  background: var(--panel);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+/* ── Fullscreen shell topbar ─────────────────────────── */
+
+.UiTopbar {
+  height: 56px;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border-light);
+  background: rgba(11, 15, 20, 0.55);
+  backdrop-filter: blur(18px);
+  flex: 0 0 56px;
 }
 
-.UiIframeWrap iframe {
-  width: 100%;
-  height: 100%;
-  border: 0;
-  display: block;
-  background: #0f1318;
+.UiTopbarLeft {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.UiTopbarTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.UiTopbarActions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  flex: 0 0 auto;
+}
+
+.UiTopbarBackButton {
+  display: flex;
+  height: 32px;
+  padding: 0 12px;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  background: rgba(230, 237, 243, 0.1);
+  color: #fff;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 510;
+  line-height: 14px;
+  appearance: none;
+  border: 1px solid rgba(230, 237, 243, 0.14);
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+  box-sizing: border-box;
+}
+
+.UiTopbarBackButton:hover {
+  background: rgba(230, 237, 243, 0.16);
+  border-color: rgba(230, 237, 243, 0.24);
 }

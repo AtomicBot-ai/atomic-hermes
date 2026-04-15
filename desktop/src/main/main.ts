@@ -10,6 +10,9 @@ import {
 import { registerTerminalIpcHandlers } from "./terminal/ipc";
 import { killAllTerminals } from "./terminal/pty-manager";
 import { registerFilesIpcHandlers } from "./files/ipc";
+import { registerSnapshotIpcHandlers } from "./files/snapshot-ipc";
+import { registerSidebarIpcHandlers } from "./files/sidebar-ipc";
+import { SnapshotWatcher } from "./files/snapshot-watcher";
 import {
   initAutoUpdater,
   disposeAutoUpdater,
@@ -25,6 +28,7 @@ app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes")
 let mainWindow: BrowserWindow | null = null;
 let pythonBridge: PythonBridge | null = null;
 let backendPort: number | null = null;
+let snapshotWatcher: SnapshotWatcher | null = null;
 
 type DashboardState =
   | { kind: "starting" }
@@ -131,6 +135,11 @@ registerTerminalIpcHandlers({
 });
 
 registerFilesIpcHandlers({ stateDir });
+registerSnapshotIpcHandlers({ stateDir });
+registerSidebarIpcHandlers({ stateDir });
+
+snapshotWatcher = new SnapshotWatcher(stateDir);
+snapshotWatcher.start();
 
 // ── Updater IPC ──────────────────────────────────────────────────────
 
@@ -225,6 +234,8 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  snapshotWatcher?.stop();
+  snapshotWatcher = null;
   disposeAutoUpdater();
   killAllTerminals();
   pythonBridge?.kill();

@@ -10,7 +10,7 @@ export type DirEntry = {
 
 const MAX_READ_SIZE = 5 * 1024 * 1024; // 5 MB
 
-function safePath(root: string, relative: string): string {
+export function safePath(root: string, relative: string): string {
   const resolved = path.resolve(root, relative);
   const normalizedRoot = path.resolve(root) + path.sep;
   const normalizedResolved = path.resolve(resolved);

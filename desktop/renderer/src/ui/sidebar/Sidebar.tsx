@@ -70,6 +70,15 @@ function IconTerminal() {
   );
 }
 
+function IconLogs() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path d="M5.25 5.25h7.5M5.25 9h7.5M5.25 12.75h4.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+      <rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" stroke="currentColor" strokeWidth="1.25" />
+    </svg>
+  );
+}
+
 export type SidebarProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -334,6 +343,16 @@ export function Sidebar(props: SidebarProps) {
             >
               <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
                 <IconFiles />
+              </span>
+            </NavLink>
+            <NavLink
+              to={routes.logs}
+              className={css.UiChatSidebarNarrowFooterBtn}
+              aria-label="Logs"
+              title="Logs"
+            >
+              <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+                <IconLogs />
               </span>
             </NavLink>
             <NavLink
