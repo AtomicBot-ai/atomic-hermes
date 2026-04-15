@@ -6,7 +6,7 @@
   "private": true,
   "scripts": {
     "rebuild": "electron-rebuild -f -w node-pty",
-    "build:ts": "tsc",
+    "build:ts": "tsc && node scripts/define-main-env.mjs",
     "build:dashboard": "npm --prefix ../web install && npm --prefix ../web run build",
     "build:renderer": "node --max-old-space-size=4096 node_modules/vite/bin/vite.js build --config renderer/vite.config.ts",
     "build:all": "npm run build:dashboard && npm run build:ts && npm run build:renderer",
@@ -26,6 +26,8 @@
     "electron-store": "^8.2.0",
     "electron-updater": "^6.7.3",
     "node-pty": "^1.1.0",
+    "posthog-js": "^1.369.0",
+    "posthog-node": "^5.29.2",
     "react-hot-toast": "^2.6.0"
   },
   "devDependencies": {
@@ -41,6 +43,7 @@
     "cross-env": "^10.1.0",
     "electron": "^33.0.0",
     "electron-builder": "^25.0.0",
+    "esbuild": "^0.28.0",
     "monaco-editor": "^0.55.1",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",

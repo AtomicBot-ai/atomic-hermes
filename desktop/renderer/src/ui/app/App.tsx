@@ -25,6 +25,7 @@ import { LogsPage } from "../logs";
 import { TerminalPage } from "../terminal";
 import { FilesPage } from "../files";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
+import { useAppOpenedEvent } from "@analytics";
 import { UpdateBanner } from "../updates/UpdateBanner";
 import a from "./App.module.css";
 
@@ -87,6 +88,7 @@ function ChatRoute() {
 }
 
 function SidebarLayout() {
+  useAppOpenedEvent();
   const [sidebarOpen, setSidebarOpen] = React.useState(readSidebarOpenFromStorage);
 
   React.useEffect(() => {

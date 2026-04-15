@@ -1,18 +1,23 @@
 import React from "react";
 
 import { DESKTOP_API_UNAVAILABLE, getDesktopApiOrNull } from "@ipc/desktopApi";
+import { optInRenderer, optOutRenderer } from "@analytics";
 import { errorToMessage } from "@lib/error-format";
 import s from "../OtherTab.module.css";
 
 export function PrivacySection({ onError }: { onError: (msg: string | null) => void }) {
   const [analyticsEnabled, setAnalyticsEnabled] = React.useState(false);
+  const userIdRef = React.useRef<string | null>(null);
 
   React.useEffect(() => {
     const api = getDesktopApiOrNull();
     if (!api?.analyticsGet) {
       return;
     }
-    void api.analyticsGet().then((res) => setAnalyticsEnabled(res.enabled));
+    void api.analyticsGet().then((res) => {
+      setAnalyticsEnabled(res.enabled);
+      userIdRef.current = res.userId;
+    });
   }, []);
 
   const toggleAnalytics = React.useCallback(
@@ -25,7 +30,11 @@ export function PrivacySection({ onError }: { onError: (msg: string | null) => v
       setAnalyticsEnabled(enabled);
       try {
         await api.analyticsSet(enabled);
-        // TODO: integrate PostHog optInRenderer / optOutRenderer when analytics are wired.
+        if (enabled && userIdRef.current) {
+          optInRenderer(userIdRef.current);
+        } else {
+          optOutRenderer();
+        }
       } catch (err) {
         setAnalyticsEnabled(!enabled);
         onError(errorToMessage(err));

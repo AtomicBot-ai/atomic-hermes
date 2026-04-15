@@ -90,6 +90,8 @@ jobs:
       - name: Build main + renderer
         working-directory: desktop
         run: npm run build:all
+        env:
+          POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
 
       - name: Determine publish mode
         id: publish-mode

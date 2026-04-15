@@ -22,6 +22,9 @@ import {
   getAppVersion,
 } from "./updater";
 import { killUpdateSplash } from "./update-splash";
+import { readAnalyticsState, writeAnalyticsState } from "./analytics/analytics-state";
+import { initPosthogMain, captureMain, shutdownPosthogMain } from "./analytics/posthog-main";
+import { registerAnalyticsHandlers } from "./analytics/analytics-ipc";
 
 app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
 
@@ -62,6 +65,22 @@ function createWindow(): void {
 }
 
 const stateDir = path.join(app.getPath("userData"), "hermes");
+
+// ── Analytics ────────────────────────────────────────────────────────
+const analyticsState = readAnalyticsState(stateDir);
+if (!analyticsState.prompted) {
+  analyticsState.enabled = true;
+  analyticsState.prompted = true;
+  analyticsState.enabledAt = analyticsState.enabledAt ?? new Date().toISOString();
+  writeAnalyticsState(stateDir, analyticsState);
+}
+initPosthogMain(analyticsState.userId, analyticsState.enabled);
+captureMain("app_launched", {
+  platform: process.platform,
+  version: app.getVersion(),
+});
+
+registerAnalyticsHandlers({ stateDir });
 
 ipcMain.handle("get-port", () => backendPort);
 ipcMain.handle("get-hermes-home", () => stateDir);
@@ -239,6 +258,7 @@ app.on("before-quit", () => {
   disposeAutoUpdater();
   killAllTerminals();
   pythonBridge?.kill();
+  void shutdownPosthogMain();
 });
 
 app.on("activate", () => {

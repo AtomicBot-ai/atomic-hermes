@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@store/hooks";
+import { captureRenderer, ANALYTICS_EVENTS } from "@analytics";
 import {
   appendMessage,
   messagesLoaded,
@@ -117,6 +118,7 @@ export function ChatPage() {
     dispatch(appendMessage(userMsg));
     setInput("");
     dispatch(setSending(true));
+    captureRenderer(ANALYTICS_EVENTS.messageSent);
 
     const allMessages = [...messages, userMsg].map((m) => ({
       role: m.role,

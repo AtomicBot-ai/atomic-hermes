@@ -35,8 +35,8 @@ export interface DesktopApi {
     filename: string,
   ): Promise<{ ok: boolean; error?: string; meta?: { mode?: string } }>;
   resetAndClose?(): Promise<void>;
-  analyticsGet?(): Promise<{ enabled: boolean }>;
-  analyticsSet?(enabled: boolean): Promise<void>;
+  analyticsGet?(): Promise<{ enabled: boolean; userId: string; prompted: boolean }>;
+  analyticsSet?(enabled: boolean): Promise<{ ok: true }>;
 
   // Updater
   getAppVersion?(): Promise<string>;

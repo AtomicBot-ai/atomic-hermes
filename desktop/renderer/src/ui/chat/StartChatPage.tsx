@@ -1,6 +1,7 @@
 import React, { useState, useCallback, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAppSelector, useAppDispatch } from "@store/hooks";
+import { captureRenderer, ANALYTICS_EVENTS } from "@analytics";
 import { approvalRequested } from "@store/slices/chatSlice";
 import { parseThinkingContent } from "../../lib/parse-thinking";
 import {
@@ -57,6 +58,7 @@ export function StartChatPage() {
     setSending(true);
     setInput("");
     setPendingUserMessage(text);
+    captureRenderer(ANALYTICS_EVENTS.messageSent);
     setStreamingRaw("");
     setStreamingThinking("");
     setStreamingActions([]);

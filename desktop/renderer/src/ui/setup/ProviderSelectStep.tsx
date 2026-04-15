@@ -1,12 +1,14 @@
 import React, { useCallback, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { GlassCard, PrimaryButton } from "@shared/kit";
+import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import { PROVIDERS, resolveProviderIconUrl } from "./providers";
 import { TOTAL_STEPS } from "./SetupPage";
 
 export function ProviderSelectStep() {
+  useOnboardingStepEvent("provider_select");
   const navigate = useNavigate();
   const ctx = useSetup();
 

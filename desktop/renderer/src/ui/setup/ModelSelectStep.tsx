@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PrimaryButton, TextInput, InlineError } from "@shared/kit";
+import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import { RichSelect, type RichOption } from "./RichSelect";
@@ -10,6 +11,7 @@ import { TOTAL_STEPS } from "./SetupPage";
 import s from "./ModelSelectStep.module.css";
 
 export function ModelSelectStep() {
+  useOnboardingStepEvent("model_select");
   const navigate = useNavigate();
   const ctx = useSetup();
   const [saving, setSaving] = useState(false);
