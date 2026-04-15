@@ -1,0 +1,105 @@
+/* Restore backup modal: drop zone, spinner, error, warning */
+
+.UiRestoreDropZone {
+  border: 2px dashed rgba(255, 255, 255, 0.15);
+  border-radius: var(--radius-lg);
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 180px;
+  transition:
+    border-color var(--transition-base),
+    background var(--transition-base);
+  margin-bottom: 12px;
+  background: #121212;
+}
+
+.UiRestoreDropZone--active {
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.UiRestoreDropZoneTitle {
+  font-size: 15px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 6px;
+}
+
+.UiRestoreDropZoneSubtext {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.UiRestoreChooseFileLink {
+  appearance: none;
+  background: none;
+  border: none;
+  color: #4aa8ff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+
+.UiRestoreChooseFileLink:hover {
+  text-decoration: underline;
+}
+
+/* Spinner */
+.UiRestoreSpinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--surface-overlay-strong);
+  border-top-color: rgba(255, 255, 255, 0.65);
+  border-radius: 50%;
+  animation: restoreSpin 0.7s linear infinite;
+}
+
+@keyframes restoreSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.UiRestoreStatusText {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  margin-top: 12px;
+}
+
+/* Error */
+.UiRestoreError {
+  font-size: 13px;
+  color: rgba(255, 100, 100, 0.95);
+  background: rgba(255, 100, 100, 0.08);
+  border-radius: var(--radius-md);
+  padding: 8px 12px;
+  margin-bottom: 12px;
+}
+
+/* Warning block */
+.UiRestoreWarningBlock {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border-radius: var(--radius-10);
+  background: rgba(255, 165, 0, 0.08);
+  border: 1px solid rgba(255, 165, 0, 0.18);
+}
+
+.UiRestoreWarningIcon {
+  flex-shrink: 0;
+  color: #ffa500;
+  margin-top: 1px;
+}
+
+.UiRestoreWarningText {
+  font-size: 13px;
+  color: #ffa500;
+  line-height: 1.5;
+}

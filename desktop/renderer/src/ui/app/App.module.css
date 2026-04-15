@@ -1,0 +1,129 @@
+/* ── App layout ──────────────────────────────────────── */
+
+.UiCentered {
+  height: 100%;
+  display: grid;
+  place-items: center;
+}
+
+.UiAppShell {
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.UiAppPage {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.UiChatLayoutMain {
+  flex: 1 1 auto;
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.UiChatLayout {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+}
+
+.UiCard {
+  width: min(860px, 92vw);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  padding: 18px 18px 16px;
+  background: var(--panel);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.4);
+}
+
+.UiCardTitle {
+  font-size: 18px;
+  font-weight: 650;
+  margin: 0 0 8px;
+}
+
+.UiCardSubtitle {
+  font-size: 13px;
+  opacity: 0.86;
+  margin: 0 0 12px;
+  line-height: 1.5;
+}
+
+.UiMeta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
+  margin: 10px 0 14px;
+}
+
+.UiPill {
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid rgba(230, 237, 243, 0.14);
+  background: rgba(230, 237, 243, 0.05);
+}
+
+.UiDashboardLayout {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 12px;
+}
+
+.UiDashboardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 16px 18px 0;
+}
+
+.UiOpenExternalButton {
+  appearance: none;
+  border: 1px solid rgba(230, 237, 243, 0.14);
+  border-radius: var(--radius-full);
+  background: rgba(230, 237, 243, 0.05);
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 6px 12px;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease;
+}
+
+.UiOpenExternalButton:hover {
+  background: rgba(230, 237, 243, 0.1);
+  border-color: rgba(230, 237, 243, 0.24);
+}
+
+.UiIframeWrap {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 0 12px 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  background: var(--panel);
+  box-shadow: 0 18px 45px rgba(0, 0, 0, 0.28);
+}
+
+.UiIframeWrap iframe {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  display: block;
+  background: #0f1318;
+}

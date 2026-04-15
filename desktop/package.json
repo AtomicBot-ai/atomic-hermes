@@ -1,0 +1,134 @@
+{
+  "name": "hermes-desktop",
+  "version": "0.1.10",
+  "description": "Atomic Hermes — self-contained macOS desktop app",
+  "main": "dist/main/main.js",
+  "private": true,
+  "scripts": {
+    "rebuild": "electron-rebuild -f -w node-pty",
+    "build:ts": "tsc",
+    "build:dashboard": "npm --prefix ../web install && npm --prefix ../web run build",
+    "build:renderer": "vite build --config renderer/vite.config.ts",
+    "build:all": "npm run build:dashboard && npm run build:ts && npm run build:renderer",
+    "start": "npm run rebuild && npm run build:all && electron .",
+    "dev": "npm run rebuild && bash scripts/bundle-dev.sh && npm run build:dashboard && npm run build:renderer && tsc && (tsc -w --preserveWatchOutput & electron .)",
+    "bundle": "bash scripts/bundle-all.sh",
+    "bundle:dev": "bash scripts/bundle-dev.sh",
+    "dist": "npm run build:all && electron-builder",
+    "dist:local": "cross-env CSC_IDENTITY_AUTO_DISCOVERY=false npm run dist -- --publish never",
+    "release": "bash scripts/release.sh",
+    "release:patch": "bash scripts/release.sh patch",
+    "release:minor": "bash scripts/release.sh minor",
+    "release:major": "bash scripts/release.sh major"
+  },
+  "dependencies": {
+    "electron-store": "^8.2.0",
+    "electron-updater": "^6.7.3",
+    "node-pty": "^1.1.0",
+    "react-hot-toast": "^2.6.0"
+  },
+  "devDependencies": {
+    "@electron/rebuild": "^4.0.3",
+    "@reduxjs/toolkit": "^2.9.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^5.1.3",
+    "cross-env": "^10.1.0",
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "react-markdown": "^10.1.0",
+    "react-redux": "^9.2.0",
+    "react-router-dom": "^7.13.0",
+    "rehype-katex": "^7.0.1",
+    "remark-gfm": "^4.0.1",
+    "remark-math": "^6.0.0",
+    "@xterm/addon-fit": "^0.11.0",
+    "@xterm/xterm": "^6.0.0",
+    "typescript": "^5.6.0",
+    "vite": "^7.3.1"
+  },
+  "optionalDependencies": {
+    "appdmg": "^0.6.6"
+  },
+  "build": {
+    "appId": "com.nousresearch.hermes-agent",
+    "productName": "Atomic Hermes",
+    "afterPack": "scripts/electron-builder.afterPack-sign-extra-resources.cjs",
+    "afterSign": "scripts/electron-builder.afterSign-notarize.cjs",
+    "afterAllArtifactBuild": "scripts/electron-builder.afterAllArtifactBuild-notarize-dmg.cjs",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "dist/**/*",
+      "renderer/dist/**/*",
+      "assets/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "assets/icon.png",
+        "to": "assets/icon.png"
+      },
+      {
+        "from": "assets/trayTemplate.png",
+        "to": "assets/trayTemplate.png"
+      },
+      {
+        "from": "assets/trayTemplate@2x.png",
+        "to": "assets/trayTemplate@2x.png"
+      },
+      {
+        "from": "build/python",
+        "to": "python"
+      },
+      {
+        "from": "build/hermes-venv",
+        "to": "hermes-venv"
+      },
+      {
+        "from": "build/hermes-agent",
+        "to": "hermes-agent"
+      },
+      {
+        "from": "build/bin",
+        "to": "bin"
+      },
+      {
+        "from": "build/node_modules",
+        "to": "node_modules"
+      },
+      {
+        "from": "build/skills",
+        "to": "skills"
+      },
+      {
+        "from": "src/python-server",
+        "to": "python-server"
+      }
+    ],
+    "publish": {
+      "provider": "github",
+      "owner": "AtomicBot-ai",
+      "repo": "atomic-hermes",
+      "releaseType": "draft"
+    },
+    "mac": {
+      "artifactName": "Atomic-Hermes-${version}-${arch}-mac.${ext}",
+      "icon": "assets/icon.icns",
+      "category": "public.app-category.developer-tools",
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.inherit.plist",
+      "target": [
+        "zip"
+      ]
+    }
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

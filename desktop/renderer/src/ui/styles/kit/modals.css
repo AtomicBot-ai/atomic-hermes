@@ -1,0 +1,169 @@
+/* ── Kit: Popover (shared base) ───────────────────────── */
+
+.UiPopover {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 4px;
+  min-width: 120px;
+  padding: 4px;
+  background: var(--bg-base);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: var(--radius-md);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  z-index: 100;
+}
+
+/* ── Kit: Modal ──────────────────────────────────────── */
+
+.UiModalOverlay {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: uiModalFadeIn 150ms ease;
+}
+
+@keyframes uiModalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.UiModalCard {
+  position: relative;
+  width: 420px;
+  max-width: 92vw;
+  max-height: 85vh;
+  border-radius: 24px;
+  border: 1px solid #ffffff1a;
+  background: var(--bg-card);
+  padding: 16px 20px;
+  animation: uiModalSlideUp 200ms ease;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.UiModalHeader {
+  display: flex;
+  position: relative;
+  align-items: center;
+}
+
+.UiModalContent {
+  min-height: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+@keyframes uiModalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.UiModalClose {
+  position: absolute;
+  width: 24px;
+  height: 24px;
+  top: 1px;
+  right: 1px;
+  appearance: none;
+  border: none;
+  background: transparent;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  border-radius: var(--radius-md);
+  transition: color var(--transition-base);
+  color: #ffffff66;
+}
+
+.UiModalClose:hover {
+  color: #ffffff80;
+}
+
+/* ── Kit: Confirm Dialog ─────────────────────────────── */
+
+.UiConfirmDialog {
+  width: 340px;
+  max-width: 90vw;
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-card);
+  padding: 20px 24px;
+  animation: uiModalSlideUp 200ms ease;
+}
+
+.UiConfirmDialog__text {
+  margin: 0 0 4px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.UiConfirmDialog__sub {
+  margin: 0 0 20px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.UiConfirmDialog__actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.UiConfirmDialog__cancel,
+.UiConfirmDialog__confirm {
+  padding: 6px 16px;
+  font-size: 13px;
+  border-radius: var(--radius-full);
+  border: none;
+  cursor: pointer;
+  appearance: none;
+  transition: background 140ms ease;
+}
+
+.UiConfirmDialog__cancel {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text);
+}
+
+.UiConfirmDialog__cancel:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.UiConfirmDialog__confirm {
+  background: var(--accent);
+  color: #fff;
+}
+
+.UiConfirmDialog__confirm:hover {
+  opacity: 0.9;
+}
+
+.UiConfirmDialog__confirm--danger {
+  background: #e53935;
+}
+
+.UiConfirmDialog__confirm--danger:hover {
+  background: #c62828;
+  opacity: 1;
+}

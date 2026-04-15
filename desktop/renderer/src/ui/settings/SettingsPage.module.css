@@ -1,0 +1,347 @@
+.UiSettingsShell {
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.UiSettingsShellWrapper {
+  width: 100%;
+  max-width: 760px;
+  min-width: 560px;
+}
+
+.UiSettingsHeader {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 40px 0 0;
+  background: var(--bg-base);
+}
+
+.UiSettingsTitleRow {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.UiSettingsTitle {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.15;
+  letter-spacing: -0.02em;
+  color: #fff;
+}
+
+.UiSettingsSubtitle {
+  margin: 0;
+  max-width: 560px;
+  color: var(--muted2);
+  line-height: 1.55;
+}
+
+.UiSettingsTabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(230, 237, 243, 0.08);
+}
+
+.UiSettingsTab {
+  padding: 9px 12px;
+  border-radius: 999px;
+  color: rgba(230, 237, 243, 0.62);
+  text-decoration: none;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.UiSettingsTab:hover {
+  color: #fff;
+  background: rgba(230, 237, 243, 0.08);
+}
+
+.UiSettingsTab--active {
+  color: #fff;
+  background: rgba(13, 111, 255, 0.22);
+}
+
+.UiSettingsContent {
+  margin: 24px 0 36px;
+}
+
+.UiSettingsContentInner {
+  margin-top: 12px;
+}
+
+.UiSettingsPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.UiSettingsPanelHeader {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.UiSettingsTabTitle {
+  margin: 0;
+  font-size: 22px;
+  line-height: 1.2;
+  color: #fff;
+}
+
+.UiSettingsLead {
+  margin: 0;
+  color: var(--muted2);
+  line-height: 1.6;
+}
+
+.UiSettingsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid rgba(230, 237, 243, 0.08);
+  border-radius: 24px;
+  background: rgba(230, 237, 243, 0.03);
+}
+
+.UiSettingsSectionTitle {
+  font-size: 15px;
+  font-weight: 650;
+  color: #fff;
+}
+
+.UiSettingsHint {
+  margin: 0;
+  color: var(--muted2);
+  line-height: 1.55;
+}
+
+.UiProviderList {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.UiProviderOption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: 18px;
+  border: 1px solid transparent;
+  background: rgba(230, 237, 243, 0.03);
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+
+.UiProviderOption:hover,
+.UiProviderOption--selected {
+  border-color: rgba(13, 111, 255, 0.42);
+  background: rgba(13, 111, 255, 0.08);
+}
+
+.UiProviderRadio {
+  margin: 0;
+  accent-color: #0d6fff;
+}
+
+.UiProviderIconWrap {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+}
+
+.UiProviderIcon {
+  width: 28px;
+  height: 28px;
+}
+
+.UiProviderEmoji {
+  font-size: 20px;
+  line-height: 1;
+}
+
+.UiProviderContent {
+  min-width: 0;
+  flex: 1 1 auto;
+}
+
+.UiProviderHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 2px;
+}
+
+.UiProviderName {
+  color: #fff;
+  font-weight: 600;
+}
+
+.UiProviderDescription {
+  color: var(--muted2);
+  font-size: 14px;
+}
+
+.UiTag {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(230, 237, 243, 0.08);
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.UiFormGrid {
+  display: grid;
+  gap: 14px;
+}
+
+.UiSettingsSelectGrid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.UiSettingsFormGroup {
+  min-width: 0;
+}
+
+.UiInputLabel {
+  display: inline-block;
+  margin-bottom: 8px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.UiActionRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.UiStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.UiStatusDot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.UiStatusDotReady {
+  background: #27c281;
+}
+
+.UiStatusDotMuted {
+  background: rgba(230, 237, 243, 0.26);
+}
+
+.UiStatusDotInfo {
+  background: #0d6fff;
+}
+
+.UiStatusDotError {
+  background: #ef4444;
+}
+
+.UiStatusText {
+  color: var(--muted);
+}
+
+.UiStatusMeta {
+  color: var(--muted2);
+  font-size: 14px;
+}
+
+.UiOAuthPanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 18px;
+  background: rgba(230, 237, 243, 0.04);
+  border: 1px solid rgba(230, 237, 243, 0.08);
+}
+
+.UiOAuthCode {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  text-align: center;
+  letter-spacing: 0.22em;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.UiLinkButton {
+  border: none;
+  padding: 0;
+  background: transparent;
+  color: var(--accent-brand);
+  cursor: pointer;
+}
+
+.UiPlaceholderCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 20px;
+  border-radius: 18px;
+  background: rgba(230, 237, 243, 0.04);
+}
+
+.UiPlaceholderBadge {
+  align-self: flex-start;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(13, 111, 255, 0.18);
+  color: #7fb0ff;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.UiPlaceholderTitle {
+  color: #fff;
+  font-size: 18px;
+  font-weight: 650;
+}
+
+.UiPlaceholderText {
+  margin: 0;
+  color: var(--muted2);
+  line-height: 1.6;
+}
+
+@media (max-width: 860px) {
+  .UiSettingsShellWrapper {
+    min-width: 0;
+  }
+
+  .UiSettingsSelectGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .UiActionRow {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

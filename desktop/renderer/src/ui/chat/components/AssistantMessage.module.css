@@ -1,0 +1,108 @@
+/* Assistant message: left-aligned, plain text, no bubble; action icons below */
+.UiChatRow-assistant {
+  justify-content: flex-start;
+}
+
+.UiChatBubble-assistant {
+  border: none;
+  background: transparent;
+  padding: 4px 0 2px;
+  box-shadow: none;
+  width: 100%;
+}
+
+.UiChatBubble-assistant :global(.UiChatBubbleMeta) {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.UiChatBubble-assistant :global(.UiChatRole) {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.5);
+}
+
+.UiChatBubble-assistant :global(.UiChatText) {
+  word-break: break-word;
+  line-height: 1.6;
+  font-size: 16px;
+  color: #fff;
+}
+
+.UiChatBubble-stream {
+  opacity: 0.9;
+}
+
+.UiChatThinkingReserve {
+  height: 28px;
+  margin-bottom: 8px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.UiChatStreamTextReserve {
+  min-height: 34px;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Streaming text appears immediately — no fade-in delay */
+.UiChatBubble-stream :global(.UiChatText) {
+  animation: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .UiChatBubble-assistant :global(.UiChatText) {
+    animation: none;
+  }
+}
+
+@keyframes chatTextFadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+/* Action icons below assistant message (copy, refresh) */
+.UiChatMessageActions {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-top: 6px;
+  padding-left: 0;
+}
+
+.UiChatMessageActionBtn {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.45);
+  padding: 4px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-sm);
+  transition:
+    color var(--transition-fast),
+    background var(--transition-fast);
+}
+
+.UiChatMessageActionBtn:hover {
+  color: rgba(255, 255, 255, 0.7);
+  background: var(--surface-overlay);
+}
+
+.UiChatMessageActionBtn svg {
+  width: 18px;
+  height: 18px;
+  display: block;
+}

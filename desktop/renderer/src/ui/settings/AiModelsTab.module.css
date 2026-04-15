@@ -1,0 +1,272 @@
+.root {
+  margin-top: 12px;
+}
+
+.title {
+  color: #fff;
+  font-size: 20px;
+  font-weight: 590;
+  line-height: 24px;
+  letter-spacing: -0.2px;
+  margin-bottom: 16px;
+}
+
+.statusBar {
+  display: flex;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.statusBarMain {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  column-gap: 40px;
+  row-gap: 8px;
+  width: 100%;
+  min-width: 0;
+}
+
+.statusSegment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 80px;
+  max-width: 100%;
+}
+
+.statusLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.4);
+}
+
+.statusValue {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  min-height: 24px;
+  display: flex;
+  align-items: center;
+}
+
+.statusValueText {
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.dropdownRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.dropdownGroup {
+  display: flex;
+  flex-direction: column;
+}
+
+.dropdownLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 6px;
+}
+
+.noModelsHint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.88);
+  line-height: 1.5;
+  margin-bottom: 16px;
+}
+
+.hint {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+  margin: 0 0 12px;
+}
+
+.errorWrap {
+  margin-bottom: 12px;
+}
+
+.apiKeySection {
+  border-top: 1px solid rgba(230, 237, 243, 0.08);
+  padding-top: 20px;
+  margin-top: 4px;
+}
+
+.apiKeyLabel {
+  font-size: 13px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.55);
+  margin-bottom: 10px;
+}
+
+.apiKeyConfiguredCard {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.apiKeyConfiguredIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  flex-shrink: 0;
+  color: #34c759;
+}
+
+.apiKeyConfiguredBody {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.apiKeyConfiguredTitle {
+  font-size: 14px;
+  font-weight: 650;
+  line-height: 20px;
+  margin: 0;
+  color: #fff;
+}
+
+.apiKeyConfiguredHint {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.4);
+  line-height: 16px;
+  margin: 0;
+}
+
+.apiKeyConfiguredButton {
+  width: 200px !important;
+}
+
+.apiKeyHelpText {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+  line-height: 1.5;
+  margin-bottom: 12px;
+}
+
+.apiKeyInputRow {
+  margin-bottom: 12px;
+}
+
+.apiKeyActions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  padding-bottom: 24px;
+}
+
+.authStatusCard {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.authStatusRow {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.authStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.authStatusDotReady {
+  background: #22c55e;
+}
+
+.authStatusDotInfo {
+  background: #5ac8fa;
+}
+
+.authStatusDotError {
+  background: #ff453a;
+}
+
+.authStatusText {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.oauthCode {
+  padding: 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  text-align: center;
+  letter-spacing: 0.22em;
+  font-size: 26px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.inlineLink {
+  color: var(--accent-brand);
+  text-decoration: none;
+}
+
+.modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+@media (max-width: 860px) {
+  .dropdownRow {
+    grid-template-columns: 1fr;
+  }
+
+  .apiKeyConfiguredCard {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .apiKeyConfiguredButton {
+    width: 100% !important;
+  }
+
+  .apiKeyActions,
+  .modalActions {
+    flex-direction: column;
+  }
+}

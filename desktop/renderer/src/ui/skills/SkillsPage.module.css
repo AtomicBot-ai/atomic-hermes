@@ -1,0 +1,43 @@
+.root {
+  flex: 1;
+  overflow-y: auto;
+  padding: 32px 24px;
+}
+
+.container {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+}
+
+.title {
+  font-size: 24px;
+  font-weight: 700;
+  color: #fff;
+  margin: 0;
+}
+
+.addBtn {
+  appearance: none;
+  border: none;
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 7px 14px;
+  border-radius: 10px;
+  transition:
+    background-color 0.15s ease,
+    opacity 0.15s ease;
+}
+
+.addBtn:hover {
+  background: rgba(255, 255, 255, 0.14);
+}

@@ -1,0 +1,29 @@
+export const routes = {
+  loading: "/loading",
+  error: "/error",
+  setup: "/setup",
+  chat: "/chat",
+  dashboard: "/dashboard",
+  terminal: "/terminal",
+  skills: "/skills",
+  skillEdit: "/skills/edit/:name",
+  settings: "/settings",
+  // Legacy path that now redirects to the unified AI Models screen.
+  settingsProviders: "/settings/ai-providers",
+  settingsModels: "/settings/ai-models",
+  settingsSkills: "/settings/skills",
+  settingsMessengers: "/settings/messengers",
+  settingsVoice: "/settings/voice",
+  settingsMcpServers: "/settings/mcp-servers",
+  settingsLogs: "/settings/logs",
+  settingsOther: "/settings/other",
+} as const;
+
+export function isBootstrapPath(pathname: string): boolean {
+  return (
+    pathname === "/" ||
+    pathname === routes.loading ||
+    pathname === routes.error ||
+    pathname.startsWith(routes.setup)
+  );
+}

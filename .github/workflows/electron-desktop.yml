@@ -1,0 +1,242 @@
+name: Electron Desktop
+
+on:
+  push:
+    tags:
+      - "v*"
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: "Publish to GitHub Releases"
+        required: false
+        default: false
+        type: boolean
+
+# Only allow one release build at a time to avoid race conditions on GitHub Releases.
+concurrency:
+  group: electron-desktop-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-macos:
+    runs-on: macos-14
+    timeout-minutes: 90
+    permissions:
+      contents: write
+    env:
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+          check-latest: true
+
+      # Python 3.11 is required for two reasons:
+      # 1. bundle-all.sh uses uv to install Python 3.11 and create the hermes venv
+      # 2. node-gyp inside electron-builder needs distutils (removed in Python 3.12+)
+      - name: Setup Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Runtime versions
+        run: |
+          node -v
+          npm -v
+          python3 --version
+          uv --version
+
+      - name: Bundle hermes resources
+        run: bash desktop/scripts/bundle-all.sh
+
+      # Remove broken symlinks and fake .app dirs that cause codesign --verify to fail.
+      # Python venvs create absolute symlinks that break after relocation;
+      # some npm packages (puppeteer-stealth) contain *.app dirs that aren't real bundles.
+      - name: Clean bundle for codesign
+        run: |
+          set -euo pipefail
+          BUILD="desktop/build"
+
+          # Remove broken symlinks
+          BROKEN=$(find "$BUILD" -type l ! -exec test -e {} \; -print 2>/dev/null || true)
+          if [ -n "$BROKEN" ]; then
+            echo "Removing broken symlinks:"
+            echo "$BROKEN"
+            echo "$BROKEN" | xargs rm -f
+          fi
+
+          # Rename fake .app directories (no Contents/Info.plist)
+          find "$BUILD" -type d -name "*.app" -print0 2>/dev/null | while IFS= read -r -d '' d; do
+            if [ ! -f "$d/Contents/Info.plist" ]; then
+              echo "Renaming fake .app: $d"
+              mv "$d" "${d%.app}.app-dir"
+            fi
+          done
+
+          echo "Bundle clean for codesign"
+
+      - name: Install desktop dependencies
+        working-directory: desktop
+        run: npm ci
+
+      - name: Build main + renderer
+        working-directory: desktop
+        run: npm run build:all
+
+      - name: Determine publish mode
+        id: publish-mode
+        run: |
+          if [[ "${{ github.ref_type }}" == "tag" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "tag=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          elif [[ "${{ inputs.publish }}" == "true" ]]; then
+            echo "publish=true" >> "$GITHUB_OUTPUT"
+            echo "tag=v$(node -p "require('./desktop/package.json').version")" >> "$GITHUB_OUTPUT"
+          else
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # Write the App Store Connect API key to a temp file for notarytool.
+      # The NOTARYTOOL_KEY secret contains the .p8 key content; notarytool expects a file path.
+      - name: Write notary API key to file
+        if: env.NOTARYTOOL_KEY_CONTENT != ''
+        run: |
+          KEY_PATH="$RUNNER_TEMP/notary-key.p8"
+          echo "$NOTARYTOOL_KEY_CONTENT" > "$KEY_PATH"
+          chmod 600 "$KEY_PATH"
+          echo "NOTARYTOOL_KEY=$KEY_PATH" >> "$GITHUB_ENV"
+        env:
+          NOTARYTOOL_KEY_CONTENT: ${{ secrets.NOTARYTOOL_KEY }}
+
+      # Raise open file limit — electron-builder code signing opens every file in the
+      # .app bundle (including bundled Python, venv, node_modules) and the default macOS
+      # limit (256) is too low.
+      - name: Raise file descriptor limit
+        run: |
+          echo "Before: soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+          sudo launchctl limit maxfiles 524288 524288
+          ulimit -n 524288
+          echo "After: soft=$(ulimit -Sn) hard=$(ulimit -Hn)"
+
+      # Build with --publish never. Uploads are handled separately via gh CLI
+      # to avoid electron-builder HTTP timeouts during long notarization waits.
+      - name: Build with electron-builder
+        id: electron-build
+        working-directory: desktop
+        continue-on-error: true
+        run: |
+          ulimit -n 524288
+          npx electron-builder --publish never
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_LINK: ${{ secrets.MACOS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.MACOS_CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ secrets.MACOS_CSC_LINK != '' && 'true' || 'false' }}
+          NOTARIZE: ${{ secrets.NOTARYTOOL_KEY != '' && secrets.MACOS_CSC_LINK != '' && '1' || '' }}
+          NOTARYTOOL_KEY_ID: ${{ secrets.NOTARYTOOL_KEY_ID }}
+          NOTARYTOOL_ISSUER: ${{ secrets.NOTARYTOOL_ISSUER }}
+
+      - name: Diagnose codesign failure
+        if: steps.electron-build.outcome == 'failure'
+        working-directory: desktop
+        run: |
+          set -x
+          APP="release/mac-arm64/Atomic Hermes.app"
+          if [ ! -d "$APP" ]; then
+            echo "App bundle not found at $APP"
+            ls -la release/ 2>/dev/null || true
+            exit 1
+          fi
+
+          echo "=== ALL symlinks in bundle ==="
+          find "$APP" -type l -exec sh -c 'echo "LINK: $1 -> $(readlink "$1")  [exists=$(test -e "$1" && echo yes || echo NO)]"' _ {} \;
+
+          echo ""
+          echo "=== Broken symlinks ==="
+          find "$APP" -type l ! -exec test -e {} \; -print
+
+          echo ""
+          echo "=== Absolute-path symlinks ==="
+          find "$APP" -type l -exec sh -c 'target=$(readlink "$1"); case "$target" in /*) echo "ABS: $1 -> $target" ;; esac' _ {} \;
+
+          echo ""
+          echo "=== Attempting codesign verify for detailed output ==="
+          codesign --verify --deep --strict --verbose=4 "$APP" 2>&1 || true
+
+          exit 1
+
+      - name: Fail if electron-builder failed
+        if: steps.electron-build.outcome == 'failure'
+        run: exit 1
+
+      # Generate latest-mac.yml for electron-updater (normally created by --publish always).
+      - name: Generate latest-mac.yml
+        working-directory: desktop/release
+        run: |
+          set -euo pipefail
+          VERSION=$(node -p "require('../package.json').version")
+          ZIP=$(ls -1 *-mac.zip | head -1)
+          SHA512=$(shasum -a 512 "$ZIP" | awk '{print $1}' | xxd -r -p | base64)
+          SIZE=$(stat -f%z "$ZIP")
+          RELEASE_DATE=$(date -u +"%Y-%m-%dT%H:%M:%S.000Z")
+          cat > latest-mac.yml <<EOF
+          version: ${VERSION}
+          files:
+            - url: ${ZIP}
+              sha512: ${SHA512}
+              size: ${SIZE}
+          path: ${ZIP}
+          sha512: ${SHA512}
+          releaseDate: '${RELEASE_DATE}'
+          EOF
+          # Remove leading whitespace from heredoc indentation.
+          sed -i '' 's/^          //' latest-mac.yml
+          echo "Generated latest-mac.yml:"
+          cat latest-mac.yml
+
+      # Create draft GitHub Release and upload all artifacts via gh CLI.
+      # gh CLI handles large files reliably without the timeout issues of electron-builder.
+      - name: Publish to GitHub Releases
+        if: steps.publish-mode.outputs.publish == 'true'
+        working-directory: desktop/release
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.publish-mode.outputs.tag }}"
+
+          # Create draft release (or skip if it already exists).
+          gh release create "$TAG" --draft --title "$TAG" --generate-notes 2>/dev/null || true
+
+          # Upload all artifacts (zip, dmg, blockmap, latest-mac.yml).
+          for f in *.zip *.dmg *.blockmap latest-mac.yml; do
+            if [[ -f "$f" ]]; then
+              echo "Uploading: $f"
+              gh release upload "$TAG" "$f" --clobber
+            fi
+          done
+
+          echo "Draft release created: $TAG"
+          echo "Go to GitHub Releases to review and publish."
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Upload artifacts for manual dispatch builds (when not publishing to Releases).
+      - name: Upload build artifacts
+        if: steps.publish-mode.outputs.publish == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: hermes-desktop-macos-${{ runner.arch }}
+          path: |
+            desktop/release/*.zip
+            desktop/release/*.dmg
+            desktop/release/*.blockmap
+            desktop/release/latest-mac.yml
+          if-no-files-found: error
+          retention-days: 14

@@ -1,0 +1,106 @@
+/* ── Kit: Typography (section titles, errors) ────────── */
+
+.UiSectionContent {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.UiSectionCard {
+  border-radius: var(--radius-xl);
+  transition: border-color 0.15s ease;
+  background:
+    linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
+    linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.24) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.24) 100%
+      )
+      border-box;
+
+  border: 1px solid transparent;
+  padding: 24px;
+  height: 100%;
+  min-height: 300px;
+  max-height: 332px;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.UiSectionCardGreen {
+  background:
+    linear-gradient(var(--bg-elevated), var(--bg-elevated)) padding-box,
+    linear-gradient(150deg, #c3ff4224 0%, rgba(255, 255, 255, 0) 50%, #c3ff4224 100%) border-box;
+}
+
+.UiSectionTitle {
+  font-size: 26px;
+  line-height: 32px;
+  margin-bottom: 8px;
+  font-weight: 700;
+}
+
+.UiSectionSubtitle {
+  font-weight: 400;
+  font-size: 15px;
+  line-height: 20px;
+  color: #a0a0a0;
+  margin-bottom: 24px;
+}
+
+.UiSectionSubtitle ol,
+.UiSectionSubtitle ul {
+  margin: 12px 0;
+  padding: 0;
+}
+
+.UiSectionSubtitle li {
+  margin: 8px 0;
+  padding: 0;
+}
+
+.UiSectionSubtitle ul > li {
+  margin-left: 16px;
+}
+
+.UiSectionSubtitle ol {
+  counter-reset: item;
+}
+
+.UiSectionSubtitle ol > li {
+  counter-increment: item;
+  display: flex;
+  column-gap: 8px;
+  margin: 6px 0;
+}
+
+.UiSectionSubtitle ol > li::before {
+  content: counter(item) ".";
+  text-align: right;
+  opacity: 0.8;
+}
+
+.UiSectionSubtitleAccent {
+  color: #ffffff;
+}
+
+.UiInlineError {
+  margin-top: 10px;
+  font-size: 12px;
+  color: rgba(255, 122, 0, 0.95);
+}
+
+.UiFooterText {
+  position: absolute;
+  bottom: 18px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  font-size: 12px;
+  color: rgba(230, 237, 243, 0.35);
+  letter-spacing: 0.2px;
+  user-select: none;
+}

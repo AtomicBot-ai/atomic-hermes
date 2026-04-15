@@ -1,0 +1,137 @@
+/* Chat shell and transcript container */
+.UiChatShell {
+  min-width: 500px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-base);
+}
+
+.UiChatTranscript {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  scroll-behavior: smooth;
+  display: flex;
+  flex-direction: column;
+  padding: 32px 0;
+  width: 100%;
+  scrollbar-gutter: stable;
+}
+
+.UiChatTranscriptInner {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: var(--content-min-width);
+  max-width: var(--content-max-width);
+  padding: 0 24px;
+  margin: 0 auto;
+}
+
+.UiChatEmpty {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+  padding: 40px 20px;
+  animation: uiChatEmptyEnter 260ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
+.UiChatEmptyLogo {
+  width: 243px;
+  height: 135px;
+  border-radius: var(--radius-xl);
+  object-fit: contain;
+  filter: drop-shadow(0 4px 12px rgba(0, 0, 0, 0.3));
+}
+
+.UiChatEmptyTitle {
+  font-size: 26px;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.UiChatEmptySubtitle {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.55);
+  max-width: 280px;
+}
+
+.UiChatRow {
+  display: flex;
+  margin-bottom: 24px;
+  animation: uiChatBubbleEnter 400ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.UiChatRowToolGroup {
+  margin-bottom: 0;
+}
+
+.UiChatRow:first-child {
+  margin-top: 0;
+}
+
+.UiChatRowLastAssistant {
+  min-height: max(420px, calc(100dvh - 260px));
+}
+
+.UiChatRowPendingAssistant {
+  min-height: max(420px, calc(100dvh - 260px));
+}
+
+@keyframes uiChatBubbleEnter {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes uiChatEmptyEnter {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.UiChatRow--noAnim {
+  animation: none;
+}
+
+.UiChatRow--noAnim :global(.UiChatText) {
+  animation: none;
+}
+
+.UiChatScrollToBottomWrap {
+  flex-shrink: 0;
+  display: flex;
+  justify-content: center;
+  position: relative;
+  width: 100%;
+  min-width: var(--content-min-width);
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .UiChatRow {
+    animation: none;
+  }
+
+  .UiChatEmpty {
+    animation: none;
+  }
+}

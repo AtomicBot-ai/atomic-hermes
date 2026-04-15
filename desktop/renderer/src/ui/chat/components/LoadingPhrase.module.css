@@ -1,0 +1,28 @@
+/* Rotating loading phrase with shimmer (replaces typing dots) */
+.LoadingPhrase {
+  background: linear-gradient(90deg, #fff 0%, rgba(255, 255, 255, 0.4) 50%, #fff 100%);
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: loadingPhraseShimmer 1.8s linear infinite;
+  transition: opacity 0.25s ease;
+  font-size: 16px;
+}
+
+@keyframes loadingPhraseShimmer {
+  0% {
+    background-position: 200% center;
+  }
+  100% {
+    background-position: -200% center;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .LoadingPhrase {
+    animation: none;
+    background: none;
+    -webkit-text-fill-color: rgba(255, 255, 255, 0.7);
+  }
+}
