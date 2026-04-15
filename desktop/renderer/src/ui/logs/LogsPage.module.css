@@ -1,0 +1,161 @@
+.Shell {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.Toolbar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid rgba(230, 237, 243, 0.08);
+}
+
+.Filters {
+  display: flex;
+  gap: 8px;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.ToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 0 0 auto;
+}
+
+.LiveBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(39, 194, 129, 0.18);
+  color: #27c281;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.LiveDot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  animation: livePulse 1.5s ease-in-out infinite;
+}
+
+@keyframes livePulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.3;
+  }
+}
+
+.RefreshBtn {
+  padding: 5px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(230, 237, 243, 0.1);
+  background: rgba(230, 237, 243, 0.04);
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+  transition:
+    background 120ms ease,
+    color 120ms ease;
+}
+
+.RefreshBtn:hover {
+  background: rgba(230, 237, 243, 0.08);
+  color: #fff;
+}
+
+.Spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(230, 237, 243, 0.15);
+  border-top-color: #0d6fff;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.ErrorBanner {
+  flex: 0 0 auto;
+  margin: 0 16px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.LogViewer {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding: 14px 16px;
+  font-family: "SF Mono", "Fira Code", "Cascadia Code", monospace;
+  font-size: 11.5px;
+  line-height: 1.7;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.LogLine {
+  padding: 1px 4px;
+  margin: 0 -4px;
+  border-radius: 4px;
+  white-space: pre-wrap;
+  word-break: break-all;
+  transition: background 80ms ease;
+}
+
+.LogLine:hover {
+  background: rgba(230, 237, 243, 0.05);
+}
+
+.LogLineError {
+  color: #ef4444;
+}
+
+.LogLineWarning {
+  color: #f59e0b;
+}
+
+.LogLineInfo {
+  color: rgba(230, 237, 243, 0.82);
+}
+
+.LogLineDebug {
+  color: rgba(230, 237, 243, 0.38);
+}
+
+.EmptyState {
+  text-align: center;
+  padding: 40px 0;
+  color: var(--muted2);
+  font-size: 13px;
+}
+
+@media (max-width: 780px) {
+  .Toolbar {
+    flex-wrap: wrap;
+  }
+
+  .Filters {
+    flex-wrap: wrap;
+  }
+}
