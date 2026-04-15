@@ -8,7 +8,7 @@
     "rebuild": "electron-rebuild -f -w node-pty",
     "build:ts": "tsc",
     "build:dashboard": "npm --prefix ../web install && npm --prefix ../web run build",
-    "build:renderer": "vite build --config renderer/vite.config.ts",
+    "build:renderer": "node --max-old-space-size=4096 node_modules/vite/bin/vite.js build --config renderer/vite.config.ts",
     "build:all": "npm run build:dashboard && npm run build:ts && npm run build:renderer",
     "start": "npm run rebuild && npm run build:all && electron .",
     "dev": "npm run rebuild && bash scripts/bundle-dev.sh && npm run build:dashboard && npm run build:renderer && tsc && (tsc -w --preserveWatchOutput & electron .)",
