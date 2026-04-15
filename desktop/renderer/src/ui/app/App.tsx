@@ -23,6 +23,7 @@ import { SkillsSettingsTab } from "../settings/skills/SkillsSettingsTab";
 import { SkillEditor } from "../settings/skills/SkillEditor";
 import { DashboardPage } from "../dashboard";
 import { TerminalPage } from "../terminal";
+import { FilesPage } from "../files";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
 import { UpdateBanner } from "../updates/UpdateBanner";
 import a from "./App.module.css";
@@ -171,6 +172,7 @@ export function App() {
           <Route path="chat" element={<ChatRoute />} />
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="terminal" element={<TerminalPage />} />
+          <Route path="files" element={<FilesPage />} />
           <Route path="skills" element={<Navigate to={routes.settingsSkills} replace />} />
           <Route path="skills/edit/:name" element={<SkillEditor />} />
           <Route path="settings" element={<SettingsPage state={state} />}>

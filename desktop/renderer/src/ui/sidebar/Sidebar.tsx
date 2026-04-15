@@ -46,6 +46,20 @@ function IconDashboard() {
   );
 }
 
+function IconFiles() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path
+        d="M2.75 4A1.25 1.25 0 014 2.75h3.17a1 1 0 01.7.3L9.3 4.45a1 1 0 00.7.3H14A1.25 1.25 0 0115.25 6v8A1.25 1.25 0 0114 15.25H4A1.25 1.25 0 012.75 14V4z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function IconTerminal() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
@@ -312,6 +326,16 @@ export function Sidebar(props: SidebarProps) {
                 </span>
               </NavLink>
             )}
+            <NavLink
+              to={routes.files}
+              className={css.UiChatSidebarNarrowFooterBtn}
+              aria-label="Files"
+              title="Files"
+            >
+              <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+                <IconFiles />
+              </span>
+            </NavLink>
             <NavLink
               to={routes.settings}
               className={css.UiChatSidebarNarrowFooterBtn}

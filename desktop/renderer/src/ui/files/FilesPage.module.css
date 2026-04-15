@@ -1,0 +1,308 @@
+/* ── Page layout ─────────────────────────────────────────────── */
+
+.FilesPage {
+  display: flex;
+  height: 100%;
+  min-height: 0;
+  background: var(--bg);
+}
+
+/* ── Left panel: file tree ───────────────────────────────────── */
+
+.FilesSidebar {
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+  border-right: 1px solid var(--border);
+  background: var(--surface-primary);
+}
+
+/* ── Divider ─────────────────────────────────────────────────── */
+
+.Divider {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  background: transparent;
+  transition: background 140ms ease;
+  z-index: 10;
+}
+
+.Divider:hover,
+.Divider:active {
+  background: var(--accent);
+  opacity: 0.4;
+}
+
+/* ── Right panel: editor ─────────────────────────────────────── */
+
+.FilesMain {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+/* ── Toolbar ─────────────────────────────────────────────────── */
+
+.Toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 16px;
+  height: 40px;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--surface-primary);
+}
+
+.ToolbarActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-shrink: 0;
+}
+
+.DirtyDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent);
+  flex-shrink: 0;
+}
+
+.SaveButton {
+  appearance: none;
+  border: none;
+  background: rgba(255, 122, 0, 0.12);
+  color: var(--accent);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 140ms ease,
+    opacity 140ms ease;
+}
+
+.SaveButton:hover:not(:disabled) {
+  background: rgba(255, 122, 0, 0.22);
+}
+
+.SaveButton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+/* ── Breadcrumb ──────────────────────────────────────────────── */
+
+.Breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 12px;
+  color: var(--muted2);
+}
+
+.BreadcrumbSep {
+  color: var(--muted2);
+  opacity: 0.5;
+  margin: 0 2px;
+}
+
+.BreadcrumbPart {
+  color: var(--muted2);
+}
+
+.BreadcrumbActive {
+  color: var(--text);
+  font-weight: 500;
+}
+
+/* ── Editor area ─────────────────────────────────────────────── */
+
+.EditorWrapper {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+}
+
+.EditorContainer {
+  height: 100%;
+  width: 100%;
+}
+
+.EditorEmpty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--muted2);
+}
+
+.EditorEmptyIcon {
+  opacity: 0.25;
+}
+
+.EditorEmptyText {
+  font-size: 13px;
+  color: var(--muted2);
+}
+
+.EditorErrorText {
+  font-size: 13px;
+  color: #f44747;
+}
+
+/* ── File tree ───────────────────────────────────────────────── */
+
+.FileTree {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.FileTreeHeader {
+  flex-shrink: 0;
+  padding: 12px 12px 8px;
+}
+
+.FileTreeTitle {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted2);
+}
+
+.FileTreeContent {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding-bottom: 16px;
+}
+
+/* ── Tree node ───────────────────────────────────────────────── */
+
+.TreeNode {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 8px;
+  cursor: pointer;
+  font-size: 13px;
+  color: var(--text);
+  white-space: nowrap;
+  user-select: none;
+  transition: background 80ms ease;
+}
+
+.TreeNode:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.TreeNodeSelected {
+  background: rgba(255, 122, 0, 0.1) !important;
+  color: var(--text);
+}
+
+.TreeNodeChevron {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted2);
+}
+
+.TreeNodeChevronSpacer {
+  flex-shrink: 0;
+  width: 16px;
+}
+
+.TreeNodeIcon {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.TreeNodeLabel {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.TreeLoading,
+.TreeEmpty {
+  font-size: 12px;
+  color: var(--muted2);
+  padding: 4px 8px;
+}
+
+/* ── Inline input ────────────────────────────────────────────── */
+
+.InlineInput {
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  padding: 0 6px;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius-xs);
+  background: var(--surface-primary);
+  color: var(--text);
+  font-size: 12px;
+  outline: none;
+}
+
+/* ── Context menu ────────────────────────────────────────────── */
+
+.ContextMenu {
+  position: fixed;
+  z-index: 9999;
+  min-width: 140px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  background: var(--bg-base);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+.ContextMenuItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 12px;
+  padding: 6px 10px;
+  border-radius: var(--radius-xs);
+  cursor: pointer;
+  transition: background 80ms ease;
+}
+
+.ContextMenuItem:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.ContextMenuDivider {
+  height: 1px;
+  background: var(--border);
+  margin: 4px 6px;
+}

@@ -5,6 +5,7 @@ export const routes = {
   chat: "/chat",
   dashboard: "/dashboard",
   terminal: "/terminal",
+  files: "/files",
   skills: "/skills",
   skillEdit: "/skills/edit/:name",
   settings: "/settings",

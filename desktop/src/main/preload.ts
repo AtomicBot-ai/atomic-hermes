@@ -83,4 +83,18 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     onIpc("terminal:data", cb),
   onTerminalExit: (cb: (payload: { id: string; exitCode: number; signal?: number }) => void): (() => void) =>
     onIpc("terminal:exit", cb),
+
+  // ── Files ─────────────────────────────────────────────────────────
+  filesListDir: async (p: string): Promise<Array<{ name: string; type: "file" | "dir"; size: number; mtime: number }>> =>
+    ipcRenderer.invoke("files:list-dir", { path: p }),
+  filesReadFile: async (p: string): Promise<{ content: string; size: number }> =>
+    ipcRenderer.invoke("files:read-file", { path: p }),
+  filesWriteFile: async (p: string, content: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:write-file", { path: p, content }),
+  filesCreateDir: async (p: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:create-dir", { path: p }),
+  filesRename: async (oldPath: string, newPath: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:rename", { oldPath, newPath }),
+  filesDelete: async (p: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:delete", { path: p }),
 });

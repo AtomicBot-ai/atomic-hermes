@@ -9,6 +9,7 @@ import {
 } from "./onboarding-state";
 import { registerTerminalIpcHandlers } from "./terminal/ipc";
 import { killAllTerminals } from "./terminal/pty-manager";
+import { registerFilesIpcHandlers } from "./files/ipc";
 import {
   initAutoUpdater,
   disposeAutoUpdater,
@@ -128,6 +129,8 @@ registerTerminalIpcHandlers({
   getMainWindow: () => mainWindow,
   stateDir,
 });
+
+registerFilesIpcHandlers({ stateDir });
 
 // ── Updater IPC ──────────────────────────────────────────────────────
 
