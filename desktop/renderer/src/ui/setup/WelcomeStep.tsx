@@ -1,11 +1,13 @@
 import { useNavigate } from "react-router-dom";
 import { SplashLogo, PrimaryButton, FooterText } from "@shared/kit";
+import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import { TOTAL_STEPS } from "./SetupPage";
 import s from "./WelcomeStep.module.css";
 
 export function WelcomeStep() {
+  useOnboardingStepEvent("welcome");
   const navigate = useNavigate();
   const { skip } = useSetup();
 

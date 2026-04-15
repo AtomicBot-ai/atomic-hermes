@@ -50,6 +50,12 @@ contextBridge.exposeInMainWorld("hermesAPI", {
   showNotification: (title: string, body: string): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("show-notification", { title, body }),
 
+  // ── Analytics ──────────────────────────────────────────────────────
+  analyticsGet: async (): Promise<{ enabled: boolean; userId: string; prompted: boolean }> =>
+    ipcRenderer.invoke("analytics-get"),
+  analyticsSet: async (enabled: boolean): Promise<{ ok: true }> =>
+    ipcRenderer.invoke("analytics-set", { enabled }),
+
   // ── Updater ─────────────────────────────────────────────────────────
   getAppVersion: (): Promise<string> => ipcRenderer.invoke("get-app-version"),
   fetchReleaseNotes: (version: string, owner: string, repo: string): Promise<{ ok: boolean; body: string; htmlUrl: string }> =>
@@ -83,4 +89,50 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     onIpc("terminal:data", cb),
   onTerminalExit: (cb: (payload: { id: string; exitCode: number; signal?: number }) => void): (() => void) =>
     onIpc("terminal:exit", cb),
+
+  // ── Files ─────────────────────────────────────────────────────────
+  filesListDir: async (p: string): Promise<Array<{ name: string; type: "file" | "dir"; size: number; mtime: number }>> =>
+    ipcRenderer.invoke("files:list-dir", { path: p }),
+  filesReadFile: async (p: string): Promise<{ content: string; size: number }> =>
+    ipcRenderer.invoke("files:read-file", { path: p }),
+  filesWriteFile: async (p: string, content: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:write-file", { path: p, content }),
+  filesCreateDir: async (p: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:create-dir", { path: p }),
+  filesRename: async (oldPath: string, newPath: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:rename", { oldPath, newPath }),
+  filesDelete: async (p: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:delete", { path: p }),
+
+  // ── File Snapshots (Local History) ────────────────────────────
+  filesListSnapshots: async (p: string): Promise<Array<{ snapshotPath: string; timestamp: number; size: number; label: string }>> =>
+    ipcRenderer.invoke("files:list-snapshots", { path: p }),
+  filesReadSnapshot: async (snapshotPath: string): Promise<{ content: string; size: number }> =>
+    ipcRenderer.invoke("files:read-snapshot", { snapshotPath }),
+  filesDeleteSnapshot: async (snapshotPath: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:delete-snapshot", { snapshotPath }),
+  filesRestoreSnapshot: async (p: string, snapshotPath: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("files:restore-snapshot", { path: p, snapshotPath }),
+
+  // ── Sidebar (Favorites, Memories, Skills) ─────────────────────
+  sidebarListProfiles: async (): Promise<{ profiles: string[]; selected: string }> =>
+    ipcRenderer.invoke("sidebar:list-profiles"),
+  sidebarSelectProfile: async (profileName: string): Promise<{ ok: boolean; selected: string }> =>
+    ipcRenderer.invoke("sidebar:select-profile", { profileName }),
+  sidebarGetProfileHome: async (): Promise<{ profileHome: string; profileName: string }> =>
+    ipcRenderer.invoke("sidebar:get-profile-home"),
+  sidebarListMemories: async (): Promise<Array<{ name: string; exists: boolean }>> =>
+    ipcRenderer.invoke("sidebar:list-memories"),
+  sidebarReadMemoryFile: async (filename: string): Promise<{ content: string; size: number; relativePath: string }> =>
+    ipcRenderer.invoke("sidebar:read-memory-file", { filename }),
+  sidebarWriteMemoryFile: async (filename: string, content: string): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("sidebar:write-memory-file", { filename, content }),
+  sidebarListSkills: async (): Promise<Array<{ name: string; description: string; dirPath: string }>> =>
+    ipcRenderer.invoke("sidebar:list-skills"),
+  sidebarReadSkillFile: async (skillDir: string): Promise<{ content: string; size: number; relativePath: string }> =>
+    ipcRenderer.invoke("sidebar:read-skill-file", { skillDir }),
+  sidebarGetFavorites: async (): Promise<Array<{ path: string; type: "file" | "dir"; name: string }>> =>
+    ipcRenderer.invoke("sidebar:get-favorites"),
+  sidebarSetFavorites: async (entries: Array<{ path: string; type: "file" | "dir"; name: string }>): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("sidebar:set-favorites", { entries }),
 });

@@ -1,6 +1,7 @@
 import { app, type BrowserWindow } from "electron";
 import { autoUpdater, type UpdateInfo } from "electron-updater";
 import { showUpdateSplash } from "./update-splash";
+import { captureMain } from "./analytics/posthog-main";
 
 const CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const INITIAL_DELAY_MS = 5_000;
@@ -81,6 +82,7 @@ export async function downloadUpdate(): Promise<void> {
 }
 
 export function installUpdate(): void {
+  captureMain("update_installed", { version: app.getVersion() });
   showUpdateSplash();
   autoUpdater.quitAndInstall();
 }

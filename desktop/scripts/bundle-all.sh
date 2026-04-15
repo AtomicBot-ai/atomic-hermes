@@ -262,14 +262,11 @@ done < <(find "$BUILD_DIR/hermes-venv/lib" -type d \( -name "tests" -o -name "te
 find "$BUILD_DIR/python" "$BUILD_DIR/hermes-venv" -name "*.a" -delete 2>/dev/null || true
 
 # Python stdlib test suite (large, never used)
+# NOTE: keep unittest — unittest.mock is used at runtime by run_agent.py
 rm -rf "$BUILD_DIR/python/lib/python"*/test 2>/dev/null || true
-rm -rf "$BUILD_DIR/python/lib/python"*/unittest 2>/dev/null || true
 
-# .dist-info directories (pip metadata, not needed at runtime)
-while IFS= read -r -d '' d; do
-    rm -rf "$d"
-    STRIPPED=$((STRIPPED + 1))
-done < <(find "$BUILD_DIR/hermes-venv/lib" -type d -name "*.dist-info" -print0 2>/dev/null)
+# NOTE: keep .dist-info directories — importlib.metadata needs them at runtime
+# (hermes_cli/plugins.py uses entry_points(), hindsight plugin uses version())
 
 # Fake .app directories in node_modules (e.g. puppeteer-extra-plugin-stealth/evasions/chrome.app).
 # macOS codesign treats any *.app directory as an app bundle and fails if it isn't one.

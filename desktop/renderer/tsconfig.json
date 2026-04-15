@@ -4,6 +4,7 @@
     "module": "ESNext",
     "moduleResolution": "bundler",
     "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "types": ["vite/client"],
     "jsx": "react-jsx",
     "strict": true,
     "esModuleInterop": true,
@@ -18,7 +19,9 @@
       "@styles/*": ["./src/ui/styles/*"],
       "@ui/*": ["./src/ui/*"],
       "@ipc/*": ["./src/ipc/*"],
-      "@lib/*": ["./src/lib/*"]
+      "@lib/*": ["./src/lib/*"],
+      "@analytics": ["./src/analytics"],
+      "@analytics/*": ["./src/analytics/*"]
     }
   },
   "include": ["src/**/*"],

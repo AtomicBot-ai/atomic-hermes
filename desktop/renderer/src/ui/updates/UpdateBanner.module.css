@@ -49,8 +49,8 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-10);
-  background: rgba(174, 255, 0, 0.1);
-  color: var(--lime);
+  background: rgba(0, 232, 212, 0.1);
+  color: var(--accent-brand);
 }
 
 .UpdateBanner-icon--error {
@@ -110,7 +110,7 @@
 }
 
 .UpdateBanner-btn--primary {
-  background: var(--lime);
+  background: var(--accent-brand);
   color: var(--surface-primary);
   font-weight: 650;
 }
@@ -154,14 +154,14 @@
 .UpdateBanner-progressBar {
   height: 100%;
   border-radius: 2px;
-  background: linear-gradient(90deg, var(--lime), #c8ff4d);
+  background: linear-gradient(90deg, var(--accent-brand), var(--accent-brand-soft));
   transition: width 200ms ease;
 }
 
 .UpdateBanner-percent {
   font-size: 12px;
   font-weight: 650;
-  color: var(--lime);
+  color: var(--accent-brand);
   font-variant-numeric: tabular-nums;
   flex-shrink: 0;
   min-width: 32px;

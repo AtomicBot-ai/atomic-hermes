@@ -9,6 +9,10 @@ import {
 } from "./onboarding-state";
 import { registerTerminalIpcHandlers } from "./terminal/ipc";
 import { killAllTerminals } from "./terminal/pty-manager";
+import { registerFilesIpcHandlers } from "./files/ipc";
+import { registerSnapshotIpcHandlers } from "./files/snapshot-ipc";
+import { registerSidebarIpcHandlers } from "./files/sidebar-ipc";
+import { SnapshotWatcher } from "./files/snapshot-watcher";
 import {
   initAutoUpdater,
   disposeAutoUpdater,
@@ -18,12 +22,16 @@ import {
   getAppVersion,
 } from "./updater";
 import { killUpdateSplash } from "./update-splash";
+import { readAnalyticsState, writeAnalyticsState } from "./analytics/analytics-state";
+import { initPosthogMain, captureMain, shutdownPosthogMain } from "./analytics/posthog-main";
+import { registerAnalyticsHandlers } from "./analytics/analytics-ipc";
 
 app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
 
 let mainWindow: BrowserWindow | null = null;
 let pythonBridge: PythonBridge | null = null;
 let backendPort: number | null = null;
+let snapshotWatcher: SnapshotWatcher | null = null;
 
 type DashboardState =
   | { kind: "starting" }
@@ -57,6 +65,22 @@ function createWindow(): void {
 }
 
 const stateDir = path.join(app.getPath("userData"), "hermes");
+
+// ── Analytics ────────────────────────────────────────────────────────
+const analyticsState = readAnalyticsState(stateDir);
+if (!analyticsState.prompted) {
+  analyticsState.enabled = true;
+  analyticsState.prompted = true;
+  analyticsState.enabledAt = analyticsState.enabledAt ?? new Date().toISOString();
+  writeAnalyticsState(stateDir, analyticsState);
+}
+initPosthogMain(analyticsState.userId, analyticsState.enabled);
+captureMain("app_launched", {
+  platform: process.platform,
+  version: app.getVersion(),
+});
+
+registerAnalyticsHandlers({ stateDir });
 
 ipcMain.handle("get-port", () => backendPort);
 ipcMain.handle("get-hermes-home", () => stateDir);
@@ -128,6 +152,13 @@ registerTerminalIpcHandlers({
   getMainWindow: () => mainWindow,
   stateDir,
 });
+
+registerFilesIpcHandlers({ stateDir });
+registerSnapshotIpcHandlers({ stateDir });
+registerSidebarIpcHandlers({ stateDir });
+
+snapshotWatcher = new SnapshotWatcher(stateDir);
+snapshotWatcher.start();
 
 // ── Updater IPC ──────────────────────────────────────────────────────
 
@@ -222,9 +253,12 @@ app.on("window-all-closed", () => {
 });
 
 app.on("before-quit", () => {
+  snapshotWatcher?.stop();
+  snapshotWatcher = null;
   disposeAutoUpdater();
   killAllTerminals();
   pythonBridge?.kill();
+  void shutdownPosthogMain();
 });
 
 app.on("activate", () => {

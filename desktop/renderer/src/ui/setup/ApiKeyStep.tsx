@@ -7,6 +7,7 @@ import {
   SecondaryButton,
   TextInput,
 } from "@shared/kit";
+import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { TOTAL_STEPS } from "./SetupPage";
 import { useSetup } from "./setup-context";
@@ -22,6 +23,7 @@ function openExternal(url: string) {
 }
 
 export function ApiKeyStep() {
+  useOnboardingStepEvent("api_key");
   const navigate = useNavigate();
   const ctx = useSetup();
 

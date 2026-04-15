@@ -57,12 +57,35 @@ function IconDashboard() {
   );
 }
 
+function IconFiles() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path
+        d="M3 4.5A1.5 1.5 0 014.5 3h3.67a1 1 0 01.7.3L10.3 4.7a1 1 0 00.7.3h4.5A1.5 1.5 0 0117 6.5v9A1.5 1.5 0 0115.5 17h-11A1.5 1.5 0 013 15.5v-11z"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function IconTerminal() {
   return (
     <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
       <rect x="2.5" y="3.5" width="15" height="13" rx="2" stroke="currentColor" strokeWidth="1.5" />
       <path d="M6 8l3 2.5L6 13" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M11 13h3" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconLogs() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <path d="M6 6h8M6 10h8M6 14h5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <rect x="3" y="3" width="14" height="14" rx="2.25" stroke="currentColor" strokeWidth="1.5" />
     </svg>
   );
 }
@@ -171,6 +194,18 @@ export function SidebarContent(props: SidebarContentProps & { showTerminal?: boo
             <span className={css.UiChatSidebarNavLabel}>Terminal</span>
           </NavLink>
         )}
+        <NavLink to={routes.files} className={css.UiChatSidebarSettings} aria-label="Files">
+          <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+            <IconFiles />
+          </span>
+          <span className={css.UiChatSidebarNavLabel}>Files</span>
+        </NavLink>
+        <NavLink to={routes.logs} className={css.UiChatSidebarSettings} aria-label="Logs">
+          <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+            <IconLogs />
+          </span>
+          <span className={css.UiChatSidebarNavLabel}>Logs</span>
+        </NavLink>
         <NavLink to={routes.settingsSkills} className={css.UiChatSidebarSettings} aria-label="Skills">
           <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="none">

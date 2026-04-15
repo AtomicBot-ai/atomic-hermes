@@ -1,4 +1,5 @@
 import { PrimaryButton } from "@shared/kit";
+import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import { TOTAL_STEPS } from "./SetupPage";
@@ -17,6 +18,7 @@ const CONFETTI_COLORS = [
 ];
 
 export function FinishStep() {
+  useOnboardingStepEvent("finished");
   const navigate = useNavigate();
   const { complete } = useSetup();
 

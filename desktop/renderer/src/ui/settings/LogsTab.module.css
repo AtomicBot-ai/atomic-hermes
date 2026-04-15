@@ -99,7 +99,7 @@
   font-size: 11.5px;
   line-height: 1.7;
   overflow: auto;
-  max-height: 520px;
+  flex: 1 1 auto;
   min-height: 180px;
 }
 

@@ -1,4 +1,5 @@
 import React from "react";
+import { FullscreenShell, FullscreenTopbar } from "../app/App";
 import appCss from "../app/App.module.css";
 
 type DashboardState =
@@ -68,28 +69,34 @@ export function DashboardPage() {
 
   if (state.kind === "starting") {
     return (
-      <div className={appCss.UiCentered}>
-        <div className={appCss.UiCard}>
-          <div className={appCss.UiCardTitle}>Starting Hermes Dashboard</div>
-          <div className={appCss.UiCardSubtitle}>
-            The admin interface is booting in a dedicated local process.
+      <FullscreenShell>
+        <FullscreenTopbar title="Dashboard" />
+        <div className={appCss.UiCentered}>
+          <div className={appCss.UiCard}>
+            <div className={appCss.UiCardTitle}>Starting Hermes Dashboard</div>
+            <div className={appCss.UiCardSubtitle}>
+              The admin interface is booting in a dedicated local process.
+            </div>
           </div>
         </div>
-      </div>
+      </FullscreenShell>
     );
   }
 
   if (state.kind === "failed") {
     return (
-      <div className={appCss.UiCentered}>
-        <div className={appCss.UiCard}>
-          <div className={appCss.UiCardTitle}>Hermes Dashboard failed to start</div>
-          <div className={appCss.UiCardSubtitle}>
-            The embedded admin interface is unavailable, but the desktop chat backend can continue running.
+      <FullscreenShell>
+        <FullscreenTopbar title="Dashboard" />
+        <div className={appCss.UiCentered}>
+          <div className={appCss.UiCard}>
+            <div className={appCss.UiCardTitle}>Hermes Dashboard failed to start</div>
+            <div className={appCss.UiCardSubtitle}>
+              The embedded admin interface is unavailable, but the desktop chat backend can continue running.
+            </div>
+            <pre>{state.error || "No details."}</pre>
           </div>
-          <pre>{state.error || "No details."}</pre>
         </div>
-      </div>
+      </FullscreenShell>
     );
   }
 
@@ -100,29 +107,21 @@ export function DashboardPage() {
   };
 
   return (
-    <div className={appCss.UiDashboardLayout}>
-      <div className={appCss.UiDashboardHeader}>
-        <div>
-          <div className={appCss.UiCardTitle}>Hermes Dashboard</div>
-          <div className={appCss.UiCardSubtitle}>
-            Embedded local admin UI served from the same Hermes home as the desktop backend.
-          </div>
-        </div>
-        <div className={appCss.UiMeta}>
-          <div className={appCss.UiPill}>port: {state.port}</div>
-          <div className={appCss.UiPill}>{state.url}</div>
-          <button
-            type="button"
-            className={appCss.UiOpenExternalButton}
-            onClick={() => void handleOpenExternal()}
-          >
-            Open in browser
-          </button>
+    <FullscreenShell>
+      <FullscreenTopbar title="Dashboard">
+        <button
+          type="button"
+          className={appCss.UiOpenExternalButton}
+          onClick={() => void handleOpenExternal()}
+        >
+          Open in browser
+        </button>
+      </FullscreenTopbar>
+      <div className={appCss.UiAppPage}>
+        <div className={appCss.UiDashboardLayout}>
+          <iframe className={appCss.UiDashboardIframe} title="Hermes Dashboard" src={state.url} />
         </div>
       </div>
-      <div className={appCss.UiIframeWrap}>
-        <iframe title="Hermes Dashboard" src={state.url} />
-      </div>
-    </div>
+    </FullscreenShell>
   );
 }

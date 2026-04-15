@@ -46,12 +46,35 @@ function IconDashboard() {
   );
 }
 
+function IconFiles() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path
+        d="M2.75 4A1.25 1.25 0 014 2.75h3.17a1 1 0 01.7.3L9.3 4.45a1 1 0 00.7.3H14A1.25 1.25 0 0115.25 6v8A1.25 1.25 0 0114 15.25H4A1.25 1.25 0 012.75 14V4z"
+        stroke="currentColor"
+        strokeWidth="1.25"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function IconTerminal() {
   return (
     <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
       <rect x="2.25" y="3.25" width="13.5" height="11.5" rx="1.75" stroke="currentColor" strokeWidth="1.25" />
       <path d="M5.5 7.25l2.5 2L5.5 11.25" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" strokeLinejoin="round" />
       <path d="M10 11.25h2.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function IconLogs() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none" aria-hidden>
+      <path d="M5.25 5.25h7.5M5.25 9h7.5M5.25 12.75h4.5" stroke="currentColor" strokeWidth="1.25" strokeLinecap="round" />
+      <rect x="2.75" y="2.75" width="12.5" height="12.5" rx="2" stroke="currentColor" strokeWidth="1.25" />
     </svg>
   );
 }
@@ -312,6 +335,26 @@ export function Sidebar(props: SidebarProps) {
                 </span>
               </NavLink>
             )}
+            <NavLink
+              to={routes.files}
+              className={css.UiChatSidebarNarrowFooterBtn}
+              aria-label="Files"
+              title="Files"
+            >
+              <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+                <IconFiles />
+              </span>
+            </NavLink>
+            <NavLink
+              to={routes.logs}
+              className={css.UiChatSidebarNarrowFooterBtn}
+              aria-label="Logs"
+              title="Logs"
+            >
+              <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+                <IconLogs />
+              </span>
+            </NavLink>
             <NavLink
               to={routes.settings}
               className={css.UiChatSidebarNarrowFooterBtn}
