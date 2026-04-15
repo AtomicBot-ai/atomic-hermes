@@ -1,0 +1,137 @@
+/* ── What's New modal ────────────────────────────────── */
+
+/* Override shared modal size for the What's New dialog */
+:global(.UiModalCard):has(.WhatsNew) {
+  width: 520px;
+  max-height: 90vh;
+}
+
+.WhatsNew {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.WhatsNew-header {
+  padding: 4px 0 12px;
+}
+
+.WhatsNew-title {
+  font-size: 1.1em;
+  font-weight: 700;
+  margin: 0;
+  color: #fff;
+}
+
+.WhatsNew-subheader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--surface-overlay);
+  margin-bottom: 12px;
+}
+
+.WhatsNew-label {
+  font-size: 0.82em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.5);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.WhatsNew-changelogLink {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--accent-brand);
+  font-size: 0.8em;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: none;
+}
+
+.WhatsNew-changelogLink:hover {
+  text-decoration: underline;
+}
+
+.WhatsNew-body {
+  max-height: 60vh;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: #ffffff26 transparent;
+}
+
+.WhatsNew-body::-webkit-scrollbar {
+  width: 5px;
+}
+
+.WhatsNew-body::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.WhatsNew-body::-webkit-scrollbar-thumb {
+  background: #ffffff26;
+  border-radius: 1000px;
+}
+
+.WhatsNew-body :global(.UiMarkdown) {
+  font-size: 0.9em;
+  line-height: 1.55;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.WhatsNew-body :global(.UiMarkdown) h1,
+.WhatsNew-body :global(.UiMarkdown) h2,
+.WhatsNew-body :global(.UiMarkdown) h3 {
+  font-size: 0.95em;
+  color: #fff;
+  margin: 14px 0 6px;
+}
+
+.WhatsNew-body :global(.UiMarkdown) ul {
+  padding-left: 18px;
+}
+
+.WhatsNew-body :global(.UiMarkdown) li {
+  margin: 3px 0;
+}
+
+.WhatsNew-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.88em;
+}
+
+.WhatsNew-empty {
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 0.88em;
+  margin: 8px 0;
+}
+
+.WhatsNew-footer {
+  padding-top: 14px;
+  display: flex;
+  justify-content: center;
+}
+
+.WhatsNew-gotIt {
+  appearance: none;
+  border: none;
+  border-radius: var(--radius-full);
+  padding: 10px 32px;
+  font-size: 0.88em;
+  font-weight: 600;
+  cursor: pointer;
+  background: var(--accent-brand);
+  color: #000;
+  transition: opacity 0.15s ease;
+}
+
+.WhatsNew-gotIt:hover {
+  opacity: 0.88;
+}
