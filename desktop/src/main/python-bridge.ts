@@ -87,6 +87,34 @@ function getPythonPath(): string {
   return "python3";
 }
 
+/**
+ * Patch pyvenv.cfg with the correct absolute `home` path at runtime.
+ * bundle-all.sh writes a relative path (../python/bin) for codesign compatibility,
+ * but CPython requires an absolute path to properly detect the venv and add
+ * its site-packages to sys.path.
+ */
+function patchPyvenvCfg(): void {
+  const venvDir = getResourcePath("hermes-venv");
+  const cfgPath = path.join(venvDir, "pyvenv.cfg");
+  if (!fs.existsSync(cfgPath)) return;
+
+  const pythonBinDir = getResourcePath("python", "bin");
+  if (!fs.existsSync(pythonBinDir)) return;
+
+  try {
+    const content = fs.readFileSync(cfgPath, "utf-8");
+    const patched = content.replace(
+      /^home\s*=\s*.*/m,
+      `home = ${pythonBinDir}`,
+    );
+    if (patched !== content) {
+      fs.writeFileSync(cfgPath, patched, "utf-8");
+    }
+  } catch {
+    // Non-fatal: venv might still work via VIRTUAL_ENV env var
+  }
+}
+
 export const RESTART_EXIT_CODE = 75;
 
 export interface PythonBridge {
@@ -138,12 +166,14 @@ function createBridge(
 export async function startPythonBackend(): Promise<PythonBridge> {
   ensureHermesHome();
   syncSkills();
+  patchPyvenvCfg();
 
   const pythonPath = getPythonPath();
   const serverScript = getServerScript();
 
   const hermesRoot = getResourcePath("hermes-agent");
   const hermesHome = getHermesHome();
+  const venvDir = getResourcePath("hermes-venv");
 
   const env: Record<string, string> = {
     ...process.env as Record<string, string>,
@@ -153,6 +183,7 @@ export async function startPythonBackend(): Promise<PythonBridge> {
     PYTHONDONTWRITEBYTECODE: "1",
     NODE_PATH: getResourcePath("node_modules"),
     HERMES_DESKTOP_MODE: "1",
+    VIRTUAL_ENV: venvDir,
   };
 
   const child = spawn(pythonPath, [serverScript], {
