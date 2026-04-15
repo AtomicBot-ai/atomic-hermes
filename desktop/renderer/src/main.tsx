@@ -5,6 +5,7 @@ import { HashRouter } from "react-router-dom";
 import { App } from "./ui/app/App";
 import { ErrorBoundary } from "./ui/app/ErrorBoundary";
 import { Toaster } from "./ui/shared/Toaster";
+import { WhatsNewModal } from "./ui/updates/WhatsNewModal";
 import { store } from "./store/store";
 import { initPosthogRenderer } from "@analytics";
 import "./ui/styles/index.css";
@@ -29,6 +30,7 @@ ReactDOM.createRoot(document.getElementById("root")!).render(
           <App />
         </ErrorBoundary>
         <Toaster />
+        <WhatsNewModal />
       </HashRouter>
     </Provider>
   </React.StrictMode>
