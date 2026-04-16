@@ -1,4 +1,4 @@
-import { withHermesHeaders } from "./request-context";
+import { withHermesHeaders, withHermesHeadersForProfile } from "./request-context";
 
 export function getBaseUrl(port: number): string {
   return `http://127.0.0.1:${port}`;
@@ -87,19 +87,30 @@ export async function checkHealth(port: number): Promise<boolean> {
   }
 }
 
-export async function getConfig(port: number): Promise<ConfigResponse> {
-  return fetchJson(`${getBaseUrl(port)}/api/config`);
+export async function getConfig(
+  port: number,
+  profileIdOverride?: string | null,
+): Promise<ConfigResponse> {
+  const init = profileIdOverride?.trim()
+    ? withHermesHeadersForProfile(profileIdOverride.trim())
+    : withHermesHeaders();
+  return fetchJson(`${getBaseUrl(port)}/api/config`, init);
 }
 
 export async function patchConfig(
   port: number,
   body: ConfigPatchBody,
+  profileIdOverride?: string | null,
 ): Promise<{ ok: boolean; message?: string; error?: string }> {
-  return fetchJson(`${getBaseUrl(port)}/api/config`, {
+  const base: RequestInit = {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
-  });
+  };
+  const init = profileIdOverride?.trim()
+    ? withHermesHeadersForProfile(profileIdOverride.trim(), base)
+    : withHermesHeaders(base);
+  return fetchJson(`${getBaseUrl(port)}/api/config`, init);
 }
 
 export async function getProviders(port: number): Promise<ProvidersResponse> {

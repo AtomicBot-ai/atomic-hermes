@@ -17,6 +17,8 @@ import {
 } from "../../services/api";
 import { SetupContext, useSetup, type OAuthStep, type SetupFlowKind } from "./setup-context";
 import { getDesktopApiOrNull } from "@ipc/desktopApi";
+import { getSelectedHermesProfile } from "../../services/request-context";
+import { seedComputerUseMcpIfMissing } from "../../services/seed-computer-use-mcp";
 import { PROVIDERS } from "./providers";
 import { WelcomeStep } from "./WelcomeStep";
 import { SetupModePage } from "./SetupModePage";
@@ -281,9 +283,11 @@ export function SetupPage() {
   }, [port, selectedProvider, loadModels]);
 
   const complete = useCallback(() => {
+    const profileId = getSelectedHermesProfile() ?? "default";
+    void seedComputerUseMcpIfMissing(port, profileId);
     dispatch(setOnboarded(true));
     navigate(routes.chat, { replace: true });
-  }, [dispatch, navigate]);
+  }, [dispatch, navigate, port]);
 
   const skip = complete;
 

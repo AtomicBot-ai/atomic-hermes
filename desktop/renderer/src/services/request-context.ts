@@ -64,3 +64,11 @@ export function withHermesHeaders(init?: RequestInit): RequestInit {
     headers: buildHermesHeaders(init?.headers),
   };
 }
+
+/** Same as withHermesHeaders but forces X-Hermes-Profile (avoids stale localStorage vs. server selection). */
+export function withHermesHeadersForProfile(profileId: string, init?: RequestInit): RequestInit {
+  const merged = withHermesHeaders(init);
+  const headers = new Headers(merged.headers);
+  headers.set("X-Hermes-Profile", profileId);
+  return { ...merged, headers };
+}

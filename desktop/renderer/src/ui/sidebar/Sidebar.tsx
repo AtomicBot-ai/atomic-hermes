@@ -4,6 +4,7 @@ import toast from "react-hot-toast";
 import { useAppSelector } from "@store/hooks";
 import { fetchSessions, deleteSession } from "../../services/session-api";
 import { createProfile, fetchProfiles, selectProfile, type ProfileSummary } from "../../services/profile-api";
+import { seedComputerUseMcpIfMissing } from "../../services/seed-computer-use-mcp";
 import { getSelectedHermesProfile, setSelectedHermesProfile } from "../../services/request-context";
 import { getDesktopApiOrNull } from "../../ipc/desktopApi";
 import { useTerminalSidebarVisible } from "../shared/hooks/useTerminalSidebarVisible";
@@ -217,6 +218,9 @@ export function Sidebar(props: SidebarProps) {
         await api?.seedProfileProvider?.(selectedProfileId, created.profile.id);
       }
       await finishProfileCreation(created);
+      if (created.profile?.id) {
+        void seedComputerUseMcpIfMissing(port, created.profile.id);
+      }
     } catch (error) {
       console.error("Failed to create profile:", error);
       toast.error(error instanceof Error ? error.message : "Failed to create profile");
