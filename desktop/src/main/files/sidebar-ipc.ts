@@ -1,4 +1,7 @@
 import { ipcMain } from "electron";
+import * as fs from "node:fs";
+import * as path from "node:path";
+import * as yaml from "js-yaml";
 
 import {
   detectActiveProfile,
@@ -86,6 +89,56 @@ export function registerSidebarIpcHandlers(params: { stateDir: string }) {
       const entries = Array.isArray(p?.entries) ? (p.entries as FavoriteEntry[]) : [];
       writeFavorites(stateDir, entries);
       return { ok: true };
+    },
+  );
+
+  ipcMain.handle(
+    "seed-profile-provider",
+    (_evt, p: { source: string; target: string }) => {
+      const src = resolveProfileHome(stateDir, p.source);
+      const tgt = resolveProfileHome(stateDir, p.target);
+
+      const srcConfig = path.join(src.profileHome, "config.yaml");
+      const srcEnv = path.join(src.profileHome, ".env");
+      const tgtConfig = path.join(tgt.profileHome, "config.yaml");
+      const tgtEnv = path.join(tgt.profileHome, ".env");
+
+      try {
+        if (fs.existsSync(srcConfig)) {
+          const raw = fs.readFileSync(srcConfig, "utf-8");
+          const doc = yaml.load(raw) as Record<string, unknown> | null;
+          if (doc && typeof doc === "object") {
+            const seed: Record<string, unknown> = {};
+            if (doc.model != null) seed.model = doc.model;
+            if (doc.provider != null) seed.provider = doc.provider;
+            if (doc.base_url != null) seed.base_url = doc.base_url;
+
+            if (Object.keys(seed).length > 0) {
+              let existing: Record<string, unknown> = {};
+              if (fs.existsSync(tgtConfig)) {
+                const tgtRaw = fs.readFileSync(tgtConfig, "utf-8");
+                const tgtDoc = yaml.load(tgtRaw);
+                if (tgtDoc && typeof tgtDoc === "object") {
+                  existing = tgtDoc as Record<string, unknown>;
+                }
+              }
+              Object.assign(existing, seed);
+              fs.mkdirSync(path.dirname(tgtConfig), { recursive: true });
+              fs.writeFileSync(tgtConfig, yaml.dump(existing, { lineWidth: -1, noRefs: true }), "utf-8");
+            }
+          }
+        }
+
+        if (fs.existsSync(srcEnv)) {
+          fs.mkdirSync(path.dirname(tgtEnv), { recursive: true });
+          fs.copyFileSync(srcEnv, tgtEnv);
+        }
+
+        return { ok: true };
+      } catch (err) {
+        console.error("[seed-profile-provider] failed:", err);
+        return { ok: false, error: String(err) };
+      }
     },
   );
 }

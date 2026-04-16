@@ -27,6 +27,7 @@ import { FilesPage } from "../files";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
 import { useAppOpenedEvent } from "@analytics";
 import { UpdateBanner } from "../updates/UpdateBanner";
+import { LlamacppDownloadBanner } from "../updates/LlamacppDownloadBanner";
 import a from "./App.module.css";
 
 const SIDEBAR_OPEN_LS_KEY = "hermes:sidebar-open";
@@ -84,7 +85,14 @@ function ChatRoute() {
   const [searchParams] = useSearchParams();
   const session = searchParams.get("session");
 
-  return session?.trim() ? <ChatPage /> : <StartChatPage />;
+  return (
+    <>
+      <div className={a.TopRightBannerStack}>
+        <LlamacppDownloadBanner />
+      </div>
+      {session?.trim() ? <ChatPage /> : <StartChatPage />}
+    </>
+  );
 }
 
 function SidebarLayout() {
@@ -216,6 +224,7 @@ export function App() {
             <Route index element={<SettingsIndexRedirect />} />
             <Route path="ai-providers" element={<Navigate to={routes.settingsModels} replace />} />
             <Route path="ai-models" element={<AiModelsTab />} />
+            <Route path="local-models" element={<Navigate to={routes.settingsModels} replace />} />
             <Route path="skills" element={<SkillsSettingsTab />} />
             <Route path="messengers" element={<ConnectorsTab />} />
             <Route

@@ -4,6 +4,7 @@ import { gatewayReducer } from "./slices/gatewaySlice";
 import { onboardingReducer } from "./slices/onboardingSlice";
 import { chatReducer } from "./slices/chatSlice";
 import { skillsReducer } from "./slices/skillsSlice";
+import { llamacppReducer } from "./slices/llamacppSlice";
 
 export const store = configureStore({
   reducer: {
@@ -12,6 +13,7 @@ export const store = configureStore({
     onboarding: onboardingReducer,
     chat: chatReducer,
     skills: skillsReducer,
+    llamacpp: llamacppReducer,
   },
 });
 

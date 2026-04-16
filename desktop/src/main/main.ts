@@ -21,6 +21,12 @@ import {
   installUpdate,
   getAppVersion,
 } from "./updater";
+import { registerLlamacppIpcHandlers } from "./llamacpp/ipc";
+import { stopLlamacppServer, killOrphanedServer, startLlamacppServer } from "./llamacpp/server";
+import { readActiveModelId } from "./llamacpp/model-state";
+import { getLlamacppModelDef, resolveLlamacppModelPath, resolveChatTemplatePath, type LlamacppModelId } from "./llamacpp/models";
+import { isBackendDownloaded, resolveServerBinPath } from "./llamacpp/backend-download";
+import { getSystemInfo, computeContextLength } from "./llamacpp/hardware";
 import { killUpdateSplash } from "./update-splash";
 import { readAnalyticsState, writeAnalyticsState } from "./analytics/analytics-state";
 import { initPosthogMain, captureMain, shutdownPosthogMain } from "./analytics/posthog-main";
@@ -65,6 +71,7 @@ function createWindow(): void {
 }
 
 const stateDir = path.join(app.getPath("userData"), "hermes");
+const llamacppDataDir = path.join(app.getPath("userData"), "llamacpp");
 
 // ── Analytics ────────────────────────────────────────────────────────
 const analyticsState = readAnalyticsState(stateDir);
@@ -111,6 +118,7 @@ ipcMain.handle(
 );
 
 ipcMain.handle("reset-and-close", async () => {
+  await stopLlamacppServer().catch(() => {});
   pythonBridge?.kill();
   pythonBridge = null;
   backendPort = null;
@@ -118,6 +126,7 @@ ipcMain.handle("reset-and-close", async () => {
   killAllTerminals();
 
   fs.rmSync(stateDir, { recursive: true, force: true });
+  fs.rmSync(llamacppDataDir, { recursive: true, force: true });
 
   await session.defaultSession.clearStorageData();
 
@@ -156,6 +165,11 @@ registerTerminalIpcHandlers({
 registerFilesIpcHandlers({ stateDir });
 registerSnapshotIpcHandlers({ stateDir });
 registerSidebarIpcHandlers({ stateDir });
+registerLlamacppIpcHandlers({
+  llamacppDataDir,
+  stateDir,
+  getMainWindow: () => mainWindow,
+});
 
 snapshotWatcher = new SnapshotWatcher(stateDir);
 snapshotWatcher.start();
@@ -238,6 +252,40 @@ async function startDesktopBackend(): Promise<void> {
   }
 }
 
+async function autoStartLlamacppIfNeeded(): Promise<void> {
+  if (process.platform !== "darwin") return;
+
+  killOrphanedServer(stateDir);
+
+  const activeId = readActiveModelId(stateDir);
+  if (!activeId) return;
+  if (!isBackendDownloaded(llamacppDataDir)) return;
+
+  const model = getLlamacppModelDef(activeId as LlamacppModelId);
+  const modelPath = resolveLlamacppModelPath(llamacppDataDir, model);
+  const binPath = resolveServerBinPath(llamacppDataDir);
+
+  if (!fs.existsSync(modelPath) || !fs.existsSync(binPath)) return;
+
+  try {
+    const sysInfo = getSystemInfo();
+    const ctxLen = computeContextLength(sysInfo.totalRamGb, model);
+    const chatTemplateFile = resolveChatTemplatePath(model, {
+      isPackaged: app.isPackaged,
+      appPath: app.getAppPath(),
+    });
+    console.log(`[llamacpp] auto-starting server for model=${activeId}`);
+    await startLlamacppServer(binPath, modelPath, {
+      contextLength: ctxLen,
+      modelId: activeId,
+      chatTemplateFile,
+      stateDir,
+    });
+  } catch (err) {
+    console.warn("[llamacpp] auto-start failed:", err);
+  }
+}
+
 app.whenReady().then(async () => {
   createWindow();
   killUpdateSplash();
@@ -245,9 +293,11 @@ app.whenReady().then(async () => {
     initAutoUpdater(() => mainWindow);
   }
   await startDesktopBackend();
+  void autoStartLlamacppIfNeeded();
 });
 
 app.on("window-all-closed", () => {
+  void stopLlamacppServer().catch(() => {});
   pythonBridge?.kill();
   app.quit();
 });
@@ -257,6 +307,7 @@ app.on("before-quit", () => {
   snapshotWatcher = null;
   disposeAutoUpdater();
   killAllTerminals();
+  void stopLlamacppServer().catch(() => {});
   pythonBridge?.kill();
   void shutdownPosthogMain();
 });

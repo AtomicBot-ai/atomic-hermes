@@ -75,7 +75,12 @@ export function SettingsStateProvider(props: {
       setSelectedProvider(nextConfig.activeProvider || PROVIDERS[0]?.id || null);
       setConfiguredModel(nextConfig.activeModel || "");
       setSelectedModel(nextConfig.activeModel || "");
-      setBaseUrl(getConfigString(nextConfig.config, "base_url"));
+      const rootBaseUrl = getConfigString(nextConfig.config, "base_url");
+      const modelSection = nextConfig.config?.model;
+      const modelBaseUrl = typeof modelSection === "object" && modelSection !== null
+        ? getConfigString(modelSection as Record<string, unknown>, "base_url")
+        : "";
+      setBaseUrl(rootBaseUrl || modelBaseUrl);
     } catch (error) {
       setSaveError(error instanceof Error ? error.message : "Failed to load settings.");
     } finally {
