@@ -30,6 +30,9 @@ export function getModelCompatibility(
 
 const OS_RESERVE_GB = 4;
 const MIN_CONTEXT = 2048;
+// Hermes Agent refuses to start with a context window below this threshold
+// (see agent.model_metadata.MINIMUM_CONTEXT_LENGTH). Keep in sync.
+const AGENT_MIN_CONTEXT = 32_000;
 
 /**
  * Compute a safe runtime context length based on available RAM and model size.
@@ -39,6 +42,11 @@ const MIN_CONTEXT = 2048;
  *   ~0.15 * fileSizeGb  GB for larger models
  *
  * Budget = totalRam - modelFileSize - OS reserve, then divide by per-8K cost.
+ *
+ * Floors the result at AGENT_MIN_CONTEXT when the model itself supports that
+ * window, because Hermes Agent rejects any model below 64K. turbo3 (Q4) KV
+ * quantization makes the fileSize*0.15 heuristic conservative enough that
+ * llama.cpp can usually fit the agent minimum even on borderline RAM.
  */
 export function computeContextLength(totalRamGb: number, model: LlamacppModelDef): number {
   const availableGb = totalRamGb - model.fileSizeGb - OS_RESERVE_GB;
@@ -49,6 +57,8 @@ export function computeContextLength(totalRamGb: number, model: LlamacppModelDef
   const computed = blocks * 8192;
 
   const MAX_CONTEXT = 200_000;
-  const clamped = Math.max(MIN_CONTEXT, Math.min(computed, model.maxContextLength, MAX_CONTEXT));
-  return Math.max(MIN_CONTEXT, Math.floor(clamped / 5000) * 5000);
+  const agentFloor = Math.min(AGENT_MIN_CONTEXT, model.maxContextLength);
+  const clamped = Math.max(agentFloor, Math.min(computed, model.maxContextLength, MAX_CONTEXT));
+  const rounded = Math.floor(clamped / 5000) * 5000;
+  return Math.max(agentFloor, rounded);
 }

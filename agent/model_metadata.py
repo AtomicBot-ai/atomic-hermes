@@ -88,7 +88,7 @@ DEFAULT_FALLBACK_CONTEXT = CONTEXT_PROBE_TIERS[0]
 # Minimum context length required to run Hermes Agent.  Models with fewer
 # tokens cannot maintain enough working memory for tool-calling workflows.
 # Sessions, model switches, and cron jobs should reject models below this.
-MINIMUM_CONTEXT_LENGTH = 64_000
+MINIMUM_CONTEXT_LENGTH = 32_000
 
 # Thin fallback defaults — only broad model family patterns.
 # These fire only when provider is unknown AND models.dev/OpenRouter/Anthropic
@@ -152,6 +152,8 @@ DEFAULT_CONTEXT_LENGTHS = {
     # Hugging Face Inference Providers — model IDs use org/name format
     "Qwen/Qwen3.5-397B-A17B": 131072,
     "Qwen/Qwen3.5-35B-A3B": 131072,
+    # Same architecture as Qwen/Qwen3.6-35B-A3B (max_position_embeddings 262144).
+    "unsloth/Qwen3.6-35B-A3B-GGUF": 262144,
     "deepseek-ai/DeepSeek-V3.2": 65536,
     "moonshotai/Kimi-K2.5": 262144,
     "moonshotai/Kimi-K2-Thinking": 262144,
@@ -950,8 +952,14 @@ def get_model_context_length(
     # local servers actually know about.  Ollama "model:tag" colons are preserved.
     model = _strip_provider_prefix(model)
 
-    # 1. Check persistent cache (model+provider)
-    if base_url:
+    # 1. Check persistent cache (model+provider).
+    # Skip the cache for local endpoints: the embedded llama.cpp / Ollama
+    # server is the only authoritative source for its own n_ctx, and that
+    # value can change between runs when the user (or Hermes Desktop)
+    # restarts it with a different -c flag. A stale cache here would mask
+    # the real context window and make the agent reject a freshly-started
+    # server for no reason.
+    if base_url and not is_local_endpoint(base_url):
         cached = get_cached_context_length(model, base_url)
         if cached is not None:
             return cached
