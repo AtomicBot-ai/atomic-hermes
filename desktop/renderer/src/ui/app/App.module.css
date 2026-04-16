@@ -175,3 +175,20 @@
   background: rgba(230, 237, 243, 0.16);
   border-color: rgba(230, 237, 243, 0.24);
 }
+
+/* ── Top-right notification stack ─────────────────────── */
+
+.TopRightBannerStack {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  pointer-events: none;
+}
+
+.TopRightBannerStack > * {
+  pointer-events: auto;
+}

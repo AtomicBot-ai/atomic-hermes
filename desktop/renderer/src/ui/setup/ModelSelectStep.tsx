@@ -7,11 +7,11 @@ import { useSetup } from "./setup-context";
 import { RichSelect, type RichOption } from "./RichSelect";
 import { getModelTier, TIER_INFO } from "./model-presentation";
 import { resolveProviderIconUrl } from "./providers";
-import { TOTAL_STEPS } from "./SetupPage";
+import { API_KEYS_FLOW } from "./onboarding-steps";
 import s from "./ModelSelectStep.module.css";
 
 export function ModelSelectStep() {
-  useOnboardingStepEvent("model_select");
+  useOnboardingStepEvent("model_select", "api-keys");
   const navigate = useNavigate();
   const ctx = useSetup();
   const [saving, setSaving] = useState(false);
@@ -74,8 +74,8 @@ export function ModelSelectStep() {
   return (
     <>
       <OnboardingHeader
-        totalSteps={TOTAL_STEPS}
-        activeStep={3}
+        totalSteps={API_KEYS_FLOW.totalSteps}
+        activeStep={API_KEYS_FLOW.steps.model}
         onBack={() => void navigate("../api-key", { relative: "path" })}
         onSkip={ctx.skip}
       />

@@ -1,7 +1,7 @@
 import React from "react";
 
 const DEFAULT_ICON = new URL(
-  "../../../../../assets/icon-sm.png",
+  "../../../../../assets/icon.png",
   import.meta.url,
 ).toString();
 

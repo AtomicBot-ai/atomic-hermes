@@ -6,11 +6,11 @@ import { captureRenderer, ANALYTICS_EVENTS } from "@analytics";
  * step name. Uses useRef guard (no sessionStorage) so every arrival
  * at a step is tracked — correct behavior for funnel analysis.
  */
-export function useOnboardingStepEvent(step: string): void {
+export function useOnboardingStepEvent(step: string, flow?: string | null): void {
   const firedRef = React.useRef(false);
   React.useEffect(() => {
     if (firedRef.current) return;
-    captureRenderer(ANALYTICS_EVENTS.onboardingStep, { step });
+    captureRenderer(ANALYTICS_EVENTS.onboardingStep, { step, flow: flow ?? null });
     firedRef.current = true;
-  }, [step]);
+  }, [flow, step]);
 }

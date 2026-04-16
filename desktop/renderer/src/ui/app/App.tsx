@@ -25,8 +25,11 @@ import { LogsPage } from "../logs";
 import { TerminalPage } from "../terminal";
 import { FilesPage } from "../files";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
+import { useDesktopLocalWarmup } from "../chat/hooks/useDesktopLocalWarmup";
+import { DesktopWarmupBanner } from "../chat/components/DesktopWarmupBanner";
 import { useAppOpenedEvent } from "@analytics";
 import { UpdateBanner } from "../updates/UpdateBanner";
+import { LlamacppDownloadBanner } from "../updates/LlamacppDownloadBanner";
 import a from "./App.module.css";
 
 const SIDEBAR_OPEN_LS_KEY = "hermes:sidebar-open";
@@ -84,7 +87,15 @@ function ChatRoute() {
   const [searchParams] = useSearchParams();
   const session = searchParams.get("session");
 
-  return session?.trim() ? <ChatPage /> : <StartChatPage />;
+  return (
+    <>
+      <div className={a.TopRightBannerStack}>
+        <DesktopWarmupBanner />
+        <LlamacppDownloadBanner />
+      </div>
+      {session?.trim() ? <ChatPage /> : <StartChatPage />}
+    </>
+  );
 }
 
 function SidebarLayout() {
@@ -148,6 +159,7 @@ export function FullscreenShell(props: { children: React.ReactNode }) {
 }
 
 export function App() {
+  useDesktopLocalWarmup();
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
   const onboardingLoaded = useAppSelector((s) => s.onboarding.loaded);
@@ -216,6 +228,7 @@ export function App() {
             <Route index element={<SettingsIndexRedirect />} />
             <Route path="ai-providers" element={<Navigate to={routes.settingsModels} replace />} />
             <Route path="ai-models" element={<AiModelsTab />} />
+            <Route path="local-models" element={<Navigate to={routes.settingsModels} replace />} />
             <Route path="skills" element={<SkillsSettingsTab />} />
             <Route path="messengers" element={<ConnectorsTab />} />
             <Route

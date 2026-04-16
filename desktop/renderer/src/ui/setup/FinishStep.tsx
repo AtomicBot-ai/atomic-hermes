@@ -2,7 +2,7 @@ import { PrimaryButton } from "@shared/kit";
 import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
-import { TOTAL_STEPS } from "./SetupPage";
+import { API_KEYS_FLOW, LOCAL_MODEL_FLOW } from "./onboarding-steps";
 import { useNavigate } from "react-router-dom";
 import s from "./FinishStep.module.css";
 
@@ -18,16 +18,22 @@ const CONFETTI_COLORS = [
 ];
 
 export function FinishStep() {
-  useOnboardingStepEvent("finished");
   const navigate = useNavigate();
-  const { complete } = useSetup();
+  const { complete, setupFlow } = useSetup();
+  useOnboardingStepEvent("finished", setupFlow === "local-model" ? "local-model" : "api-keys");
+  const flow = setupFlow === "local-model" ? LOCAL_MODEL_FLOW : API_KEYS_FLOW;
 
   return (
     <>
       <OnboardingHeader
-        totalSteps={TOTAL_STEPS}
-        activeStep={4}
-        onBack={() => void navigate("../model", { relative: "path" })}
+        totalSteps={flow.totalSteps}
+        activeStep={flow.steps.finish}
+        onBack={() =>
+          void navigate(
+            setupFlow === "local-model" ? "../local-model-select" : "../model",
+            { relative: "path" },
+          )
+        }
       />
 
       <div className={s.confettiLayer} aria-hidden="true">

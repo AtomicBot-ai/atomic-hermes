@@ -523,6 +523,26 @@ def _qwen_portal_headers() -> dict:
     }
 
 
+_LOCAL_ROUTING_SEED_RE = re.compile(
+    r"Routing metadata only\..*?Session seed:\s*[\w-]+",
+    re.DOTALL,
+)
+
+
+def _strip_ephemeral_routing_for_local(ephemeral: str) -> str:
+    """Strip per-session routing metadata from ephemeral prompt for local LLMs.
+
+    The desktop renderer injects a unique Session seed UUID into every chat's
+    ephemeral system prompt.  Cloud providers ignore the extra tokens, but local
+    engines (llama.cpp) use KV-prefix caching — a different seed per chat evicts
+    the cache on every switch.  Stripping the routing block keeps the system
+    prompt byte-identical across chat sessions.
+    """
+    if not ephemeral:
+        return ephemeral
+    return _LOCAL_ROUTING_SEED_RE.sub("", ephemeral).strip()
+
+
 class AIAgent:
     """
     AI Agent with tool calling capabilities.
@@ -3235,7 +3255,26 @@ class AIAgent:
             timestamp_line += f"\nModel: {self.model}"
         if self.provider:
             timestamp_line += f"\nProvider: {self.provider}"
-        prompt_parts.append(timestamp_line)
+
+        # llama.cpp / local OpenAI stacks reuse KV across requests only when the
+        # rendered prompt prefix is byte-identical. A wall-clock "Conversation started"
+        # line makes desktop warmup (built seconds earlier) diverge from the first
+        # real turn and flushes the cache. For local base URLs, drop the volatile
+        # timestamp line but keep stable metadata (model/provider/session id).
+        # Opt back in with HERMES_KEEP_CONVERSATION_START_TIMESTAMP=1.
+        _keep_conv_ts = os.environ.get(
+            "HERMES_KEEP_CONVERSATION_START_TIMESTAMP", ""
+        ).strip().lower() in ("1", "true", "yes", "on")
+        _local_base = self.base_url and is_local_endpoint(self.base_url)
+        if _local_base and not _keep_conv_ts:
+            # Omit timestamp, session ID, model name, and provider for local
+            # OpenAI-compat endpoints.  The local LLM already knows its own
+            # identity, and any per-session or per-model metadata in the system
+            # prompt makes the KV-prefix differ across chats / model switches,
+            # flushing llama.cpp's cache on every turn.
+            pass
+        else:
+            prompt_parts.append(timestamp_line)
 
         # Alibaba Coding Plan API always returns "glm-4.7" as model name regardless
         # of the requested model. Inject explicit model identity into the system prompt
@@ -6239,7 +6278,14 @@ class AIAgent:
                 "promptId": str(uuid.uuid4()),
             }
         if self.tools:
-            api_kwargs["tools"] = self.tools
+            _tools_out = list(self.tools)
+            if self.base_url and is_local_endpoint(self.base_url):
+                _tools_out.sort(
+                    key=lambda t: str((t.get("function") or {}).get("name") or "")
+                    if isinstance(t, dict)
+                    else "",
+                )
+            api_kwargs["tools"] = _tools_out
 
         if self.max_tokens is not None:
             api_kwargs.update(self._max_tokens_param(self.max_tokens))
@@ -7551,7 +7597,11 @@ class AIAgent:
 
             effective_system = self._cached_system_prompt or ""
             if self.ephemeral_system_prompt:
-                effective_system = (effective_system + "\n\n" + self.ephemeral_system_prompt).strip()
+                _eph = self.ephemeral_system_prompt
+                if self.base_url and is_local_endpoint(self.base_url):
+                    _eph = _strip_ephemeral_routing_for_local(_eph)
+                if _eph:
+                    effective_system = (effective_system + "\n\n" + _eph).strip()
             if effective_system:
                 api_messages = [{"role": "system", "content": effective_system}] + api_messages
             if self.prefill_messages:
@@ -7841,12 +7891,14 @@ class AIAgent:
                 except Exception:
                     pass  # Fall through to build fresh
 
-            if stored_prompt:
+            _is_local_ep = self.base_url and is_local_endpoint(self.base_url)
+            if stored_prompt and not _is_local_ep:
                 # Continuing session — reuse the exact system prompt from
                 # the previous turn so the Anthropic cache prefix matches.
                 self._cached_system_prompt = stored_prompt
             else:
-                # First turn of a new session — build from scratch.
+                # First turn of a new session, or local endpoint (always rebuild
+                # for local to match the warmup KV cache which builds fresh).
                 self._cached_system_prompt = self._build_system_prompt(system_message)
                 # Plugin hook: on_session_start
                 # Fired once when a brand-new session is created (not on
@@ -8118,7 +8170,11 @@ class AIAgent:
             # prompt, so the stable cache prefix remains unchanged.
             effective_system = active_system_prompt or ""
             if self.ephemeral_system_prompt:
-                effective_system = (effective_system + "\n\n" + self.ephemeral_system_prompt).strip()
+                _eph = self.ephemeral_system_prompt
+                if self.base_url and is_local_endpoint(self.base_url):
+                    _eph = _strip_ephemeral_routing_for_local(_eph)
+                if _eph:
+                    effective_system = (effective_system + "\n\n" + _eph).strip()
             # NOTE: Plugin context from pre_llm_call hooks is injected into the
             # user message (see injection block above), NOT the system prompt.
             # This is intentional — system prompt modifications break the prompt

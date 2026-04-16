@@ -5,6 +5,7 @@ import { useAppSelector } from "@store/hooks";
 import { fetchSessions, deleteSession } from "../../services/session-api";
 import { createProfile, fetchProfiles, selectProfile, type ProfileSummary } from "../../services/profile-api";
 import { getSelectedHermesProfile, setSelectedHermesProfile } from "../../services/request-context";
+import { getDesktopApiOrNull } from "../../ipc/desktopApi";
 import { useTerminalSidebarVisible } from "../shared/hooks/useTerminalSidebarVisible";
 import { routes } from "../app/routes";
 import { SidebarContent } from "./SidebarContent";
@@ -211,6 +212,10 @@ export function Sidebar(props: SidebarProps) {
     setProfilesCreating(true);
     try {
       const created = await createProfile(port, name);
+      if (created.ok && created.profile?.id && selectedProfileId) {
+        const api = getDesktopApiOrNull();
+        await api?.seedProfileProvider?.(selectedProfileId, created.profile.id);
+      }
       await finishProfileCreation(created);
     } catch (error) {
       console.error("Failed to create profile:", error);
@@ -218,7 +223,7 @@ export function Sidebar(props: SidebarProps) {
     } finally {
       setProfilesCreating(false);
     }
-  }, [finishProfileCreation, port, profilesCreating]);
+  }, [finishProfileCreation, port, profilesCreating, selectedProfileId]);
 
   const handleCloneProfile = React.useCallback(async (name: string) => {
     if (profilesCreating || !selectedProfileId) return;

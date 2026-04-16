@@ -10,6 +10,7 @@ Exposes an HTTP server with endpoints:
 - POST /v1/runs                    — start a run, returns run_id immediately (202)
 - GET  /v1/runs/{run_id}/events    — SSE stream of structured lifecycle events
 - GET  /health                     — health check
+- POST /warmup, POST /api/warmup — desktop local model warmup (Electron only)
 
 Any OpenAI-compatible frontend (Open WebUI, LobeChat, LibreChat,
 AnythingLLM, NextChat, ChatBox, etc.) can connect to hermes-agent
@@ -25,6 +26,7 @@ import hmac
 import json
 import logging
 import os
+import sys
 import socket as _socket
 import re
 import sqlite3
@@ -2021,6 +2023,33 @@ class APIServerAdapter(BasePlatformAdapter):
 
         return response
 
+    async def _handle_desktop_warmup(self, request: "web.Request") -> "web.Response":
+        """Local OpenAI-compatible warmup for desktop Electron (uses desktop/src/python-server/local_warmup)."""
+        body: Dict[str, Any] = {}
+        try:
+            raw = await request.json()
+            if isinstance(raw, dict):
+                body = raw
+        except Exception:
+            pass
+        try:
+            _desktop_py = Path(__file__).resolve().parents[2] / "desktop" / "src" / "python-server"
+            if _desktop_py.is_dir():
+                p = str(_desktop_py)
+                if p not in sys.path:
+                    sys.path.insert(0, p)
+            from local_warmup import perform_desktop_warmup
+        except Exception as exc:
+            logger.warning("[%s] desktop warmup import failed: %s", self.name, exc)
+            return web.json_response({"ok": False, "error": f"warmup_unavailable:{exc}"})
+
+        try:
+            result = await perform_desktop_warmup(body, agent_alignment="api_server")
+            return web.json_response(result)
+        except Exception as exc:
+            logger.exception("[%s] desktop warmup failed", self.name)
+            return web.json_response({"ok": False, "error": str(exc)})
+
     async def _sweep_orphaned_runs(self) -> None:
         """Periodically clean up run streams that were never consumed."""
         while True:
@@ -2069,6 +2098,9 @@ class APIServerAdapter(BasePlatformAdapter):
             # Structured event streaming
             self._app.router.add_post("/v1/runs", self._handle_runs)
             self._app.router.add_get("/v1/runs/{run_id}/events", self._handle_run_events)
+            # Desktop Electron renderer — same port as gateway API (desktop-gateway.py)
+            self._app.router.add_post("/warmup", self._handle_desktop_warmup)
+            self._app.router.add_post("/api/warmup", self._handle_desktop_warmup)
             # Extension point: additional routes (config, skills, etc.)
             try:
                 from gateway.platforms.api_extensions import register_routes

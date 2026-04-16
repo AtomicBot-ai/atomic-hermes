@@ -9,8 +9,8 @@ import {
 } from "@shared/kit";
 import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
-import { TOTAL_STEPS } from "./SetupPage";
 import { useSetup } from "./setup-context";
+import { API_KEYS_FLOW } from "./onboarding-steps";
 import { PROVIDERS } from "./providers";
 
 function openExternal(url: string) {
@@ -23,7 +23,7 @@ function openExternal(url: string) {
 }
 
 export function ApiKeyStep() {
-  useOnboardingStepEvent("api_key");
+  useOnboardingStepEvent("api_key", "api-keys");
   const navigate = useNavigate();
   const ctx = useSetup();
 
@@ -83,8 +83,8 @@ export function ApiKeyStep() {
   return (
     <>
       <OnboardingHeader
-        totalSteps={TOTAL_STEPS}
-        activeStep={2}
+        totalSteps={API_KEYS_FLOW.totalSteps}
+        activeStep={API_KEYS_FLOW.steps.apiKey}
         onBack={() => void navigate("../provider", { relative: "path" })}
         onSkip={ctx.skip}
       />

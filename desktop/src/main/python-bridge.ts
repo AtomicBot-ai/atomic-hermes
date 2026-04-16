@@ -123,6 +123,8 @@ export interface PythonBridge {
   /** Resolves with the dashboard port once the dashboard server is up. */
   dashboardPort: Promise<number>;
   kill: () => void;
+  /** Send SIGTERM (then SIGKILL after 5s) and resolve once the process has exited. */
+  killAndWait: () => Promise<void>;
   /** Register a callback that fires when the process exits with the restart code. */
   onRestartExit: (cb: () => void) => void;
 }
@@ -146,19 +148,33 @@ function createBridge(
     }
   });
 
+  const kill = () => {
+    restartCb = null;
+    if (!child.killed) {
+      child.kill("SIGTERM");
+      setTimeout(() => {
+        if (!child.killed) child.kill("SIGKILL");
+      }, 5_000);
+    }
+  };
+
+  const killAndWait = (): Promise<void> => {
+    return new Promise((resolve) => {
+      if (child.killed || child.exitCode !== null) {
+        resolve();
+        return;
+      }
+      child.once("exit", () => resolve());
+      kill();
+    });
+  };
+
   return {
     process: child,
     port,
     dashboardPort,
-    kill: () => {
-      restartCb = null;
-      if (!child.killed) {
-        child.kill("SIGTERM");
-        setTimeout(() => {
-          if (!child.killed) child.kill("SIGKILL");
-        }, 5_000);
-      }
-    },
+    kill,
+    killAndWait,
     onRestartExit: (cb) => { restartCb = cb; },
   };
 }

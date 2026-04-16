@@ -11,6 +11,8 @@
   margin-bottom: 16px;
 }
 
+/* ── Active status bar ───────────────────────────────── */
+
 .statusBar {
   display: flex;
   padding: 12px 14px;
@@ -18,9 +20,16 @@
   border-radius: 12px;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 42px;
 }
 
-.statusBarMain {
+.statusBarVertical {
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.statusBarVerticalMain {
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -29,6 +38,94 @@
   row-gap: 8px;
   width: 100%;
   min-width: 0;
+}
+
+.statusBarVerticalMain .statusSegment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 80px;
+  max-width: 100%;
+}
+
+.statusBarVerticalMain .statusLabel {
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.statusBarVerticalMain .statusValue {
+  flex: 0 1 auto;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 24px;
+}
+
+.statusBarVerticalMain .statusValueText {
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.statusBarHorizontal {
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: stretch;
+}
+
+.statusBarHorizontalMain {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  column-gap: 4px;
+  row-gap: 4px;
+  width: 100%;
+}
+
+.statusBarHorizontal .statusBarRunningModel {
+  max-width: 100%;
+}
+
+.statusBarHorizontal .statusBarRunningModel .statusLabel {
+  min-width: 0;
+}
+
+.statusBarHorizontal .statusSegment {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  flex: 0 1 auto;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.statusBarHorizontal .statusLabel {
+  flex-shrink: 0;
+  min-width: 0;
+}
+
+.statusBarHorizontal .statusValue {
+  flex: 0 1 auto;
+  align-self: stretch;
+  min-width: 0;
+  min-height: 24px;
+}
+
+.statusBarHorizontal .statusBarRunningModel .statusValue {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.statusBarHorizontal .statusValueText {
+  line-height: 16px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .statusSegment {
@@ -54,6 +151,7 @@
   min-height: 24px;
   display: flex;
   align-items: center;
+  gap: 6px;
 }
 
 .statusValueText {
@@ -61,6 +159,206 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.serverDot {
+  display: inline-block;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.serverDot--running {
+  background: #22c55e;
+}
+
+.serverDot--starting {
+  background: #ff9f0a;
+  animation: server-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.serverDot--loading {
+  background: #5ac8fa;
+  animation: server-dot-pulse 1.2s ease-in-out infinite;
+}
+
+.serverDot--error {
+  background: #ff453a;
+}
+
+.serverDot--stopped {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+.serverStopBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  gap: 4px;
+  height: 20px;
+  margin: 0;
+  padding: 0 7px 0 6px;
+  border: 1px solid rgba(255, 69, 58, 0.45);
+  border-radius: 4px;
+  background: rgba(255, 69, 58, 0.12);
+  color: #ff6961;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    border-color 0.15s ease,
+    color 0.15s ease;
+}
+
+.serverStopBtnLabel {
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+
+.serverStopBtn:hover:not(:disabled) {
+  background: rgba(255, 69, 58, 0.25);
+  border-color: rgba(255, 69, 58, 0.6);
+  color: #ff6961;
+}
+
+.serverStopBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+@keyframes server-dot-pulse {
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ── Connection mode toggle ──────────────────────────── */
+
+.connectionSection {
+  margin-bottom: 24px;
+}
+
+.connectionSelector {
+  display: flex;
+  gap: 0;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 3px;
+}
+
+.connectionOption {
+  flex: 1;
+  padding: 7px 14px;
+  border: none;
+  border-radius: 7px;
+  background: transparent;
+  color: rgba(255, 255, 255, 0.5);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
+  white-space: nowrap;
+}
+
+.connectionOption:hover:not(:disabled) {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.connectionOption--active {
+  background: rgba(255, 255, 255, 0.12);
+  color: #fff;
+}
+
+.connectionOption:disabled {
+  cursor: not-allowed;
+}
+
+/* ── Mode switch loader ──────────────────────────────── */
+
+.modeSwitchLoader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 18px 16px;
+  margin-bottom: 24px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.modeSwitchSpinner {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  border: 2px solid rgba(255, 255, 255, 0.18);
+  border-top-color: rgba(255, 255, 255, 0.9);
+  animation: ai-models-spin 0.8s linear infinite;
+  flex-shrink: 0;
+}
+
+.modeSwitchLoaderText {
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+}
+
+@keyframes ai-models-spin {
+  from {
+    transform: rotate(0deg);
+  }
+
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ── Coming Soon banner (local models on non-Mac) ──── */
+
+.comingSoonBanner {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 20px;
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.comingSoonIcon {
+  font-size: 28px;
+  flex-shrink: 0;
+}
+
+.comingSoonBody {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.comingSoonTitle {
+  font-size: 15px;
+  font-weight: 650;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.comingSoonDesc {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.5);
+  line-height: 1.5;
 }
 
 .dropdownRow {

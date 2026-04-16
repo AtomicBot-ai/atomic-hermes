@@ -20,7 +20,7 @@
 
 .subtitle {
   font-size: 15px;
-  color: rgba(255, 255, 255, 0.6);
+  color: var(--muted2);
   margin: 0 0 32px;
   max-width: 380px;
   line-height: 1.5;

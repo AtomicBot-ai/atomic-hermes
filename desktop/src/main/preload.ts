@@ -14,12 +14,18 @@ function onIpc<T>(channel: string, cb: (payload: T) => void): () => void {
 }
 
 contextBridge.exposeInMainWorld("hermesAPI", {
+  platform: process.platform,
   getPort: (): Promise<number> => ipcRenderer.invoke("get-port"),
   getHermesHome: (): Promise<string> => ipcRenderer.invoke("get-hermes-home"),
   getDashboardState: (): Promise<DashboardState> =>
     ipcRenderer.invoke("get-dashboard-state"),
   openExternal: (url: string): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("open-external", { url }),
+  getLaunchAtLogin: (): Promise<{ enabled: boolean }> =>
+    ipcRenderer.invoke("get-launch-at-login"),
+  setLaunchAtLogin: async (enabled: boolean): Promise<void> => {
+    await ipcRenderer.invoke("set-launch-at-login", { enabled });
+  },
   onPythonError: (cb: (error: string) => void) => {
     ipcRenderer.on("python-error", (_event, error: string) => cb(error));
   },
@@ -90,6 +96,50 @@ contextBridge.exposeInMainWorld("hermesAPI", {
   onTerminalExit: (cb: (payload: { id: string; exitCode: number; signal?: number }) => void): (() => void) =>
     onIpc("terminal:exit", cb),
 
+  // ── Llamacpp (Local Models) ────────────────────────────────────────
+  llamacppSystemInfo: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-system-info"),
+  llamacppBackendStatus: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-backend-status"),
+  llamacppBackendDownload: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-backend-download"),
+  llamacppBackendDownloadCancel: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-backend-download-cancel"),
+  llamacppBackendUpdate: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-backend-update"),
+  llamacppModelStatus: async (model?: string): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-model-status", model ? { model } : undefined),
+  llamacppModelDownload: async (model?: string): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-model-download", model ? { model } : undefined),
+  llamacppModelDownloadCancel: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-model-download-cancel"),
+  llamacppModelDelete: async (model: string): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-model-delete", { model }),
+  llamacppModelsList: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-models-list"),
+  llamacppServerStart: async (model?: string): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-server-start", model ? { model } : undefined),
+  llamacppServerStop: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-server-stop"),
+  llamacppClearActiveModel: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-clear-active-model"),
+  llamacppServerStatus: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-server-status"),
+  llamacppSetActiveModel: async (model: string): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-set-active-model", { model }),
+  llamacppWarmupGet: async (): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-warmup-get"),
+  llamacppWarmupSet: async (params: {
+    state: "idle" | "warming" | "done";
+    modelId: string | null;
+  }): Promise<unknown> => ipcRenderer.invoke("llamacpp-warmup-set", params),
+  onLlamacppBackendDownloadProgress: (cb: (payload: { percent: number; transferred: number; total: number }) => void): (() => void) =>
+    onIpc("llamacpp-backend-download-progress", cb),
+  onLlamacppModelDownloadProgress: (cb: (payload: { percent: number; transferred: number; total: number; modelId: string }) => void): (() => void) =>
+    onIpc("llamacpp-model-download-progress", cb),
+  llamacppPropagateModel: async (model: string): Promise<unknown> =>
+    ipcRenderer.invoke("llamacpp-propagate-model", { model }),
+
   // ── Files ─────────────────────────────────────────────────────────
   filesListDir: async (p: string): Promise<Array<{ name: string; type: "file" | "dir"; size: number; mtime: number }>> =>
     ipcRenderer.invoke("files:list-dir", { path: p }),
@@ -135,4 +185,6 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("sidebar:get-favorites"),
   sidebarSetFavorites: async (entries: Array<{ path: string; type: "file" | "dir"; name: string }>): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("sidebar:set-favorites", { entries }),
+  seedProfileProvider: async (source: string, target: string): Promise<unknown> =>
+    ipcRenderer.invoke("seed-profile-provider", { source, target }),
 });

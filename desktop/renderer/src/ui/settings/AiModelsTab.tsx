@@ -1,29 +1,72 @@
 import React from "react";
+import { useAppDispatch, useAppSelector } from "@store/hooks";
+import { switchMode } from "@store/slices/mode-switch";
+import { MODE_LABELS, type HermesSetupMode } from "@store/slices/mode-persistence";
+import { fetchLlamacppServerStatus, stopLlamacppServer } from "@store/slices/llamacppSlice";
 import { RichSelect, type RichOption } from "../setup/RichSelect";
 import { getModelTier, TIER_INFO } from "../setup/model-presentation";
 import { PROVIDERS, resolveProviderIconUrl } from "../setup/providers";
+import { isProfileUsingLlamacppServer } from "./llamacpp-profile-config";
 import { useSettingsState } from "./settings-context";
 import { AiModelsInlineProvider } from "./AiModelsInlineProvider";
-import { AiModelsStatusBar } from "./AiModelsStatusBar";
+import {
+  AiModelsStatusBar,
+  LLAMACPP_PRIMARY_PREFIX,
+  formatModelIdForStatusBar,
+  resolveLlamacppServerUiKey,
+} from "./AiModelsStatusBar";
+import { LocalModelsTab } from "./local-models/LocalModelsTab";
 import s from "./AiModelsTab.module.css";
 
 function getProviderBadge(provider: (typeof PROVIDERS)[number]):
   | { text: string; variant: string }
   | undefined {
-  if (provider.recommended) {
-    return { text: "Recommended", variant: "recommended" };
-  }
-  if (provider.popular) {
-    return { text: "Popular", variant: "popular" };
-  }
-  if (provider.localModels) {
-    return { text: "Local", variant: "local" };
-  }
+  if (provider.recommended) return { text: "Recommended", variant: "recommended" };
+  if (provider.popular) return { text: "Popular", variant: "popular" };
+  if (provider.localModels) return { text: "Local", variant: "local" };
   return undefined;
 }
 
+function ConnectionToggle(props: {
+  activeMode: HermesSetupMode | null;
+  disabled: boolean;
+  onSelect: (mode: HermesSetupMode) => void;
+}) {
+  const active = props.activeMode;
+  return (
+    <div className={s.connectionSection}>
+      <div className={s.connectionSelector} role="radiogroup" aria-label="Connection mode">
+        <button
+          type="button"
+          className={`${s.connectionOption}${active === "self-managed" ? ` ${s["connectionOption--active"]}` : ""}`}
+          onClick={() => void props.onSelect("self-managed")}
+          disabled={props.disabled}
+        >
+          API keys
+        </button>
+        <button
+          type="button"
+          className={`${s.connectionOption}${active === "local-model" ? ` ${s["connectionOption--active"]}` : ""}`}
+          onClick={() => void props.onSelect("local-model")}
+          disabled={props.disabled}
+        >
+          Local Models
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export function AiModelsTab() {
+  const dispatch = useAppDispatch();
+  const authMode = useAppSelector((st) => st.config.mode);
+  const llamacpp = useAppSelector((st) => st.llamacpp);
+
+  const [tabMode, setTabMode] = React.useState<HermesSetupMode>(authMode);
+  const [modeSwitchBusy, setModeSwitchBusy] = React.useState(false);
+
   const {
+    port,
     configSnap,
     selectedProvider,
     setSelectedProvider,
@@ -53,7 +96,12 @@ export function AiModelsTab() {
     startOAuth,
     resetTransientState,
   } = useSettingsState();
+
   const previousProviderRef = React.useRef<string | null>(null);
+
+  React.useEffect(() => {
+    void dispatch(fetchLlamacppServerStatus());
+  }, [dispatch]);
 
   React.useEffect(() => {
     if (!selectedProvider && configSnap) {
@@ -62,9 +110,7 @@ export function AiModelsTab() {
   }, [selectedProvider, setSelectedProvider, configSnap]);
 
   React.useEffect(() => {
-    if (!selectedProvider) {
-      return;
-    }
+    if (!selectedProvider) return;
     const isInitialSet = previousProviderRef.current === null;
     if (!isInitialSet && previousProviderRef.current !== selectedProvider) {
       setSelectedModel("");
@@ -122,9 +168,7 @@ export function AiModelsTab() {
 
   const handleModelChange = React.useCallback(
     (modelId: string) => {
-      if (!selectedProvider) {
-        return;
-      }
+      if (!selectedProvider) return;
       setSelectedModel(modelId);
       void saveModelSelection(modelId, selectedProvider);
     },
@@ -132,13 +176,9 @@ export function AiModelsTab() {
   );
 
   const handleProviderSave = React.useCallback(async () => {
-    if (!provider) {
-      return false;
-    }
+    if (!provider) return false;
     if (provider.authType === "oauth" && oauthStep !== "success") {
-      if (!canEditConfig) {
-        return false;
-      }
+      if (!canEditConfig) return false;
       await startOAuth();
       return false;
     }
@@ -147,108 +187,191 @@ export function AiModelsTab() {
       await loadModels(selectedProvider);
     }
     return saved;
-  }, [
-    canEditConfig,
-    loadModels,
-    oauthStep,
-    provider,
-    saveProviderConfig,
-    selectedProvider,
-    startOAuth,
-  ]);
+  }, [canEditConfig, loadModels, oauthStep, provider, saveProviderConfig, selectedProvider, startOAuth]);
 
   React.useEffect(() => {
-    if (!selectedProvider || isLoadingModels || isSavingModel || modelOptions.length === 0) {
-      return;
-    }
-    if (selectedModelValue && modelOptions.some((option) => option.value === selectedModelValue)) {
-      return;
-    }
+    if (!selectedProvider || isLoadingModels || isSavingModel || modelOptions.length === 0) return;
+    if (selectedModelValue?.startsWith(LLAMACPP_PRIMARY_PREFIX)) return;
+    if (selectedModelValue && modelOptions.some((option) => option.value === selectedModelValue)) return;
     const fallbackModel = modelOptions[0]?.value;
-    if (!fallbackModel) {
-      return;
-    }
+    if (!fallbackModel) return;
     setSelectedModel(fallbackModel);
     void saveModelSelection(fallbackModel, selectedProvider);
-  }, [
-    isLoadingModels,
-    isSavingModel,
-    modelOptions,
-    saveModelSelection,
-    selectedModelValue,
-    selectedProvider,
-    setSelectedModel,
-  ]);
+  }, [isLoadingModels, isSavingModel, modelOptions, saveModelSelection, selectedModelValue, selectedProvider, setSelectedModel]);
 
-  const currentModelName = selectedModelValue || null;
+  // ── Mode switching ──
+
+  const handleConnectionSelect = React.useCallback(
+    async (mode: HermesSetupMode) => {
+      setTabMode(mode);
+      if (mode === authMode) return;
+
+      setModeSwitchBusy(true);
+      try {
+        await dispatch(switchMode({ port, target: mode })).unwrap();
+      } catch (err) {
+        console.error("[AiModelsTab] switchMode failed:", err);
+      } finally {
+        setModeSwitchBusy(false);
+      }
+    },
+    [authMode, dispatch, port],
+  );
+
+  // ── Server stop ──
+
+  const [serverStopping, setServerStopping] = React.useState(false);
+
+  const handleServerStop = React.useCallback(async () => {
+    setServerStopping(true);
+    try {
+      await dispatch(stopLlamacppServer()).unwrap();
+    } catch (err) {
+      console.error("[AiModelsTab] stopServer failed:", err);
+    } finally {
+      setServerStopping(false);
+    }
+  }, [dispatch]);
+
+  // ── Status bar model name ──
+
+  const isLlamacppProvider = isProfileUsingLlamacppServer(configSnap);
+
+  const statusModeLabel = isLlamacppProvider ? MODE_LABELS["local-model"] : MODE_LABELS["self-managed"];
+
+  const currentModelName = React.useMemo(() => {
+    if (isLlamacppProvider) {
+      const localModel = llamacpp.models.find((m) => m.id === llamacpp.activeModelId);
+      if (localModel?.name) return localModel.name;
+      if (llamacpp.activeModelId) return formatModelIdForStatusBar(llamacpp.activeModelId);
+      return null;
+    }
+    return selectedModelValue || null;
+  }, [isLlamacppProvider, llamacpp.activeModelId, llamacpp.models, selectedModelValue]);
+
+  const runningModelLabel = React.useMemo(() => {
+    const uiKey = resolveLlamacppServerUiKey(llamacpp.serverStatus);
+    if (uiKey === "stopped") return "None";
+    const rawId = llamacpp.serverStatus?.activeModelId ?? llamacpp.activeModelId ?? null;
+    if (!rawId) return "None";
+    const localModel = llamacpp.models.find((m) => m.id === rawId);
+    if (localModel?.name) return localModel.name;
+    return formatModelIdForStatusBar(rawId);
+  }, [llamacpp.serverStatus, llamacpp.activeModelId, llamacpp.models]);
+
+  const isLocalTab = tabMode === "local-model";
+  const isMac = navigator.platform?.toLowerCase().includes("mac") ?? true;
 
   return (
     <div className={s.root}>
       <div className={s.title}>AI Models</div>
 
-      <AiModelsStatusBar modeLabel="API keys" modelName={currentModelName} />
+      <AiModelsStatusBar
+        isLocalModels={isLocalTab}
+        modeLabel={statusModeLabel}
+        modelName={currentModelName}
+        runningModelLabel={runningModelLabel}
+        serverStatus={llamacpp.serverStatus}
+        onStop={() => void handleServerStop()}
+        stopping={serverStopping}
+      />
 
-      <div className={s.dropdownRow}>
-        <div className={s.dropdownGroup}>
-          <div className={s.dropdownLabel}>Provider</div>
-          <RichSelect
-            value={selectedProvider}
-            onChange={handleProviderChange}
-            options={providerOptions}
-            placeholder="Select provider..."
-            disabled={isSavingProvider || isReloading}
-          />
+      <ConnectionToggle
+        activeMode={tabMode}
+        disabled={modeSwitchBusy}
+        onSelect={handleConnectionSelect}
+      />
+
+      {modeSwitchBusy && (
+        <div className={s.modeSwitchLoader} role="status" aria-live="polite">
+          <div className={s.modeSwitchSpinner} aria-hidden="true" />
+          <div className={s.modeSwitchLoaderText}>Switching to {MODE_LABELS[tabMode]}...</div>
         </div>
+      )}
 
-        <div className={s.dropdownGroup}>
-          <div className={s.dropdownLabel}>Model</div>
-          <RichSelect
-            value={selectedModelValue}
-            onChange={handleModelChange}
-            options={modelOptions}
-            placeholder={
-              !selectedProvider
-                ? "Select provider first"
-                : modelOptions.length === 0
-                  ? "Enter API key to choose a model"
-                  : "Select model..."
-            }
-            disabled={!selectedProvider || isLoadingModels || isSavingModel || modelOptions.length === 0}
-            disabledStyles={!selectedProvider || modelOptions.length === 0}
-            onlySelectedIcon
-          />
+      {isLocalTab && !modeSwitchBusy && (
+        <div className="fade-in">
+          {isMac ? (
+            <LocalModelsTab port={port} />
+          ) : (
+            <div className={s.comingSoonBanner}>
+              <span className={s.comingSoonIcon}>🖥</span>
+              <div className={s.comingSoonBody}>
+                <div className={s.comingSoonTitle}>Coming Soon</div>
+                <div className={s.comingSoonDesc}>
+                  Local models support for this platform is under development. Stay tuned!
+                </div>
+              </div>
+            </div>
+          )}
         </div>
-      </div>
+      )}
 
-      {selectedProvider && modelOptions.length === 0 && !isLoadingModels ? (
-        <div className={s.noModelsHint}>
-          {!providerConfigured
-            ? "Add an API key below to load models for this provider."
-            : "No models loaded. Try reloading settings or reconfiguring this provider."}
+      {tabMode === "self-managed" && !modeSwitchBusy && (
+        <div className="fade-in">
+          <div className={s.dropdownRow}>
+            <div className={s.dropdownGroup}>
+              <div className={s.dropdownLabel}>Provider</div>
+              <RichSelect
+                value={selectedProvider}
+                onChange={handleProviderChange}
+                options={providerOptions}
+                placeholder="Select provider..."
+                disabled={isSavingProvider || isReloading}
+              />
+            </div>
+
+            <div className={s.dropdownGroup}>
+              <div className={s.dropdownLabel}>Model</div>
+              <RichSelect
+                value={selectedModelValue}
+                onChange={handleModelChange}
+                options={modelOptions}
+                placeholder={
+                  !selectedProvider
+                    ? "Select provider first"
+                    : modelOptions.length === 0
+                      ? "Enter API key to choose a model"
+                      : "Select model..."
+                }
+                disabled={!selectedProvider || isLoadingModels || isSavingModel || modelOptions.length === 0}
+                disabledStyles={!selectedProvider || modelOptions.length === 0}
+                onlySelectedIcon
+              />
+            </div>
+          </div>
+
+          {selectedProvider && modelOptions.length === 0 && !isLoadingModels ? (
+            <div className={s.noModelsHint}>
+              {!providerConfigured
+                ? "Add an API key below to load models for this provider."
+                : "No models loaded. Try reloading settings or reconfiguring this provider."}
+            </div>
+          ) : null}
+
+          {provider ? (
+            <AiModelsInlineProvider
+              provider={provider}
+              providerConfigured={providerConfigured}
+              isReloading={isReloading}
+              isSavingProvider={isSavingProvider}
+              saveError={saveError}
+              apiKey={apiKey}
+              setApiKey={setApiKey}
+              baseUrl={baseUrl}
+              setBaseUrl={setBaseUrl}
+              oauthStep={oauthStep}
+              oauthUserCode={oauthUserCode}
+              oauthVerificationUrl={oauthVerificationUrl}
+              oauthError={oauthError}
+              canEditConfig={canEditConfig}
+              onReload={reloadConfig}
+              onSave={handleProviderSave}
+              onOAuthStart={startOAuth}
+            />
+          ) : null}
         </div>
-      ) : null}
-
-      {provider ? (
-        <AiModelsInlineProvider
-          provider={provider}
-          providerConfigured={providerConfigured}
-          isReloading={isReloading}
-          isSavingProvider={isSavingProvider}
-          saveError={saveError}
-          apiKey={apiKey}
-          setApiKey={setApiKey}
-          baseUrl={baseUrl}
-          setBaseUrl={setBaseUrl}
-          oauthStep={oauthStep}
-          oauthUserCode={oauthUserCode}
-          oauthVerificationUrl={oauthVerificationUrl}
-          oauthError={oauthError}
-          canEditConfig={canEditConfig}
-          onReload={reloadConfig}
-          onSave={handleProviderSave}
-          onOAuthStart={startOAuth}
-        />
-      ) : null}
+      )}
     </div>
   );
 }
