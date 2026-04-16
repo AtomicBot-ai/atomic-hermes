@@ -1,0 +1,108 @@
+.card {
+  max-width: 560px;
+}
+
+.modelList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.modelRow {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--surface-hover);
+  border: 1px solid var(--surface-overlay);
+}
+
+.modelIcon {
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: var(--surface-overlay-subtle);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modelInfo {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.modelName {
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modelMeta {
+  font-size: 12px;
+  color: var(--muted3);
+  line-height: 16px;
+}
+
+.modelAction {
+  flex-shrink: 0;
+}
+
+.badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  border-radius: 8px;
+}
+
+.badgeRecommended {
+  background: color-mix(in srgb, var(--lime) 15%, transparent);
+  color: var(--lime);
+}
+
+.badgePossible {
+  background: color-mix(in srgb, var(--warning) 15%, transparent);
+  color: var(--warning);
+}
+
+.badgeHighPerformance {
+  background: color-mix(in srgb, var(--accent-brand) 15%, transparent);
+  color: var(--accent-brand);
+}
+
+.downloadingRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.downloadingText {
+  font-size: 12px;
+  color: var(--muted3);
+  white-space: nowrap;
+}
+
+.cancelIcon {
+  appearance: none;
+  border: none;
+  background: none;
+  color: var(--muted3);
+  font-size: 12px;
+  cursor: pointer;
+  padding: 2px;
+  line-height: 1;
+  border-radius: var(--radius-xs);
+  transition: color var(--transition-base);
+}
+
+.cancelIcon:hover {
+  color: var(--error);
+}

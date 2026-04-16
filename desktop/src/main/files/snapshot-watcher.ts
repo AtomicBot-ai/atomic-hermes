@@ -59,6 +59,19 @@ export class SnapshotWatcher {
       void this.watcher.close();
       this.watcher = null;
     }
+    this.clearTimersAndCache();
+  }
+
+  async asyncStop(): Promise<void> {
+    if (this.watcher) {
+      const w = this.watcher;
+      this.watcher = null;
+      await w.close();
+    }
+    this.clearTimersAndCache();
+  }
+
+  private clearTimersAndCache(): void {
     for (const timer of this.debounceTimers.values()) {
       clearTimeout(timer);
     }

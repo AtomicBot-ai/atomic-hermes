@@ -1,0 +1,134 @@
+/* ── SetupModePage (two-column variant) ── */
+
+.UiSetupModeHeader :global(button.UiTextButton) {
+  margin-left: -112px;
+}
+
+.UiSetupModeCard {
+  display: flex;
+  flex-direction: column;
+  width: min(760px, calc(100vw - 128px));
+  height: auto;
+}
+
+.UiSetupModeCard :global(.UiSectionSubtitle) {
+  margin-bottom: 16px;
+}
+
+.UiSetupModeOptions {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+  margin-top: 11px;
+  align-items: start;
+  min-height: 0;
+}
+
+.UiSetupModeOptions .UiSetupModeOptionCard {
+  justify-content: flex-start;
+  height: auto;
+  box-sizing: border-box;
+  min-height: 280px;
+  max-height: none;
+}
+
+.UiSetupModeCardBody {
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.UiSetupModeCardFooter {
+  flex-shrink: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.UiSetupModeCardFooter :global(.UiPrimaryButton),
+.UiSetupModeCardFooter :global(.UiSecondaryButton) {
+  width: 100%;
+}
+
+.UiSetupModeCardBody .UiSetupModeFeatures {
+  margin-bottom: 0;
+}
+
+.UiSetupModeIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: var(--surface-overlay);
+  flex-shrink: 0;
+  margin-bottom: 12px;
+}
+
+.UiSetupModeTitle {
+  font-weight: 700;
+  font-size: 17px;
+  line-height: 22px;
+  margin-bottom: 5px;
+}
+
+.UiSetupModeDesc {
+  font-size: 13px;
+  color: var(--muted3);
+  margin-bottom: 16px;
+}
+
+.UiSetupModeFeatures {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 16px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.UiSetupModeFeatures li {
+  font-size: 13px;
+  line-height: 18px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.UiSetupModeFeatures li::before {
+  content: "✓";
+  color: var(--accent-brand);
+  font-weight: 700;
+  font-size: 12px;
+  flex-shrink: 0;
+}
+
+.UiSetupModeFeatures li.UiSetupModeFeatureNote::before {
+  content: none;
+  display: none;
+}
+
+.UiSetupModeFeatureNoteIcon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+  color: var(--muted3);
+}
+
+.UiSetupModeFeatureNoteIcon svg {
+  width: 100%;
+  height: 100%;
+}
+
+.UiSetupModeOptionCardComingSoon {
+  opacity: 0.65;
+  pointer-events: none;
+}

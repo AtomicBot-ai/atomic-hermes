@@ -1,7 +1,10 @@
+import type { MutableRefObject } from "react";
 import { createContext, useContext } from "react";
 import type { CapabilitiesResponse, DeviceCodeResponse } from "../../services/api";
 
 export type OAuthStep = "idle" | "loading" | "waiting" | "success" | "error";
+
+export type SetupFlowKind = "unset" | "api-keys" | "local-model";
 
 export type SetupState = {
   port: number;
@@ -36,7 +39,10 @@ export type SetupState = {
   setOauthError: (err: string) => void;
   deviceCodeData: DeviceCodeResponse | null;
   setDeviceCodeData: (data: DeviceCodeResponse | null) => void;
-  oauthPollRef: React.MutableRefObject<ReturnType<typeof setInterval> | null>;
+  oauthPollRef: MutableRefObject<ReturnType<typeof setInterval> | null>;
+
+  setupFlow: SetupFlowKind;
+  setSetupFlow: (flow: SetupFlowKind) => void;
 
   checkCapabilities: () => Promise<void>;
   loadCurrentConfig: () => Promise<void>;

@@ -49,7 +49,7 @@
   padding: 13px 16px;
   border: none;
   background: transparent;
-  color: rgba(255, 255, 255, 0.72);
+  color: var(--muted);
   font-size: 17px;
   font-weight: 500;
   line-height: 22px;

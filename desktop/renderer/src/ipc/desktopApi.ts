@@ -81,6 +81,8 @@ export type UpdateErrorPayload = {
 
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface DesktopApi {
+  /** Node/Electron `process.platform` when running inside Electron preload. */
+  platform?: string;
   openExternal?(url: string): void;
   getLaunchAtLogin?(): Promise<{ enabled: boolean }>;
   setLaunchAtLogin?(enabled: boolean): Promise<void>;

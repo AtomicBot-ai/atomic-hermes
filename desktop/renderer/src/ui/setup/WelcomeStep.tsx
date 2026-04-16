@@ -3,17 +3,16 @@ import { SplashLogo, PrimaryButton, FooterText } from "@shared/kit";
 import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
-import { TOTAL_STEPS } from "./SetupPage";
 import s from "./WelcomeStep.module.css";
 
 export function WelcomeStep() {
-  useOnboardingStepEvent("welcome");
+  useOnboardingStepEvent("welcome", null);
   const navigate = useNavigate();
   const { skip } = useSetup();
 
   return (
     <>
-      <OnboardingHeader totalSteps={TOTAL_STEPS} activeStep={0} />
+      <OnboardingHeader totalSteps={0} activeStep={0} />
       <div className={s.stage}>
         <div className={s.center}>
           <SplashLogo size={72} />
@@ -21,7 +20,7 @@ export function WelcomeStep() {
 
           <PrimaryButton
             className={s.primaryBtn}
-            onClick={() => void navigate("provider")}
+            onClick={() => void navigate("setup-mode")}
           >
             Get Started
           </PrimaryButton>

@@ -14,6 +14,7 @@ function onIpc<T>(channel: string, cb: (payload: T) => void): () => void {
 }
 
 contextBridge.exposeInMainWorld("hermesAPI", {
+  platform: process.platform,
   getPort: (): Promise<number> => ipcRenderer.invoke("get-port"),
   getHermesHome: (): Promise<string> => ipcRenderer.invoke("get-hermes-home"),
   getDashboardState: (): Promise<DashboardState> =>

@@ -5,12 +5,18 @@ import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import { PROVIDERS, resolveProviderIconUrl } from "./providers";
-import { TOTAL_STEPS } from "./SetupPage";
+import { API_KEYS_FLOW } from "./onboarding-steps";
 
 export function ProviderSelectStep() {
-  useOnboardingStepEvent("provider_select");
+  useOnboardingStepEvent("provider_select", "api-keys");
   const navigate = useNavigate();
   const ctx = useSetup();
+
+  useEffect(() => {
+    if (ctx.setupFlow !== "api-keys") {
+      void navigate("../setup-mode", { relative: "path", replace: true });
+    }
+  }, [ctx.setupFlow, navigate]);
 
   useEffect(() => {
     void ctx.checkCapabilities();
@@ -47,9 +53,12 @@ export function ProviderSelectStep() {
   return (
     <>
       <OnboardingHeader
-        totalSteps={TOTAL_STEPS}
-        activeStep={1}
-        onBack={() => void navigate("..", { relative: "path" })}
+        totalSteps={API_KEYS_FLOW.totalSteps}
+        activeStep={API_KEYS_FLOW.steps.provider}
+        onBack={() => {
+          ctx.setSetupFlow("unset");
+          void navigate("../setup-mode", { relative: "path" });
+        }}
         onSkip={ctx.skip}
       />
       <GlassCard className="UiProviderCard UiGlassCardOnboarding">

@@ -15,16 +15,68 @@ import {
   type CapabilitiesResponse,
   type DeviceCodeResponse,
 } from "../../services/api";
-import { SetupContext, type OAuthStep } from "./setup-context";
+import { SetupContext, useSetup, type OAuthStep, type SetupFlowKind } from "./setup-context";
+import { getDesktopApiOrNull } from "@ipc/desktopApi";
 import { PROVIDERS } from "./providers";
 import { WelcomeStep } from "./WelcomeStep";
+import { SetupModePage } from "./SetupModePage";
+import { LocalBackendSetupPage } from "./LocalBackendSetupPage";
+import { LocalModelSelectPage } from "./LocalModelSelectPage";
 import { ProviderSelectStep } from "./ProviderSelectStep";
 import { ApiKeyStep } from "./ApiKeyStep";
 import { ModelSelectStep } from "./ModelSelectStep";
 import { FinishStep } from "./FinishStep";
 import "./setup.css";
 
-export const TOTAL_STEPS = 5;
+function SetupModeRoute() {
+  const navigate = useNavigate();
+  const { setSetupFlow } = useSetup();
+  const isMac = (getDesktopApiOrNull()?.platform ?? "darwin") === "darwin";
+  return (
+    <SetupModePage
+      localModelComingSoon={!isMac}
+      onSelectApiKeys={() => {
+        setSetupFlow("api-keys");
+        void navigate("../provider", { relative: "path" });
+      }}
+      onSelectLocalModels={() => {
+        setSetupFlow("local-model");
+        void navigate("../local-backend-setup", { relative: "path" });
+      }}
+      onBack={() => {
+        setSetupFlow("unset");
+        void navigate("..", { relative: "path" });
+      }}
+    />
+  );
+}
+
+function LocalBackendSetupRoute() {
+  const navigate = useNavigate();
+  const { setSetupFlow } = useSetup();
+  return (
+    <LocalBackendSetupPage
+      onContinue={() => void navigate("../local-model-select", { relative: "path" })}
+      onBack={() => {
+        setSetupFlow("unset");
+        void navigate("../setup-mode", { relative: "path" });
+      }}
+    />
+  );
+}
+
+function LocalModelSelectRoute() {
+  const navigate = useNavigate();
+  const { setSetupFlow } = useSetup();
+  return (
+    <LocalModelSelectPage
+      onBack={() => {
+        setSetupFlow("unset");
+        void navigate("../setup-mode", { relative: "path" });
+      }}
+    />
+  );
+}
 
 function openExternal(url: string) {
   const api = (window as any).hermesAPI;
@@ -60,6 +112,8 @@ export function SetupPage() {
   const [deviceCodeData, setDeviceCodeData] =
     useState<DeviceCodeResponse | null>(null);
   const oauthPollRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const [setupFlow, setSetupFlow] = useState<SetupFlowKind>("unset");
 
   useEffect(() => {
     return () => {
@@ -264,6 +318,8 @@ export function SetupPage() {
       deviceCodeData,
       setDeviceCodeData,
       oauthPollRef,
+      setupFlow,
+      setSetupFlow,
       checkCapabilities,
       loadCurrentConfig,
       loadModels,
@@ -289,6 +345,7 @@ export function SetupPage() {
       oauthVerificationUrl,
       oauthError,
       deviceCodeData,
+      setupFlow,
       checkCapabilities,
       loadCurrentConfig,
       loadModels,
@@ -306,9 +363,12 @@ export function SetupPage() {
         <HeroPageLayout context="onboarding" hideTopbar align="center">
           <Routes>
             <Route index element={<WelcomeStep />} />
+            <Route path="setup-mode" element={<SetupModeRoute />} />
             <Route path="provider" element={<ProviderSelectStep />} />
             <Route path="api-key" element={<ApiKeyStep />} />
             <Route path="model" element={<ModelSelectStep />} />
+            <Route path="local-backend-setup" element={<LocalBackendSetupRoute />} />
+            <Route path="local-model-select" element={<LocalModelSelectRoute />} />
             <Route path="finish" element={<FinishStep />} />
             <Route path="*" element={<Navigate to="." replace />} />
           </Routes>

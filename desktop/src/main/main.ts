@@ -141,15 +141,22 @@ ipcMain.handle(
 );
 
 ipcMain.handle("reset-and-close", async () => {
+  if (snapshotWatcher) {
+    await snapshotWatcher.asyncStop();
+    snapshotWatcher = null;
+  }
+
   await stopLlamacppServer().catch(() => {});
-  pythonBridge?.kill();
-  pythonBridge = null;
+  if (pythonBridge) {
+    await pythonBridge.killAndWait();
+    pythonBridge = null;
+  }
   backendPort = null;
 
   killAllTerminals();
 
-  fs.rmSync(stateDir, { recursive: true, force: true });
-  fs.rmSync(llamacppDataDir, { recursive: true, force: true });
+  const rmOpts = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 } as const;
+  fs.rmSync(stateDir, rmOpts);
 
   await session.defaultSession.clearStorageData();
 
