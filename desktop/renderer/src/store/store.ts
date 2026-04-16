@@ -5,6 +5,7 @@ import { onboardingReducer } from "./slices/onboardingSlice";
 import { chatReducer } from "./slices/chatSlice";
 import { skillsReducer } from "./slices/skillsSlice";
 import { llamacppReducer } from "./slices/llamacppSlice";
+import { desktopWarmupReducer } from "./slices/desktopWarmupSlice";
 
 export const store = configureStore({
   reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
     chat: chatReducer,
     skills: skillsReducer,
     llamacpp: llamacppReducer,
+    desktopWarmup: desktopWarmupReducer,
   },
 });
 

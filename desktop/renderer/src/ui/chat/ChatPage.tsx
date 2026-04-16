@@ -19,7 +19,14 @@ import {
   type ChatMessage,
 } from "@store/slices/chatSlice";
 import { parseThinkingContent } from "../../lib/parse-thinking";
-import { buildChatSessionSystemMessage, loadChatSessionSeed } from "../../services/chat-session";
+import {
+  buildChatSessionSystemMessage,
+  consumePendingChatSessionSeed,
+  loadChatSessionSeed,
+  readSessionIdFromLocationHash,
+  resolveDesktopChatRoutingSeed,
+  saveChatSessionSeed,
+} from "../../services/chat-session";
 import { fetchSessionMessages } from "../../services/session-api";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
 import { notifyIfHidden } from "../../lib/desktop-notifications";
@@ -43,7 +50,8 @@ export function ChatPage() {
   const loading = useAppSelector((s) => s.chat.loading);
 
   const [searchParams] = useSearchParams();
-  const sessionKey = searchParams.get("session") ?? "";
+  const sessionKey =
+    (searchParams.get("session") ?? "").trim() || readSessionIdFromLocationHash();
   const sessionSeed = React.useMemo(
     () => (sessionKey ? loadChatSessionSeed(sessionKey) : null),
     [sessionKey],
@@ -124,9 +132,12 @@ export function ChatPage() {
       role: m.role,
       content: m.content,
     }));
-    const requestMessages = sessionSeed
-      ? [buildChatSessionSystemMessage(sessionSeed), ...allMessages]
-      : allMessages;
+    // Always send routing metadata as the first system message so gateway
+    // ephemeral_system_prompt matches desktop KV warmup (pending seed when
+    // localStorage has no mapping yet — e.g. deep-linked session).
+    const fromStoredSeed = sessionSeed;
+    const routingSeed = resolveDesktopChatRoutingSeed(searchParams.get("session"));
+    const requestMessages = [buildChatSessionSystemMessage(routingSeed), ...allMessages];
 
     dispatch(streamStarted());
     setAnchorVersion((value) => value + 1);
@@ -146,8 +157,13 @@ export function ChatPage() {
         const detail = data.description ? `${data.description}\n${data.command}` : data.command;
         notifyIfHidden("Approval required", detail);
       },
-      onSessionId() {
-        // session_id derived by gateway, sidebar will refresh
+      onSessionId(sid) {
+        if (sid) {
+          saveChatSessionSeed(sid, routingSeed);
+          if (!fromStoredSeed) {
+            consumePendingChatSessionSeed();
+          }
+        }
       },
       onCompletionId(id) {
         completionIdRef.current = id;
@@ -171,7 +187,7 @@ export function ChatPage() {
         completionIdRef.current = null;
       },
     });
-  }, [input, sending, streaming, messages, port, dispatch, sessionSeed]);
+  }, [input, sending, streaming, messages, port, dispatch, sessionSeed, searchParams]);
 
   const handleStop = useCallback(() => {
     const cid = completionIdRef.current;

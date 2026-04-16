@@ -112,7 +112,10 @@ export interface DesktopApi {
   llamacppServerStatus?(): Promise<LlamacppServerStatusResponse>;
   llamacppSetActiveModel?(model: string): Promise<LlamacppServerStartResponse>;
   llamacppWarmupGet?(): Promise<{ state: "idle" | "warming" | "done"; modelId: string | null }>;
-  llamacppWarmupSet?(state: string, modelId: string | null): Promise<{ ok: boolean }>;
+  llamacppWarmupSet?(params: {
+    state: "idle" | "warming" | "done";
+    modelId: string | null;
+  }): Promise<{ ok: boolean }>;
   onLlamacppBackendDownloadProgress?(cb: (payload: LlamacppDownloadProgress) => void): () => void;
   onLlamacppModelDownloadProgress?(cb: (payload: LlamacppModelDownloadProgress) => void): () => void;
   llamacppPropagateModel?(model: string): Promise<{ ok: boolean; updatedProfiles: string[] }>;

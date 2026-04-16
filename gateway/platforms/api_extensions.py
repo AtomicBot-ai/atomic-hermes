@@ -35,6 +35,19 @@ except ImportError:
     web = None  # type: ignore[assignment]
 
 
+def build_desktop_openai_warmup_agent_for_gateway(**kwargs: Any) -> Any:
+    """Stable entry point for desktop local-LLM warmup (gateway context).
+
+    Delegates to ``agent.local_llm_warmup.build_desktop_openai_warmup_agent`` with
+    ``agent_alignment`` defaulting to ``api_server``.
+    """
+    from agent.local_llm_warmup import build_desktop_openai_warmup_agent
+
+    merged = dict(kwargs)
+    merged.setdefault("agent_alignment", "api_server")
+    return build_desktop_openai_warmup_agent(**merged)
+
+
 def _get_hermes_home() -> Path:
     try:
         from hermes_constants import get_hermes_home

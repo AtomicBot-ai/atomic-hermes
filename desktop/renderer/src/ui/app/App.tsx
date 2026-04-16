@@ -25,6 +25,8 @@ import { LogsPage } from "../logs";
 import { TerminalPage } from "../terminal";
 import { FilesPage } from "../files";
 import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache";
+import { useDesktopLocalWarmup } from "../chat/hooks/useDesktopLocalWarmup";
+import { DesktopWarmupBanner } from "../chat/components/DesktopWarmupBanner";
 import { useAppOpenedEvent } from "@analytics";
 import { UpdateBanner } from "../updates/UpdateBanner";
 import { LlamacppDownloadBanner } from "../updates/LlamacppDownloadBanner";
@@ -88,6 +90,7 @@ function ChatRoute() {
   return (
     <>
       <div className={a.TopRightBannerStack}>
+        <DesktopWarmupBanner />
         <LlamacppDownloadBanner />
       </div>
       {session?.trim() ? <ChatPage /> : <StartChatPage />}
@@ -156,6 +159,7 @@ export function FullscreenShell(props: { children: React.ReactNode }) {
 }
 
 export function App() {
+  useDesktopLocalWarmup();
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
   const onboardingLoaded = useAppSelector((s) => s.onboarding.loaded);

@@ -6,7 +6,9 @@ import { approvalRequested } from "@store/slices/chatSlice";
 import { parseThinkingContent } from "../../lib/parse-thinking";
 import {
   buildChatSessionSystemMessage,
-  createChatSessionSeed,
+  consumePendingChatSessionSeed,
+  resolveDesktopChatRoutingSeed,
+  rotatePendingChatSessionSeed,
   saveChatSessionSeed,
 } from "../../services/chat-session";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
@@ -31,7 +33,7 @@ export function StartChatPage() {
   const abortRef = useRef<AbortController | null>(null);
   const completionIdRef = useRef<string | null>(null);
   const createdSessionIdRef = useRef<string | null>(null);
-  const sessionSeedRef = useRef(createChatSessionSeed());
+  const sessionSeedRef = useRef(resolveDesktopChatRoutingSeed(""));
   const scrollRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
   const gatewayState = useAppSelector((s) => s.gateway.state);
@@ -74,6 +76,7 @@ export function StartChatPage() {
     abortRef.current = streamChatCompletion(port, messages, {
       onSessionId(sessionId) {
         saveChatSessionSeed(sessionId, sessionSeedRef.current);
+        consumePendingChatSessionSeed();
         createdSessionIdRef.current = sessionId;
       },
       onCompletionId(id) {
@@ -139,7 +142,7 @@ export function StartChatPage() {
     setStreamingThinking("");
     setStreamingActions([]);
     setStreamingMessageId(null);
-    sessionSeedRef.current = createChatSessionSeed();
+    sessionSeedRef.current = rotatePendingChatSessionSeed();
   }, [port]);
 
   const displayMessages: DisplayMessage[] = pendingUserMessage

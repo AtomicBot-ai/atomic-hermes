@@ -128,8 +128,10 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("llamacpp-set-active-model", { model }),
   llamacppWarmupGet: async (): Promise<unknown> =>
     ipcRenderer.invoke("llamacpp-warmup-get"),
-  llamacppWarmupSet: async (state: string, modelId: string | null): Promise<unknown> =>
-    ipcRenderer.invoke("llamacpp-warmup-set", { state, modelId }),
+  llamacppWarmupSet: async (params: {
+    state: "idle" | "warming" | "done";
+    modelId: string | null;
+  }): Promise<unknown> => ipcRenderer.invoke("llamacpp-warmup-set", params),
   onLlamacppBackendDownloadProgress: (cb: (payload: { percent: number; transferred: number; total: number }) => void): (() => void) =>
     onIpc("llamacpp-backend-download-progress", cb),
   onLlamacppModelDownloadProgress: (cb: (payload: { percent: number; transferred: number; total: number; modelId: string }) => void): (() => void) =>

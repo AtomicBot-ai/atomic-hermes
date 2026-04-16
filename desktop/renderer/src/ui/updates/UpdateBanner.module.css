@@ -198,8 +198,8 @@
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(18, 18, 18, 0.25);
-  border-top-color: var(--surface-primary);
+  border: 2px solid rgba(0, 232, 212, 0.18);
+  border-top-color: var(--accent-brand);
   border-radius: 50%;
   animation: updateSpinnerRotate 600ms linear infinite;
   vertical-align: middle;

@@ -16,9 +16,9 @@ import threading
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import Body, FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 
@@ -34,6 +34,7 @@ from bridge import (
     make_step_cb,
     make_status_cb,
 )
+from local_warmup import perform_desktop_warmup
 
 logger = logging.getLogger("hermes.desktop")
 
@@ -102,6 +103,28 @@ async def get_config():
         }
     except Exception as e:
         return {"config": {}, "has_api_keys": False, "error": str(e)}
+
+
+@app.post("/warmup")
+async def post_warmup(body: Optional[Dict[str, Any]] = Body(default=None)):
+    """Lightweight OpenAI-compatible warmup for local models (desktop only)."""
+    payload = body if isinstance(body, dict) else {}
+    try:
+        return await perform_desktop_warmup(payload, agent_alignment="desktop")
+    except Exception as exc:
+        logger.exception("POST /warmup failed")
+        return {"ok": False, "error": str(exc)}
+
+
+@app.post("/api/warmup")
+async def post_warmup_api_prefix(body: Optional[Dict[str, Any]] = Body(default=None)):
+    """Alias for clients that only route /api/* to the bridge (same handler as POST /warmup)."""
+    payload = body if isinstance(body, dict) else {}
+    try:
+        return await perform_desktop_warmup(payload, agent_alignment="desktop")
+    except Exception as exc:
+        logger.exception("POST /api/warmup failed")
+        return {"ok": False, "error": str(exc)}
 
 
 @app.post("/config")
