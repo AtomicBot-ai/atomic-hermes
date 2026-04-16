@@ -101,6 +101,29 @@ ipcMain.handle("open-external", async (_evt, payload: { url?: string }) => {
   return { ok: true };
 });
 
+ipcMain.handle("get-launch-at-login", () => {
+  // Electron documents login items for macOS and Windows only.
+  if (process.platform !== "darwin" && process.platform !== "win32") {
+    return { enabled: false };
+  }
+  const opts = process.platform === "win32" ? { path: app.getPath("exe") } : undefined;
+  const s = app.getLoginItemSettings(opts);
+  return { enabled: Boolean(s.openAtLogin) };
+});
+
+ipcMain.handle("set-launch-at-login", (_evt, payload: { enabled?: boolean }) => {
+  if (process.platform !== "darwin" && process.platform !== "win32") {
+    throw new Error("Launch at login is only available on macOS and Windows");
+  }
+  const enabled = Boolean(payload?.enabled);
+  if (process.platform === "win32") {
+    app.setLoginItemSettings({ openAtLogin: enabled, path: app.getPath("exe") });
+  } else {
+    app.setLoginItemSettings({ openAtLogin: enabled });
+  }
+  return { ok: true };
+});
+
 ipcMain.handle("onboarding-get-state", () => {
   return { onboarded: readOnboardedState(stateDir) };
 });

@@ -20,6 +20,11 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("get-dashboard-state"),
   openExternal: (url: string): Promise<{ ok: boolean }> =>
     ipcRenderer.invoke("open-external", { url }),
+  getLaunchAtLogin: (): Promise<{ enabled: boolean }> =>
+    ipcRenderer.invoke("get-launch-at-login"),
+  setLaunchAtLogin: async (enabled: boolean): Promise<void> => {
+    await ipcRenderer.invoke("set-launch-at-login", { enabled });
+  },
   onPythonError: (cb: (error: string) => void) => {
     ipcRenderer.on("python-error", (_event, error: string) => cb(error));
   },
