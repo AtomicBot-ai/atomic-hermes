@@ -19,7 +19,8 @@
 .UiModalOverlay {
   position: fixed;
   inset: 0;
-  z-index: 900;
+  /* Above chat sidebar (999) and profile dropdown (2000); below top-right banners (9999). */
+  z-index: 5000;
   display: flex;
   align-items: center;
   justify-content: center;

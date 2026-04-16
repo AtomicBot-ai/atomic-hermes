@@ -1,7 +1,6 @@
 /* ── Exec Approval Modal (overrides on UiModalOverlay / UiModalCard) ── */
 
 .ExecApprovalOverlay {
-  z-index: 950;
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
