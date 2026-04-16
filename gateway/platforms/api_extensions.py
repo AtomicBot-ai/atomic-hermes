@@ -853,8 +853,12 @@ class _ConfigRoutes:
                         await _write_event(
                             "exec_approval_requested",
                             {
-                                "command": payload.get("command", "") if isinstance(payload, dict) else "",
-                                "description": payload.get("description", "") if isinstance(payload, dict) else "",
+                                "command": payload.get("command", "")
+                                if isinstance(payload, dict)
+                                else "",
+                                "description": payload.get("description", "")
+                                if isinstance(payload, dict)
+                                else "",
                                 "session_id": session_id,
                             },
                         )
@@ -1183,9 +1187,7 @@ class _ConfigRoutes:
         try:
             body = await request.json()
         except Exception:
-            return web.json_response(
-                _openai_error("Invalid JSON body"), status=400
-            )
+            return web.json_response(_openai_error("Invalid JSON body"), status=400)
 
         session_id = body.get("session_id", "")
         decision = body.get("decision", "")
@@ -1218,12 +1220,16 @@ class _ConfigRoutes:
                 )
                 count = payload.get("resolved", 0)
             except Exception as exc:
-                logger.warning("[api_extensions] Worker approval resolve failed: %s", exc)
+                logger.warning(
+                    "[api_extensions] Worker approval resolve failed: %s", exc
+                )
                 count = 0
 
         logger.info(
             "[api_extensions] Approval resolved: session=%s decision=%s resolved=%d",
-            session_id, choice, count,
+            session_id,
+            choice,
+            count,
         )
         return web.json_response({"status": "resolved", "resolved": count})
 
@@ -2495,11 +2501,19 @@ class _ConfigRoutes:
 
             env = load_env()
             merged_env = {**os.environ, **env}
-            logger.debug("[api_extensions] messengers env keys: %s", [k for k in merged_env if "TELEGRAM" in k or "DISCORD" in k or "SLACK" in k])
+            logger.debug(
+                "[api_extensions] messengers env keys: %s",
+                [
+                    k
+                    for k in merged_env
+                    if "TELEGRAM" in k or "DISCORD" in k or "SLACK" in k
+                ],
+            )
 
             running_platforms: set = set()
             try:
                 from gateway.status import read_runtime_status
+
                 rt = read_runtime_status() or {}
                 for plat_id, info in (rt.get("platforms") or {}).items():
                     if isinstance(info, dict) and info.get("state") == "connected":
@@ -2518,9 +2532,7 @@ class _ConfigRoutes:
                         deps_installed = False
 
                 required = entry.get("required_env", [])
-                configured = all(
-                    bool(merged_env.get(k, "").strip()) for k in required
-                )
+                configured = all(bool(merged_env.get(k, "").strip()) for k in required)
 
                 results.append({
                     "id": entry["id"],
@@ -2537,21 +2549,15 @@ class _ConfigRoutes:
             return results
 
         try:
-            result = await asyncio.get_event_loop().run_in_executor(
-                None, _build_status
-            )
+            result = await asyncio.get_event_loop().run_in_executor(None, _build_status)
             return web.json_response({"platforms": result})
         except Exception as e:
             logger.exception("[api_extensions] Error reading messenger status")
-            return web.json_response(
-                {"ok": False, "error": str(e)}, status=500
-            )
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
 
     # -- POST /api/messengers/install -----------------------------------------
 
-    async def handle_messengers_install(
-        self, request: "web.Request"
-    ) -> "web.Response":
+    async def handle_messengers_install(self, request: "web.Request") -> "web.Response":
         """Install pip dependencies for a messenger platform."""
         auth_err = self._check_auth(request)
         if auth_err:
@@ -2560,9 +2566,7 @@ class _ConfigRoutes:
         try:
             body = await request.json()
         except Exception:
-            return web.json_response(
-                {"ok": False, "error": "Invalid JSON"}, status=400
-            )
+            return web.json_response({"ok": False, "error": "Invalid JSON"}, status=400)
 
         platform_id = body.get("platform", "")
         entry = next(
@@ -2602,9 +2606,7 @@ class _ConfigRoutes:
             install_spec = f"hermes-agent[{pip_extra}]"
             cmd = [*pip_args, "install", f"hermes-agent[{pip_extra}]"]
 
-        logger.info(
-            "[api_extensions] Installing messenger deps: %s", install_spec
-        )
+        logger.info("[api_extensions] Installing messenger deps: %s", install_spec)
 
         def _run_pip():
             proc = subprocess.run(
@@ -2629,17 +2631,13 @@ class _ConfigRoutes:
             })
         except Exception as e:
             logger.exception("[api_extensions] pip install failed")
-            return web.json_response(
-                {"ok": False, "error": str(e)}, status=500
-            )
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
 
     # -- POST /api/gateway/restart --------------------------------------------
 
     _RESTART_EXIT_CODE = 75
 
-    async def handle_gateway_restart(
-        self, request: "web.Request"
-    ) -> "web.Response":
+    async def handle_gateway_restart(self, request: "web.Request") -> "web.Response":
         """Request gateway restart by exiting the Python process.
 
         In desktop mode, Electron detects exit code 75 and auto-restarts
@@ -2651,7 +2649,10 @@ class _ConfigRoutes:
             return auth_err
 
         try:
-            logger.info("[api_extensions] Gateway restart requested via API — exiting with code %d", self._RESTART_EXIT_CODE)
+            logger.info(
+                "[api_extensions] Gateway restart requested via API — exiting with code %d",
+                self._RESTART_EXIT_CODE,
+            )
 
             async def _delayed_exit():
                 await asyncio.sleep(0.5)
@@ -2664,9 +2665,7 @@ class _ConfigRoutes:
             })
         except Exception as e:
             logger.exception("[api_extensions] Gateway restart failed")
-            return web.json_response(
-                {"ok": False, "error": str(e)}, status=500
-            )
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
 
     # ------------------------------------------------------------------
     # Backup / Restore
@@ -2692,7 +2691,6 @@ class _ConfigRoutes:
         def _create():
             import tempfile
             from datetime import datetime
-            from hermes_cli.backup import run_backup as _cli_run_backup
             import argparse
 
             args = argparse.Namespace(
@@ -2702,12 +2700,11 @@ class _ConfigRoutes:
             )
             # run_backup prints to stdout and calls sys.exit on error;
             # we replicate the core logic inline instead.
-            from hermes_constants import get_default_hermes_root, display_hermes_home
+            from hermes_constants import get_default_hermes_root
             from hermes_cli.backup import (
                 _should_exclude,
                 _EXCLUDED_DIRS,
                 _safe_copy_db,
-                _format_size,
             )
             import zipfile
 
@@ -2751,7 +2748,9 @@ class _ConfigRoutes:
                 for abs_path, rel_path in files_to_add:
                     try:
                         if abs_path.suffix == ".db":
-                            with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as tmp:
+                            with tempfile.NamedTemporaryFile(
+                                suffix=".db", delete=False
+                            ) as tmp:
                                 tmp_db = Path(tmp.name)
                             if _safe_copy_db(abs_path, tmp_db):
                                 zf.write(tmp_db, arcname=str(rel_path))
@@ -2775,9 +2774,7 @@ class _ConfigRoutes:
             return web.json_response(result)
         except Exception as e:
             logger.exception("[api_extensions] backup create error")
-            return web.json_response(
-                {"ok": False, "error": str(e)}, status=500
-            )
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
 
     async def handle_backup_restore(self, request: "web.Request") -> "web.Response":
         """Restore from a Hermes backup zip.
@@ -2841,7 +2838,7 @@ class _ConfigRoutes:
 
                 for member in members:
                     if prefix and member.startswith(prefix):
-                        rel = member[len(prefix):]
+                        rel = member[len(prefix) :]
                     else:
                         rel = member
                     if not rel:
@@ -2873,9 +2870,7 @@ class _ConfigRoutes:
             return web.json_response(result)
         except Exception as e:
             logger.exception("[api_extensions] backup restore error")
-            return web.json_response(
-                {"ok": False, "error": str(e)}, status=500
-            )
+            return web.json_response({"ok": False, "error": str(e)}, status=500)
         finally:
             if tmp_path and os.path.exists(tmp_path):
                 try:
