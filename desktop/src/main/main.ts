@@ -31,6 +31,10 @@ import { killUpdateSplash } from "./update-splash";
 import { readAnalyticsState, writeAnalyticsState } from "./analytics/analytics-state";
 import { initPosthogMain, captureMain, shutdownPosthogMain } from "./analytics/posthog-main";
 import { registerAnalyticsHandlers } from "./analytics/analytics-ipc";
+import {
+  registerNotificationsHandlers,
+  isNotificationsEnabled,
+} from "./notifications";
 
 app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
 
@@ -95,6 +99,7 @@ captureMain("app_launched", {
 });
 
 registerAnalyticsHandlers({ stateDir });
+registerNotificationsHandlers({ stateDir });
 
 ipcMain.handle("get-port", () => backendPort);
 ipcMain.handle("get-hermes-home", () => stateDir);
@@ -179,6 +184,7 @@ ipcMain.handle(
   "show-notification",
   (_evt, payload: { title: string; body: string }) => {
     if (!Notification.isSupported()) return { ok: false };
+    if (!isNotificationsEnabled(stateDir)) return { ok: false, disabled: true };
     const notif = new Notification({
       title: payload.title,
       body: payload.body,

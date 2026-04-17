@@ -62,6 +62,12 @@ contextBridge.exposeInMainWorld("hermesAPI", {
   analyticsSet: async (enabled: boolean): Promise<{ ok: true }> =>
     ipcRenderer.invoke("analytics-set", { enabled }),
 
+  // ── Notifications ──────────────────────────────────────────────────
+  notificationsGet: async (): Promise<{ enabled: boolean }> =>
+    ipcRenderer.invoke("notifications-get"),
+  notificationsSet: async (enabled: boolean): Promise<{ ok: true }> =>
+    ipcRenderer.invoke("notifications-set", { enabled }),
+
   // ── Updater ─────────────────────────────────────────────────────────
   getAppVersion: (): Promise<string> => ipcRenderer.invoke("get-app-version"),
   fetchReleaseNotes: (version: string, owner: string, repo: string): Promise<{ ok: boolean; body: string; htmlUrl: string }> =>

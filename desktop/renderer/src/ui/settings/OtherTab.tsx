@@ -5,6 +5,7 @@ import { AppInfoSection } from "./other/AppInfoSection";
 import { BackupSection } from "./other/BackupSection";
 import { SecuritySection } from "./other/SecuritySection";
 import { PrivacySection } from "./other/PrivacySection";
+import { NotificationsSection } from "./other/NotificationsSection";
 import { DangerZoneSection } from "./other/DangerZoneSection";
 
 export type { SecurityLevel, ExecApprovalsFile } from "./other/types";
@@ -17,6 +18,7 @@ export function OtherTab({ onError }: { onError: (msg: string | null) => void })
       <BackupSection onError={onError} />
       <SecuritySection onError={onError} />
       <PrivacySection onError={onError} />
+      <NotificationsSection onError={onError} />
       <DangerZoneSection onError={onError} />
     </div>
   );

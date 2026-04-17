@@ -96,6 +96,8 @@ export interface DesktopApi {
   resetAndClose?(): Promise<void>;
   analyticsGet?(): Promise<{ enabled: boolean; userId: string; prompted: boolean }>;
   analyticsSet?(enabled: boolean): Promise<{ ok: true }>;
+  notificationsGet?(): Promise<{ enabled: boolean }>;
+  notificationsSet?(enabled: boolean): Promise<{ ok: true }>;
 
   // Llamacpp (Local Models)
   llamacppSystemInfo?(): Promise<LlamacppSystemInfoResponse>;
