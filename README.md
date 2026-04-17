@@ -24,10 +24,6 @@
   <img src="https://img.shields.io/badge/node-%E2%89%A518-339933?style=for-the-badge&logo=node.js&logoColor=white" alt="Node 18+">
 </p>
 
-<p align="center">
-  <img src="assets/banner.png" alt="Atomic Hermes banner" width="100%">
-</p>
-
 ---
 
 ## A full-stack AI agent, not a chat window
@@ -35,11 +31,11 @@
 Atomic Hermes is a native macOS AI assistant — not a browser tab, not a CLI wrapper, not "ChatGPT with buttons". It's an autonomous agent with hands, eyes, memory, and a real workspace. Launch it from `/Applications`, live in the tray, autostart on login, get delta auto-updates. Everything below is one app, one install, one window.
 
 - **Chat** — streaming conversations with a tool-using AI agent, native approval modals for dangerous actions, voice-memo input, skill slash-commands.
-- **Files** — a real workspace browser with Monaco-powered editing, side-by-side diffs, and automatic version history for every file the AI agent touches.
+- **Files** — a real workspace browser with Monaco-powered editing, side-by-side diffs, and automatic version history for every file the AI agent touches. Manage your skils and agent memory
 - **Terminal** — built-in PTY where the AI agent can run commands for you: background processes, streaming output, per-command approval.
 - **Computer Use** — the AI agent literally sees and operates your Mac, with native OCR so it clicks the right pixel the first time.
-- **Dashboard** — a local admin panel for configuring the agent's skills, tools, memory, cron jobs, and the messaging gateway.
-- **Settings** — one-click switch between cloud AI models and a fully local llama.cpp engine we bundle for you.
+- **Dashboard** — a local admin panel for configuring the agent's skills, tools, memory, messaging gateway and etc.
+- **Settings** — one-click switch between cloud AI provides and a fully local model engine we bundle for you.
 
 ---
 
