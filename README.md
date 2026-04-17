@@ -3,7 +3,7 @@
 </p>
 
 <h1 align="center">Atomic Hermes</h1>
-<h3 align="center">A native macOS AI agent that actually sees your screen, edits your files, and runs locally if you want it to.</h3>
+<h3 align="center">An AI agent that actually sees your screen, edits your files, and runs locally if you want it to.</h3>
 
 <p align="center">
   Not a chatbot — a real AI assistant that lives on your desktop. Chat, terminal, file browser with time-travel snapshots, a built-in computer-use agent, free local models, and a mission control for 16+ messengers — all in one beautiful, self-contained app.
@@ -63,7 +63,6 @@ Atomic Hermes silently saves a snapshot of every file **before and after** the A
 - **Watch the AI agent evolve your code.** Open any file in the **Files** tab and the right-hand panel lists every past version with relative timestamps — *"just now"*, *"12m ago"*, *"3d ago"* — plus file size.
 - **Diff anything against anything.** Click a snapshot to open a side-by-side diff against the current file. See exactly what the agent changed, line by line.
 - **One-click restore.** Any past version, any time. Restoring itself takes a fresh snapshot first, so there's never a dead end.
-- **Safe by construction.** Writes are atomic (`tmp` + rename), stored locally in plain files, auto-purged by count and age so your disk doesn't fill up.
 
 If the AI agent wrecks a file, it's one click away from being fine again. That's the deal.
 
@@ -71,7 +70,7 @@ If the AI agent wrecks a file, it's one click away from being fine again. That's
 
 ## A fully local AI assistant. Zero cloud.
 
-Want an AI agent that lives entirely on your machine, with no keys, no API bills, and no data ever leaving the Mac? **One click** in the app and Atomic Hermes does the whole thing for you: downloads a bundled **llama.cpp** inference engine, scans your hardware (RAM, chipset), picks a model that will actually run well, and starts an OpenAI-compatible server locally. No terminal. No config files. No "figure out which quant fits your GPU". Every feature — chat, computer use, tools, memory — works identically to cloud mode.
+Want an AI agent that lives entirely on your machine, with no keys, no API bills, and no data ever leaving the Mac? **One click** in the app and Atomic Hermes does the whole thing for you: downloads a bundled  inference engine, scans your hardware (RAM, chipset), picks a model that will actually run well, and starts an OpenAI-compatible server locally. No terminal. No config files. No "figure out which quant fits your GPU". Every feature — chat, computer use, tools, memory — works identically to cloud mode.
 
 Or bring keys for 20+ cloud AI providers: OpenRouter, Anthropic, OpenAI, Gemini, DeepSeek, Kimi, Moonshot, MiniMax, Nous Portal, xAI, z.ai, Venice, NVIDIA, Alibaba Cloud, Xiaomi MiMo, Ollama, HuggingFace, and more. Switch the model powering your AI agent between local and cloud mid-conversation — no restart, no config reload.
 
