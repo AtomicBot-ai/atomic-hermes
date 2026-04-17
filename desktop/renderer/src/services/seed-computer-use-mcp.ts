@@ -9,7 +9,7 @@ export function getDefaultComputerUseMcpServerConfig(): Record<string, unknown> 
     env: {
       COMPUTER_USE_OVERLAY_ENABLED: "1",
       COMPUTER_USE_OVERLAY_LABEL: "Atomic Hermes",
-      COMPUTER_USE_OVERLAY_COLOR: "FFBF1D",
+      COMPUTER_USE_OVERLAY_COLOR: "ff9100",
     },
   };
 }

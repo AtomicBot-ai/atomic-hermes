@@ -5,6 +5,11 @@ const DEFAULT_ICON = new URL(
   import.meta.url,
 ).toString();
 
+const SPLASH_ICON = new URL(
+  "../../../../../assets/icon-simple-splash.png",
+  import.meta.url,
+).toString();
+
 export function Brand({
   text = "Atomic Hermes",
   iconSrc,
@@ -31,7 +36,7 @@ export function SplashLogo({ iconSrc, iconAlt = "", size = 64 }: { iconSrc?: str
   return (
     <img
       className="UiSplashLogo"
-      src={iconSrc || DEFAULT_ICON}
+      src={iconSrc || SPLASH_ICON}
       alt={iconAlt}
       aria-hidden={iconAlt ? undefined : true}
       width={size}
@@ -58,7 +63,7 @@ export function SpinningSplashLogo({
       className={merged}
       width={64}
       height={64}
-      src={iconSrc || DEFAULT_ICON}
+      src={iconSrc || SPLASH_ICON}
       alt={iconAlt}
       aria-hidden={iconAlt ? undefined : true}
     />
