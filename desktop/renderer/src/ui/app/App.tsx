@@ -1,6 +1,6 @@
 import React from "react";
 import { Navigate, Outlet, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
-import { Brand, SpinningSplashLogo } from "@shared/kit";
+import { Brand, SpinningSplashLogo, PoweredBanner } from "@shared/kit";
 import { useAppDispatch, useAppSelector } from "@store/hooks";
 import { initGatewayState } from "@store/slices/gatewaySlice";
 import { loadOnboardingState } from "@store/slices/onboardingSlice";
@@ -65,6 +65,7 @@ function LoadingScreen() {
         <div className="UiLoadingTitle">Starting Atomic Hermes...</div>
         <div className="UiLoadingSubtitle">Initializing backend services</div>
       </div>
+      <PoweredBanner />
     </div>
   );
 }

@@ -27,6 +27,33 @@
           radial-gradient(900px 520px at 50% 35%, rgba(255, 191, 29, 0.1), transparent 55%),
           radial-gradient(800px 500px at 50% 60%, rgba(0, 229, 204, 0.05), transparent 60%), #0b0f14;
         color: #e6edf3;
+        position: relative;
+        overflow: hidden;
+      }
+
+      .powered {
+        position: fixed;
+        left: 50%;
+        bottom: 18px;
+        transform: translateX(-50%);
+        max-width: min(78vw, 520px);
+        width: 100%;
+        height: auto;
+        opacity: 0.9;
+        pointer-events: none;
+        user-select: none;
+        animation: fade-in 500ms ease-out 120ms both;
+      }
+
+      @keyframes fade-in {
+        from {
+          opacity: 0;
+          transform: translate(-50%, 6px);
+        }
+        to {
+          opacity: 0.9;
+          transform: translate(-50%, 0);
+        }
       }
 
       .inner {
@@ -124,6 +151,9 @@
         .dots span {
           animation: none;
         }
+        .powered {
+          animation: none;
+        }
       }
     </style>
   </head>
@@ -133,5 +163,6 @@
       <div class="dots" aria-hidden="true"><span></span><span></span><span></span></div>
       <div class="text">Please stand by....</div>
     </div>
+    <img class="powered" src="powered.png" alt="" aria-hidden="true" />
   </body>
 </html>

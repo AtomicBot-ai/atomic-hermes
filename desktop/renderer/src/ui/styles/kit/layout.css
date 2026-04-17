@@ -82,6 +82,19 @@
   transform-origin: 50% 50%;
 }
 
+.UiPoweredBanner {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  width: min(37vw, 252px);
+  height: auto;
+  opacity: 0.9;
+  pointer-events: none;
+  user-select: none;
+  z-index: 1;
+}
+
 .UiLoadingStage {
   flex: 1 1 auto;
   min-height: 0;
@@ -102,8 +115,8 @@
 
 .UiLoadingTitle {
   font-weight: 700;
-  font-size: 26px;
-  line-height: 32px;
+  font-size: 34px;
+  line-height: 42px;
   text-align: center;
   color: #ffffff;
 }
@@ -111,9 +124,9 @@
 .UiLoadingSubtitle {
   color: #a0a0a0;
   text-align: center;
-  font-size: 13px;
+  font-size: 17px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 21px;
   margin-top: 4px;
 }
 

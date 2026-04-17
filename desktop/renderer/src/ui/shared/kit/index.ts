@@ -1,4 +1,4 @@
-export { Brand, SplashLogo, SpinningSplashLogo } from "./Brand";
+export { Brand, SplashLogo, SpinningSplashLogo, PoweredBanner } from "./Brand";
 export { FullscreenShell, HeroPageLayout } from "./layouts";
 export { GlassCard, ScrollBox } from "./containers";
 export { TextInput, CheckboxRow, UiCheckbox, SelectDropdown } from "./forms";

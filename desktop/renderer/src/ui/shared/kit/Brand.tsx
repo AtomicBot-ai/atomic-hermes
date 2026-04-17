@@ -5,6 +5,11 @@ const SPLASH_ICON = new URL(
   import.meta.url,
 ).toString();
 
+const POWERED_BANNER = new URL(
+  "../../../../../assets/powered.png",
+  import.meta.url,
+).toString();
+
 export function Brand({
   text = "Atomic Hermes",
   iconSrc,
@@ -56,11 +61,16 @@ export function SpinningSplashLogo({
   return (
     <img
       className={merged}
-      width={64}
-      height={64}
+      width={83}
+      height={83}
       src={iconSrc || SPLASH_ICON}
       alt={iconAlt}
       aria-hidden={iconAlt ? undefined : true}
     />
   );
+}
+
+export function PoweredBanner({ className }: { className?: string }) {
+  const merged = className ? `UiPoweredBanner ${className}` : "UiPoweredBanner";
+  return <img className={merged} src={POWERED_BANNER} alt="" aria-hidden="true" />;
 }
