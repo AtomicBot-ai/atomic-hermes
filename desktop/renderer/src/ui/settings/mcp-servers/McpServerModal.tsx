@@ -118,7 +118,7 @@ const MODE_TAB_STYLE: React.CSSProperties = {
   fontSize: 13,
   background: "none",
   border: "none",
-  borderBottom: "2px solid transparent",
+  borderBottom: "0",
   color: "rgba(230, 237, 243, 0.55)",
   cursor: "pointer",
   transition: "color 120ms, border-color 120ms",
@@ -127,7 +127,14 @@ const MODE_TAB_STYLE: React.CSSProperties = {
 const MODE_TAB_ACTIVE: React.CSSProperties = {
   ...MODE_TAB_STYLE,
   color: "#fff",
-  borderBottomColor: "#0d6fff",
+  borderBottom: "2px solid #0d6fff",
+};
+
+const MODE_CONTENT_STYLE: React.CSSProperties = {
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+  minHeight: 460,
 };
 
 export function McpServerModal(props: {
@@ -339,6 +346,7 @@ export function McpServerModal(props: {
           </button>
         </div>
 
+        <div style={MODE_CONTENT_STYLE}>
         {mode === "form" ? (
           <>
             <TextInput
@@ -485,6 +493,7 @@ export function McpServerModal(props: {
             )}
           </>
         )}
+        </div>
 
         {error && <div className="InputErrorMessage">{error}</div>}
 

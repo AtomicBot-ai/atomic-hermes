@@ -2,6 +2,7 @@ import React from "react";
 
 import { useAppDispatch, useAppSelector } from "@store/hooks";
 import { desktopWarmupActions } from "@store/slices/desktopWarmupSlice";
+import { fetchLlamacppServerStatus } from "@store/slices/llamacppSlice";
 import { getDesktopApiOrNull } from "@ipc/desktopApi";
 import { getBaseUrl } from "../../../services/api";
 import {
@@ -107,7 +108,11 @@ export function useDesktopLocalWarmup(): void {
     };
 
     const tick = async () => {
-      if (cancelled || triggeredRef.current) return;
+      if (cancelled) return;
+
+      void dispatch(fetchLlamacppServerStatus());
+
+      if (triggeredRef.current) return;
 
       const markDone = async (modelId: string) => {
         triggeredRef.current = true;
