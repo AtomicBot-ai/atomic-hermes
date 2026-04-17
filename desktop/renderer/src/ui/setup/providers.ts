@@ -37,6 +37,7 @@ const PROVIDER_ICONS: Record<string, string> = {
   alibaba: "alibaba_cloud.svg",
   xiaomi: "xiaomi_mimo.svg",
   "ai-gateway": "ai_gateway.svg",
+  copilot: "github.svg",
   custom: "custom.svg",
 };
 
@@ -149,6 +150,7 @@ export const PROVIDERS: ProviderDef[] = [
     desc: "API key required",
     authType: "api_key",
     envKey: "COPILOT_GITHUB_TOKEN",
+    svgIcon: "copilot",
     emoji: "🐙",
     placeholder: "ghp_...",
     helpText: "Use your GitHub token to access Copilot models.",

@@ -1,10 +1,5 @@
 import React from "react";
 
-const DEFAULT_ICON = new URL(
-  "../../../../../assets/icon.png",
-  import.meta.url,
-).toString();
-
 const SPLASH_ICON = new URL(
   "../../../../../assets/icon-simple-splash.png",
   import.meta.url,
@@ -23,7 +18,7 @@ export function Brand({
     <div className="UiBrand" aria-label={text}>
       <img
         className="UiBrandIcon"
-        src={iconSrc || DEFAULT_ICON}
+        src={iconSrc || SPLASH_ICON}
         alt={iconAlt}
         aria-hidden={iconAlt ? undefined : true}
       />
