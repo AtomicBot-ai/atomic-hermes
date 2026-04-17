@@ -19,9 +19,7 @@ export function SetupModePage(props: {
 
   return (
     <>
-      <div className={s.UiSetupModeHeader}>
-        <OnboardingHeader totalSteps={0} activeStep={0} onBack={props.onBack} onSkip={skip} />
-      </div>
+      <OnboardingHeader totalSteps={0} activeStep={0} onBack={props.onBack} onSkip={skip} />
       <GlassCard className={s.UiSetupModeCard}>
         <div className="UiSectionContent">
           <div>
@@ -37,7 +35,7 @@ export function SetupModePage(props: {
                 <div className={s.UiSetupModeIcon}>
                   <SplashLogo size={35} />
                 </div>
-                <div className={s.UiSetupModeTitle}>Bring your own API keys</div>
+                <div className={s.UiSetupModeTitle}>Your own API keys</div>
                 <div className={s.UiSetupModeDesc}>Pay providers directly</div>
                 <ul className={s.UiSetupModeFeatures}>
                   <li>OpenRouter, Ollama, Anthropic and others</li>

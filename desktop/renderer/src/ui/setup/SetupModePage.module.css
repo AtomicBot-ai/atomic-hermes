@@ -1,13 +1,10 @@
 /* ── SetupModePage (two-column variant) ── */
 
-.UiSetupModeHeader :global(button.UiTextButton) {
-  margin-left: -112px;
-}
-
 .UiSetupModeCard {
   display: flex;
   flex-direction: column;
-  width: min(760px, calc(100vw - 128px));
+  width: min(520px, 92vw);
+  min-width: 320px;
   height: auto;
 }
 
@@ -20,13 +17,15 @@
   grid-template-columns: repeat(2, 1fr);
   gap: 16px;
   margin-top: 11px;
-  align-items: start;
+  align-items: stretch;
   min-height: 0;
 }
 
 .UiSetupModeOptions .UiSetupModeOptionCard {
+  display: flex;
+  flex-direction: column;
   justify-content: flex-start;
-  height: auto;
+  height: 100%;
   box-sizing: border-box;
   min-height: 280px;
   max-height: none;

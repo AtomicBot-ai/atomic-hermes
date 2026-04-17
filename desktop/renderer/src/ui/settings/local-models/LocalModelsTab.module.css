@@ -121,7 +121,7 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 84px;
+  min-width: 140px;
   min-height: 36px;
 }
 
@@ -130,7 +130,7 @@
   align-items: center;
   justify-content: center;
   min-height: 36px;
-  min-width: 84px;
+  min-width: 140px;
   color: var(--accent-brand);
   font-weight: 600;
   font-size: 14px;
@@ -167,9 +167,10 @@
 }
 
 .actionBtn {
-  min-width: 96px;
+  min-width: 140px;
   padding: 6px 14px;
   text-align: center;
+  white-space: nowrap;
 }
 
 .deleteBtn {

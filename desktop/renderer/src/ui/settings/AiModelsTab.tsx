@@ -138,7 +138,6 @@ export function AiModelsTab() {
   );
 
   const modelOptions = React.useMemo<RichOption<string>[]>(() => {
-    const providerIcon = selectedProvider ? resolveProviderIconUrl(selectedProvider) : undefined;
     return availableModels
       .slice()
       .sort((left, right) => left.localeCompare(right))
@@ -147,12 +146,11 @@ export function AiModelsTab() {
         return {
           value: modelId,
           label: modelId,
-          icon: providerIcon,
           badge: tier ? { text: TIER_INFO[tier].label, variant: tier } : undefined,
           description: tier ? TIER_INFO[tier].description : undefined,
         };
       });
-  }, [availableModels, selectedProvider]);
+  }, [availableModels]);
 
   const handleProviderChange = React.useCallback(
     (providerId: string) => {
