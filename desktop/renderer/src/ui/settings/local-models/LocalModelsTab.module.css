@@ -166,6 +166,12 @@
   gap: 10px;
 }
 
+.actionBtn {
+  min-width: 96px;
+  padding: 6px 14px;
+  text-align: center;
+}
+
 .deleteBtn {
   background: none;
   border: none;
@@ -323,54 +329,6 @@
 
 .backendStatusDotOff {
   background: #6b7280;
-}
-
-.activateBtn {
-  padding: 6px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--surface-overlay);
-  background: var(--surface-hover);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-  white-space: nowrap;
-}
-
-.activateBtn:hover {
-  background: var(--surface-overlay);
-}
-
-.activateBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.downloadBtn {
-  padding: 6px 16px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--surface-overlay);
-  background: var(--surface-hover);
-  color: var(--text);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  transition:
-    background 0.15s ease,
-    border-color 0.15s ease;
-  white-space: nowrap;
-}
-
-.downloadBtn:hover {
-  background: var(--surface-overlay);
-}
-
-.downloadBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
 }
 
 .dismissBtn {

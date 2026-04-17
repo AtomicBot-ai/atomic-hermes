@@ -35,7 +35,7 @@ export function ChatMessageList(props: ChatMessageListProps) {
     waitingForFirstChunk,
     scrollRef,
   } = props;
-  const latestUserRef = React.useRef<HTMLDivElement | null>(null);
+  const followBottomRef = React.useRef(true);
 
   const renderedMessages = React.useMemo(() => {
     if (
@@ -57,60 +57,51 @@ export function ChatMessageList(props: ChatMessageListProps) {
     ];
   }, [isStreaming, messages, streamingActions, streamingMessageId, streamingText, streamingThinking, waitingForFirstChunk]);
 
-  const latestUserMessageId = React.useMemo(() => {
-    for (let index = renderedMessages.length - 1; index >= 0; index -= 1) {
-      const message = renderedMessages[index];
-      if (message?.role === "user") {
-        return message.id;
-      }
-    }
-    return null;
-  }, [renderedMessages]);
-
+  // Detect user-initiated scroll input and flip stickiness based on resulting position.
+  // Programmatic scrolls (our own scrollTo below) don't fire these events, so they
+  // never accidentally detach or re-attach the sticky state.
   React.useEffect(() => {
-    if ((!streamingMessageId && anchorVersion === 0) || !latestUserRef.current || !scrollRef.current) return;
+    const container = scrollRef.current;
+    if (!container) return;
 
-    let timeoutId: number | null = null;
-    let frameId = 0;
+    const STICK_THRESHOLD_PX = 80;
 
-    const alignLatestUser = (behavior: ScrollBehavior) => {
-      const container = scrollRef.current;
-      const target = latestUserRef.current;
-      if (!container || !target) return;
-
-      const containerRect = container.getBoundingClientRect();
-      const targetRect = target.getBoundingClientRect();
-      const desiredTop = -40;
-      const nextScrollTop = container.scrollTop + (targetRect.top - containerRect.top) - desiredTop;
-
-      container.scrollTo({
-        top: Math.max(0, nextScrollTop),
-        behavior,
-      });
+    const reevaluate = () => {
+      const distanceFromBottom = container.scrollHeight - container.scrollTop - container.clientHeight;
+      followBottomRef.current = distanceFromBottom <= STICK_THRESHOLD_PX;
     };
 
-    frameId = requestAnimationFrame(() => {
-      alignLatestUser("smooth");
-      timeoutId = window.setTimeout(() => {
-        alignLatestUser("auto");
-      }, 140);
-    });
+    const handleUserInput = () => {
+      requestAnimationFrame(reevaluate);
+    };
+
+    container.addEventListener("wheel", handleUserInput, { passive: true });
+    container.addEventListener("touchmove", handleUserInput, { passive: true });
+    container.addEventListener("keydown", handleUserInput);
 
     return () => {
-      cancelAnimationFrame(frameId);
-      if (timeoutId !== null) {
-        window.clearTimeout(timeoutId);
-      }
+      container.removeEventListener("wheel", handleUserInput);
+      container.removeEventListener("touchmove", handleUserInput);
+      container.removeEventListener("keydown", handleUserInput);
     };
-  }, [
-    anchorVersion,
-    isStreaming,
-    latestUserMessageId,
-    scrollRef,
-    streamingMessageId,
-    streamingText,
-    waitingForFirstChunk,
-  ]);
+  }, [scrollRef]);
+
+  // New send / stream completion boundary — user clearly wants to see the latest,
+  // so re-enable stickiness.
+  React.useEffect(() => {
+    if (anchorVersion === 0) return;
+    followBottomRef.current = true;
+  }, [anchorVersion]);
+
+  // Follow the bottom on every streamed chunk, but only while the user hasn't
+  // scrolled away. Uses scrollTop assignment (no smooth behavior) to avoid the
+  // per-token animation jitter.
+  React.useEffect(() => {
+    if (!followBottomRef.current) return;
+    const container = scrollRef.current;
+    if (!container) return;
+    container.scrollTop = container.scrollHeight;
+  }, [streamingText, streamingThinking, streamingActions, anchorVersion, renderedMessages.length, scrollRef]);
 
   return (
     <div className={`${ct.UiChatTranscript} scrollable`} ref={scrollRef}>
@@ -120,7 +111,6 @@ export function ChatMessageList(props: ChatMessageListProps) {
             return (
               <UserMessageBubble
                 key={msg.id}
-                ref={msg.id === latestUserMessageId ? latestUserRef : undefined}
                 text={msg.content}
               />
             );

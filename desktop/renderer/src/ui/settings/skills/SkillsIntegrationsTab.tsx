@@ -16,7 +16,7 @@ type Props = {
 
 export function SkillsIntegrationsTab({ port, noTitle }: Props) {
   const navigate = useNavigate();
-  const [tab, setTab] = React.useState<SubTab>("installed");
+  const [tab, setTab] = React.useState<SubTab>("hub");
   const [search, setSearch] = React.useState("");
   const [removeTarget, setRemoveTarget] = React.useState<string | null>(null);
 
@@ -60,17 +60,17 @@ export function SkillsIntegrationsTab({ port, noTitle }: Props) {
       <div className={s.tabs}>
         <button
           type="button"
-          className={`${s.tab} ${tab === "installed" ? s.tabActive : ""}`}
-          onClick={() => setTab("installed")}
-        >
-          Installed
-        </button>
-        <button
-          type="button"
           className={`${s.tab} ${tab === "hub" ? s.tabActive : ""}`}
           onClick={() => setTab("hub")}
         >
           HermesHub
+        </button>
+        <button
+          type="button"
+          className={`${s.tab} ${tab === "installed" ? s.tabActive : ""}`}
+          onClick={() => setTab("installed")}
+        >
+          Installed
         </button>
       </div>
 

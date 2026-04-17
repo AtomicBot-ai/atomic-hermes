@@ -180,7 +180,7 @@ export function LocalModelsTab(props: { port: number }) {
                       </button>
                       <button
                         type="button"
-                        className={s.activateBtn}
+                        className={`UiSkillConnectButton ${s.actionBtn}`}
                         disabled={isSelecting || selectingModelId !== null || isDeleting}
                         onClick={() => void handleSelect(model.id)}
                       >
@@ -206,7 +206,7 @@ export function LocalModelsTab(props: { port: number }) {
                 ) : (
                   <button
                     type="button"
-                    className={s.downloadBtn}
+                    className={`UiSkillConnectButton ${s.actionBtn}`}
                     onClick={() => {
                       if (model.compatibility === "not-recommended") return;
                       void (async () => {
