@@ -117,7 +117,7 @@
 }
 
 .UiTerminalNewTab:hover {
-  background: rgba(0, 232, 212, 0.08);
+  background: rgba(255, 191, 29, 0.08);
   color: var(--accent-brand);
 }
 

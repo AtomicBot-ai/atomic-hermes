@@ -78,7 +78,7 @@
 .SaveButton {
   appearance: none;
   border: none;
-  background: rgba(0, 232, 212, 0.12);
+  background: rgba(255, 191, 29, 0.12);
   color: var(--accent-brand);
   font-size: 12px;
   font-weight: 600;
@@ -91,7 +91,7 @@
 }
 
 .SaveButton:hover:not(:disabled) {
-  background: rgba(0, 232, 212, 0.22);
+  background: rgba(255, 191, 29, 0.22);
 }
 
 .SaveButton:disabled {
@@ -258,7 +258,7 @@
 }
 
 .SidebarItemActive {
-  background: rgba(0, 232, 212, 0.1) !important;
+  background: rgba(255, 191, 29, 0.1) !important;
 }
 
 .SidebarItemDisabled {
@@ -351,7 +351,7 @@
 }
 
 .TreeNodeSelected {
-  background: rgba(0, 232, 212, 0.1) !important;
+  background: rgba(255, 191, 29, 0.1) !important;
   color: var(--text);
 }
 
@@ -467,12 +467,12 @@
 }
 
 .HistoryToggleActive {
-  background: rgba(0, 232, 212, 0.12);
+  background: rgba(255, 191, 29, 0.12);
   color: var(--accent-brand);
 }
 
 .HistoryToggleActive:hover {
-  background: rgba(0, 232, 212, 0.22);
+  background: rgba(255, 191, 29, 0.22);
 }
 
 /* ── History sidebar (right panel) ──────────────────────────── */
@@ -564,7 +564,7 @@
 }
 
 .SnapshotItemActive {
-  background: rgba(0, 232, 212, 0.1) !important;
+  background: rgba(255, 191, 29, 0.1) !important;
 }
 
 .SnapshotItemMain {
@@ -637,7 +637,7 @@
   padding: 6px 16px;
   flex-shrink: 0;
   border-bottom: 1px solid var(--border);
-  background: rgba(0, 232, 212, 0.06);
+  background: rgba(255, 191, 29, 0.06);
 }
 
 .DiffBannerLeft {
@@ -683,7 +683,7 @@
 .DiffRestoreBtn {
   appearance: none;
   border: none;
-  background: rgba(0, 232, 212, 0.12);
+  background: rgba(255, 191, 29, 0.12);
   color: var(--accent-brand);
   font-size: 11px;
   font-weight: 600;
@@ -694,7 +694,7 @@
 }
 
 .DiffRestoreBtn:hover {
-  background: rgba(0, 232, 212, 0.25);
+  background: rgba(255, 191, 29, 0.25);
 }
 
 .DiffCloseBtn {

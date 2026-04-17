@@ -47,7 +47,7 @@
   border-radius: var(--radius-sm);
   object-fit: contain;
   filter: drop-shadow(0 10px 24px rgba(0, 0, 0, 0.35))
-    drop-shadow(0 0 16px rgba(0, 232, 212, 0.16));
+    drop-shadow(0 0 16px rgba(255, 191, 29, 0.16));
 }
 
 .UiBrandMark {
@@ -56,7 +56,7 @@
   display: inline-grid;
   place-items: center;
   border-radius: var(--radius-sm);
-  background: rgba(0, 232, 212, 0.18);
+  background: rgba(255, 191, 29, 0.18);
   color: var(--accent-brand);
   font-weight: 800;
   line-height: 1;

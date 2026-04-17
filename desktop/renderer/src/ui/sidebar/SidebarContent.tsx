@@ -90,6 +90,21 @@ function IconLogs() {
   );
 }
 
+function IconAiModels() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 20 20" fill="none" aria-hidden>
+      <rect x="5" y="5" width="10" height="10" rx="1.5" stroke="currentColor" strokeWidth="1.5" />
+      <rect x="8" y="8" width="4" height="4" rx="0.75" stroke="currentColor" strokeWidth="1.5" />
+      <path
+        d="M8 2.5v2.5M12 2.5v2.5M8 15v2.5M12 15v2.5M2.5 8H5M2.5 12H5M15 8h2.5M15 12h2.5"
+        stroke="currentColor"
+        strokeWidth="1.5"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function SidebarContent(props: SidebarContentProps & { showTerminal?: boolean }) {
   const {
     onCollapse,
@@ -213,6 +228,12 @@ export function SidebarContent(props: SidebarContentProps & { showTerminal?: boo
             </svg>
           </span>
           <span className={css.UiChatSidebarNavLabel}>Skills</span>
+        </NavLink>
+        <NavLink to={routes.settingsModels} className={css.UiChatSidebarSettings} aria-label="AI Models">
+          <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">
+            <IconAiModels />
+          </span>
+          <span className={css.UiChatSidebarNavLabel}>AI Models</span>
         </NavLink>
         <NavLink to={routes.settings} className={css.UiChatSidebarSettings} aria-label="Settings">
           <span className={css.UiChatSidebarSettingsIcon} aria-hidden="true">

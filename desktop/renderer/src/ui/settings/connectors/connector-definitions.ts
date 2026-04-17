@@ -22,6 +22,14 @@ export type ConnectorDefinition = {
   hasCustomModal: boolean;
 };
 
+export function resolveConnectorIconUrl(svgIcon: string | undefined): string | undefined {
+  if (!svgIcon) return undefined;
+  return new URL(
+    `../../../../../assets/messangers/${svgIcon}`,
+    import.meta.url,
+  ).toString();
+}
+
 export const CONNECTORS: ConnectorDefinition[] = [
   {
     id: "telegram",
@@ -76,6 +84,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "Email",
     description: "Connect email via IMAP/SMTP for email-based messaging",
     iconEmoji: "📧",
+    svgIcon: "Email.svg",
     hasCustomModal: false,
   },
   {
@@ -83,6 +92,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "Home Assistant",
     description: "Connect to Home Assistant for smart home automation",
     iconEmoji: "🏠",
+    svgIcon: "HomeAssistant.svg",
     hasCustomModal: false,
   },
   {
@@ -90,6 +100,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "SMS (Twilio)",
     description: "Send and receive SMS via Twilio",
     iconEmoji: "📱",
+    svgIcon: "twilio.svg",
     hasCustomModal: false,
   },
   {
@@ -97,6 +108,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "DingTalk",
     description: "Connect a DingTalk chatbot via Stream Mode",
     iconEmoji: "🔔",
+    svgIcon: "DingTalk.svg",
     hasCustomModal: false,
   },
   {
@@ -104,6 +116,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "Feishu / Lark",
     description: "Connect a Feishu or Lark bot",
     iconEmoji: "🐦",
+    svgIcon: "Feishu.svg",
     hasCustomModal: false,
   },
   {
@@ -111,6 +124,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "Mattermost",
     description: "Connect to a Mattermost server",
     iconEmoji: "💬",
+    svgIcon: "mattermost.svg",
     hasCustomModal: false,
   },
   {

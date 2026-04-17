@@ -27,6 +27,7 @@ import { readActiveModelId } from "./llamacpp/model-state";
 import { getLlamacppModelDef, resolveLlamacppModelPath, resolveChatTemplatePath, type LlamacppModelId } from "./llamacpp/models";
 import { isBackendDownloaded, resolveServerBinPath } from "./llamacpp/backend-download";
 import { getSystemInfo, computeContextLength } from "./llamacpp/hardware";
+import { isAnyProfileUsingLlamacpp } from "./llamacpp/profile-usage";
 import { killUpdateSplash } from "./update-splash";
 import { readAnalyticsState, writeAnalyticsState } from "./analytics/analytics-state";
 import { initPosthogMain, captureMain, shutdownPosthogMain } from "./analytics/posthog-main";
@@ -299,6 +300,11 @@ async function autoStartLlamacppIfNeeded(): Promise<void> {
   if (process.platform !== "darwin") return;
 
   killOrphanedServer(stateDir);
+
+  if (!isAnyProfileUsingLlamacpp(stateDir)) {
+    console.log("[llamacpp] auto-start skipped: no profile is configured to use llama.cpp");
+    return;
+  }
 
   const activeId = readActiveModelId(stateDir);
   if (!activeId) return;

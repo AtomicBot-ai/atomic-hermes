@@ -301,8 +301,8 @@
   align-items: center;
   justify-content: center;
   border-radius: var(--radius-full);
-  background: linear-gradient(180deg, rgba(111, 162, 255, 0.95), rgba(78, 122, 227, 0.88));
-  color: #fff;
+  background: linear-gradient(180deg, #FFD54F, #FFA000);
+  color: #171717;
   font-size: var(--font-sm);
   font-weight: 700;
   line-height: 1;
@@ -533,7 +533,7 @@
   padding: 0 14px;
   border: none;
   border-radius: var(--radius-10);
-  background: rgba(0, 232, 212, 0.18);
+  background: rgba(255, 191, 29, 0.18);
   color: var(--accent-brand-soft);
   font-size: var(--font-sm);
   font-weight: 600;
@@ -544,7 +544,7 @@
 }
 
 .UiChatSidebarProfileInlineSubmit:hover:not(:disabled) {
-  background: rgba(0, 232, 212, 0.28);
+  background: rgba(255, 191, 29, 0.28);
 }
 
 .UiChatSidebarProfileInlineSubmit:disabled {

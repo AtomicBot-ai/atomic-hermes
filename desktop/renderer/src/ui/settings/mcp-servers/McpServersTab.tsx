@@ -197,7 +197,7 @@ export function McpServersTab() {
               href="https://modelcontextprotocol.io"
               target="_blank"
               rel="noopener noreferrer"
-              style={{ color: "#0d6fff" }}
+              style={{ color: "#FF9F1C" }}
             >
               Model Context Protocol
             </a>{" "}

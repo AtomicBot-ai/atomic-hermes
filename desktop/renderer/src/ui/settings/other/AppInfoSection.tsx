@@ -74,8 +74,8 @@ export function AppInfoSection({ onError }: { onError: (msg: string | null) => v
           </div>
           <div className={s.UiSettingsOtherRow}>
             <span className={s.UiSettingsOtherRowLabel}>Support</span>
-            <a href="mailto:support@hermes-agent.ai" className={s.UiSettingsOtherLink}>
-              support@hermes-agent.ai
+            <a href="mailto:support@atomicbot.ai" className={s.UiSettingsOtherLink}>
+              support@atomicbot.ai
             </a>
           </div>
         </div>
@@ -86,21 +86,21 @@ export function AppInfoSection({ onError }: { onError: (msg: string | null) => v
           <button
             type="button"
             className={s.UiSettingsOtherFooterLink}
-            onClick={() => openExternal("https://github.com/hermes-agent/hermes-agent")}
+            onClick={() => openExternal("https://github.com/AtomicBot-ai/atomic-hermes")}
           >
             GitHub
           </button>
           <button
             type="button"
             className={s.UiSettingsOtherFooterLink}
-            onClick={() => openExternal("https://hermes-agent.ai")}
+            onClick={() => openExternal("https://atomicbot.ai/hermes")}
           >
             Website
           </button>
           <button
             type="button"
             className={s.UiSettingsOtherFooterLink}
-            onClick={() => openExternal("https://hermes-agent.ai/privacy-policy")}
+            onClick={() => openExternal("https://atomicbot.ai/privacy-policy")}
           >
             Privacy Policy
           </button>

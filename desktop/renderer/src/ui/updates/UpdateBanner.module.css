@@ -75,7 +75,7 @@
   width: 32px;
   height: 32px;
   border-radius: var(--radius-10);
-  background: rgba(0, 232, 212, 0.1);
+  background: rgba(255, 191, 29, 0.1);
   color: var(--accent-brand);
 }
 
@@ -198,7 +198,7 @@
   display: inline-block;
   width: 14px;
   height: 14px;
-  border: 2px solid rgba(0, 232, 212, 0.18);
+  border: 2px solid rgba(255, 191, 29, 0.18);
   border-top-color: var(--accent-brand);
   border-radius: 50%;
   animation: updateSpinnerRotate 600ms linear infinite;

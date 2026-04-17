@@ -43,30 +43,40 @@
 
 .UiSettingsTabs {
   display: flex;
-  flex-wrap: wrap;
-  gap: 4px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(230, 237, 243, 0.08);
+  gap: 0;
+  border-bottom: 1.5px solid var(--surface-overlay);
 }
 
 .UiSettingsTab {
-  padding: 9px 12px;
-  border-radius: 999px;
-  color: rgba(230, 237, 243, 0.62);
+  display: block;
+  padding: 10px 12px;
   text-decoration: none;
-  transition:
-    background 120ms ease,
-    color 120ms ease;
+  color: rgba(230, 237, 243, 0.55);
+  font-size: 14px;
+  font-weight: 400;
+  white-space: nowrap;
+  position: relative;
+  transition: color var(--transition-fast);
+  cursor: pointer;
 }
 
 .UiSettingsTab:hover {
-  color: #fff;
-  background: rgba(230, 237, 243, 0.08);
+  color: rgba(230, 237, 243, 0.85);
 }
 
 .UiSettingsTab--active {
   color: #fff;
-  background: rgba(13, 111, 255, 0.22);
+}
+
+.UiSettingsTab--active::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -1px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--accent-brand);
 }
 
 .UiSettingsContent {
@@ -146,13 +156,13 @@
 
 .UiProviderOption:hover,
 .UiProviderOption--selected {
-  border-color: rgba(13, 111, 255, 0.42);
-  background: rgba(13, 111, 255, 0.08);
+  border-color: rgba(255, 159, 28, 0.42);
+  background: rgba(255, 159, 28, 0.08);
 }
 
 .UiProviderRadio {
   margin: 0;
-  accent-color: #0d6fff;
+  accent-color: #FF9F1C;
 }
 
 .UiProviderIconWrap {
@@ -255,7 +265,7 @@
 }
 
 .UiStatusDotInfo {
-  background: #0d6fff;
+  background: #FF9F1C;
 }
 
 .UiStatusDotError {
@@ -313,8 +323,8 @@
   align-self: flex-start;
   padding: 4px 10px;
   border-radius: 999px;
-  background: rgba(13, 111, 255, 0.18);
-  color: #7fb0ff;
+  background: rgba(255, 159, 28, 0.18);
+  color: #FFD580;
   font-size: 12px;
   font-weight: 650;
 }

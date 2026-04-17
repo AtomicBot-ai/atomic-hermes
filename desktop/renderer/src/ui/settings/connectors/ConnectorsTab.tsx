@@ -5,7 +5,7 @@ import { useSettingsState } from "../settings-context";
 import { patchConfig } from "../../../services/api";
 import { restartGateway } from "../../../services/messengers-api";
 import { useConnectorsStatus, type ConnectorStatus } from "./useConnectorsStatus";
-import { CONNECTORS, type ConnectorId } from "./connector-definitions";
+import { CONNECTORS, resolveConnectorIconUrl, type ConnectorId } from "./connector-definitions";
 import { TelegramModal } from "./modals/TelegramModal";
 import { SlackModal } from "./modals/SlackModal";
 import { DiscordModal } from "./modals/DiscordModal";
@@ -186,30 +186,37 @@ export function ConnectorsTab() {
 
       <div className="UiSkillsScroll" style={{ maxHeight: "none" }}>
         <div className="UiSkillsGrid">
-          {CONNECTORS.map((connector) => (
-            <div
-              key={connector.id}
-              className="UiSkillCard"
-              role="group"
-              aria-label={connector.name}
-            >
-              <div className="UiSkillTopRow">
-                <span className="UiSkillIcon" aria-hidden="true">
-                  {connector.iconEmoji}
-                  {resolveStatus(connector.id) === "connected" && (
-                    <span className="UiProviderTileCheck" aria-label="Connected">
-                      ✓
-                    </span>
-                  )}
-                </span>
-                <div className="UiSkillTopRight">
-                  {renderCta(connector.id)}
+          {CONNECTORS.map((connector) => {
+            const iconUrl = resolveConnectorIconUrl(connector.svgIcon);
+            return (
+              <div
+                key={connector.id}
+                className="UiSkillCard"
+                role="group"
+                aria-label={connector.name}
+              >
+                <div className="UiSkillTopRow">
+                  <span className="UiSkillIcon" aria-hidden="true">
+                    {iconUrl ? (
+                      <img src={iconUrl} alt="" />
+                    ) : (
+                      connector.iconEmoji
+                    )}
+                    {resolveStatus(connector.id) === "connected" && (
+                      <span className="UiProviderTileCheck" aria-label="Connected">
+                        ✓
+                      </span>
+                    )}
+                  </span>
+                  <div className="UiSkillTopRight">
+                    {renderCta(connector.id)}
+                  </div>
                 </div>
+                <div className="UiSkillName">{connector.name}</div>
+                <div className="UiSkillDescription">{connector.description}</div>
               </div>
-              <div className="UiSkillName">{connector.name}</div>
-              <div className="UiSkillDescription">{connector.description}</div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 

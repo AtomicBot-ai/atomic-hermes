@@ -11,7 +11,7 @@
   --muted3: rgba(230, 237, 243, 0.45);
   --accent: #ff7a00;
   --lime: #aeff00;
-  --accent-brand: #00E8D4;
+  --accent-brand: #FFBF1D;
 
   /* ── surface colors ─── */
   --surface-primary: #121212;
@@ -31,8 +31,8 @@
   --success: #38bb58;
   --error: #ef4444;
   --warning: #ff7a00;
-  --info: #0d6fff;
-  --accent-brand-soft: #47E8D8;
+  --info: #FF9F1C;
+  --accent-brand-soft: #FFBF1D;
 
   /* ── border variants ─── */
   --border-subtle: rgba(230, 237, 243, 0.06);
@@ -71,7 +71,7 @@
   --transition-slow: 300ms ease;
 
   /* ── focus ring ─── */
-  --focus-ring: rgba(13, 111, 255, 0.5);
+  --focus-ring: rgba(255, 159, 28, 0.5);
 }
 
 html,

@@ -24,7 +24,7 @@
 }
 
 .UiCheckRow input:checked {
-  background-color: #0d6fff !important;
+  background-color: #FF9F1C !important;
 }
 
 .UiCheckRow input:checked::after {
@@ -73,7 +73,7 @@
 }
 
 .UiCheckbox__box--checked {
-  background: #0d6fff;
+  background: #FF9F1C;
 }
 
 .UiCheckbox__check {

@@ -127,7 +127,7 @@ const MODE_TAB_STYLE: React.CSSProperties = {
 const MODE_TAB_ACTIVE: React.CSSProperties = {
   ...MODE_TAB_STYLE,
   color: "#fff",
-  borderBottom: "2px solid #0d6fff",
+  borderBottom: "2px solid #FF9F1C",
 };
 
 const MODE_CONTENT_STYLE: React.CSSProperties = {
