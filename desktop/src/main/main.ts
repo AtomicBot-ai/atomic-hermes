@@ -47,18 +47,25 @@ type DashboardState =
 let dashboardState: DashboardState = { kind: "starting" };
 
 function createWindow(): void {
+  const windowTitle = `Atomic Hermes v${app.getVersion()}`;
+
   mainWindow = new BrowserWindow({
     width: 960,
     height: 720,
     minWidth: 480,
     minHeight: 400,
-    title: "Atomic Hermes",
+    title: windowTitle,
     backgroundColor: "#1a1a2e",
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       contextIsolation: true,
       nodeIntegration: false,
     },
+  });
+
+  // Prevent the <title> tag in index.html from overriding our versioned title.
+  mainWindow.on("page-title-updated", (event) => {
+    event.preventDefault();
   });
 
   const rendererPath = path.join(__dirname, "..", "..", "renderer", "dist", "index.html");
