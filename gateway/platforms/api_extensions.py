@@ -1400,6 +1400,7 @@ class _ConfigRoutes:
 
         try:
             from hermes_cli.config import load_config, load_env, OPTIONAL_ENV_VARS
+            from hermes_cli.auth import PROVIDER_REGISTRY
 
             config = load_config()
             env = load_env()
@@ -1407,11 +1408,27 @@ class _ConfigRoutes:
 
             active_model, active_provider = _extract_active_model(config)
 
-            provider_keys = [
-                k
-                for k, v in OPTIONAL_ENV_VARS.items()
-                if v.get("category") == "provider" and v.get("password")
-            ]
+            # Canonical provider env key set: union of
+            #   1. api_key_env_vars across auth.PROVIDER_REGISTRY (runtime source of
+            #      truth — covers ANTHROPIC/XAI/COPILOT/KILOCODE/AI_GATEWAY and
+            #      others not declared in OPTIONAL_ENV_VARS).
+            #   2. OPTIONAL_ENV_VARS entries tagged as provider passwords
+            #      (preserves any provider keys declared only in the UX catalog).
+            provider_keys: list[str] = []
+            for pconfig in PROVIDER_REGISTRY.values():
+                if getattr(pconfig, "auth_type", None) != "api_key":
+                    continue
+                for name in getattr(pconfig, "api_key_env_vars", ()) or ():
+                    if name and name not in provider_keys:
+                        provider_keys.append(name)
+            for k, v in OPTIONAL_ENV_VARS.items():
+                if (
+                    v.get("category") == "provider"
+                    and v.get("password")
+                    and k not in provider_keys
+                ):
+                    provider_keys.append(k)
+
             providers_status = []
             for key in provider_keys:
                 val = env.get(key) or os.environ.get(key, "")

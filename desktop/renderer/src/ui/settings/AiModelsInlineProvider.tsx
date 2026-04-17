@@ -81,8 +81,14 @@ export function AiModelsInlineProvider(props: {
   }, [props]);
 
   const handleSave = React.useCallback(async () => {
+    // #region agent log
+    fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H1',location:'AiModelsInlineProvider.tsx:handleSave:entry',message:'Save click fired',data:{providerId:props.provider.id,apiKeyLen:props.apiKey.length,apiKeyTrimmedLen:props.apiKey.trim().length,isSavingProvider:props.isSavingProvider,providerConfigured:props.providerConfigured,editing,authType:props.provider.authType},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     setClipboardError("");
     const saved = await props.onSave();
+    // #region agent log
+    fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H2',location:'AiModelsInlineProvider.tsx:handleSave:result',message:'onSave returned',data:{saved},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (saved) {
       setEditing(false);
     }

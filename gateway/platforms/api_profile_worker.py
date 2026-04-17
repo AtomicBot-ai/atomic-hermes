@@ -70,14 +70,28 @@ class ProfileWorkerRuntime:
 
     def get_config(self) -> Dict[str, Any]:
         from hermes_cli.config import OPTIONAL_ENV_VARS, load_config, load_env
+        from hermes_cli.auth import PROVIDER_REGISTRY
 
         config = load_config()
         env = load_env()
         active_model, active_provider = extract_active_model(config)
-        provider_keys = [
-            key for key, value in OPTIONAL_ENV_VARS.items()
-            if value.get("category") == "provider" and value.get("password")
-        ]
+        # Canonical provider env key set — see handle_get_config in api_extensions.py
+        # for the rationale. Mirror the same union logic here so profile-scoped
+        # configs (X-Hermes-Profile header) report the same providers list.
+        provider_keys: list[str] = []
+        for pconfig in PROVIDER_REGISTRY.values():
+            if getattr(pconfig, "auth_type", None) != "api_key":
+                continue
+            for name in getattr(pconfig, "api_key_env_vars", ()) or ():
+                if name and name not in provider_keys:
+                    provider_keys.append(name)
+        for key, value in OPTIONAL_ENV_VARS.items():
+            if (
+                value.get("category") == "provider"
+                and value.get("password")
+                and key not in provider_keys
+            ):
+                provider_keys.append(key)
         providers_status = []
         for key in provider_keys:
             val = env.get(key) or os.environ.get(key, "")

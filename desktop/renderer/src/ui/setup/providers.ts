@@ -18,7 +18,6 @@ export type ProviderDef = {
 
 const PROVIDER_ICONS: Record<string, string> = {
   anthropic: "anthropic.svg",
-  openai: "openai.svg",
   "openai-codex": "openai-codex.svg",
   openrouter: "openrouter.svg",
   ollama: "ollama.svg",
@@ -96,18 +95,6 @@ export const PROVIDERS: ProviderDef[] = [
     placeholder: "sk-or-...",
     helpText: "Get your API key from OpenRouter.",
     helpUrl: "https://openrouter.ai/keys",
-    popular: true,
-  },
-  {
-    id: "openai",
-    name: "OpenAI",
-    desc: "API key required",
-    authType: "api_key",
-    envKey: "OPENAI_API_KEY",
-    svgIcon: "openai",
-    placeholder: "sk-...",
-    helpText: "Get your API key from the OpenAI Platform.",
-    helpUrl: "https://platform.openai.com/api-keys",
     popular: true,
   },
   {

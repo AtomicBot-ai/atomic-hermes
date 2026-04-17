@@ -70,6 +70,9 @@ export function SettingsStateProvider(props: {
         checkCapabilities(port).catch(() => null),
         getConfig(port),
       ]);
+      // #region agent log
+      fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H4H5',location:'settings-context.tsx:reloadConfig:configLoaded',message:'Config reloaded from server',data:{activeProvider:nextConfig.activeProvider,activeModel:nextConfig.activeModel,hasApiKeys:nextConfig.hasApiKeys,providersCount:nextConfig.providers?.length??0,providersEnvVars:(nextConfig.providers??[]).map(p=>({envVar:p.envVar,configured:p.configured})),hermesHome:nextConfig.hermesHome},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       setCapabilities(nextCapabilities);
       setConfigSnap(nextConfig);
       setSelectedProvider(nextConfig.activeProvider || PROVIDERS[0]?.id || null);
@@ -116,6 +119,9 @@ export function SettingsStateProvider(props: {
 
   const saveProviderConfig = React.useCallback(async () => {
     const provider = getProviderById(selectedProvider);
+    // #region agent log
+    fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H2',location:'settings-context.tsx:saveProviderConfig:entry',message:'saveProviderConfig called',data:{selectedProvider,providerFound:Boolean(provider),providerId:provider?.id,envKey:provider?.envKey,apiKeyLen:apiKey.length,apiKeyTrimmedLen:apiKey.trim().length,baseUrlLen:baseUrl.length,port},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
     if (!provider) {
       return false;
     }
@@ -131,11 +137,20 @@ export function SettingsStateProvider(props: {
       if (provider.envKey && apiKey.trim()) {
         body.env = { [provider.envKey]: apiKey.trim() };
       }
-      await patchConfig(port, body);
+      // #region agent log
+      fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H3',location:'settings-context.tsx:saveProviderConfig:preRequest',message:'About to PATCH /api/config',data:{bodyConfigKeys:Object.keys(body.config),bodyHasEnv:Boolean(body.env),bodyEnvKeys:body.env?Object.keys(body.env):[],bodyEnvValueLens:body.env?Object.fromEntries(Object.entries(body.env).map(([k,v])=>[k,(v as string).length])):{}},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
+      const patchResp = await patchConfig(port, body);
+      // #region agent log
+      fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H3',location:'settings-context.tsx:saveProviderConfig:postRequest',message:'PATCH /api/config response',data:{patchResp},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       await reloadConfig();
       document.dispatchEvent(new Event("hermes-config-changed"));
       return true;
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7831/ingest/afbd3787-1f02-4bfb-8a9a-c6c81cb2ee48',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'bdc941'},body:JSON.stringify({sessionId:'bdc941',hypothesisId:'H3',location:'settings-context.tsx:saveProviderConfig:catch',message:'saveProviderConfig caught error',data:{errorMsg:error instanceof Error?error.message:String(error)},timestamp:Date.now()})}).catch(()=>{});
+      // #endregion
       setSaveError(error instanceof Error ? error.message : "Failed to save provider settings.");
       return false;
     } finally {
