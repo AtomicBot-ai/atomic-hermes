@@ -674,6 +674,20 @@ class _ConfigRoutes:
                     )
 
             result = await agent_task
+
+            if result.get("failed") or result.get("error"):
+                error_msg = result.get("error") or result.get("final_response") or "Unknown error"
+                await _write_event("error", {"error": str(error_msg)})
+                await _write_event(
+                    None,
+                    self._build_stream_chunk(
+                        completion_id, created, model, finish_reason="stop"
+                    ),
+                )
+                await response.write(b"data: [DONE]\n\n")
+                self._running_completions.pop(completion_id, None)
+                return response
+
             usage = self._build_usage_payload(result)
             final_payload = self._extract_final_assistant_payload(result)
             final_message = final_payload["message"]
@@ -866,6 +880,18 @@ class _ConfigRoutes:
                 final_result = message["result"]["result"]
         except Exception as exc:
             await _write_event("error", {"error": str(exc)})
+            await _write_event(
+                None,
+                self._build_stream_chunk(
+                    completion_id, created, model, finish_reason="stop"
+                ),
+            )
+            await response.write(b"data: [DONE]\n\n")
+            return response
+
+        if final_result and (final_result.get("failed") or final_result.get("error")):
+            error_msg = final_result.get("error") or final_result.get("final_response") or "Unknown error"
+            await _write_event("error", {"error": str(error_msg)})
             await _write_event(
                 None,
                 self._build_stream_chunk(

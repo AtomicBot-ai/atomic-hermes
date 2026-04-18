@@ -13,6 +13,7 @@ import {
 } from "../../services/chat-session";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
 import { routes } from "../app/routes";
+import toast from "react-hot-toast";
 import { notifyIfHidden } from "../../lib/desktop-notifications";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
@@ -117,6 +118,7 @@ export function StartChatPage() {
       },
       onError(err) {
         console.error("StartChatPage: stream error", err);
+        toast.error(err.message);
         setSending(false);
         setStreaming(false);
         setStreamingRaw(err.message || "An error occurred");

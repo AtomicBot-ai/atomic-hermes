@@ -29,6 +29,7 @@ import {
 } from "../../services/chat-session";
 import { fetchSessionMessages } from "../../services/session-api";
 import { streamChatCompletion, cancelChatCompletion } from "../../services/sse-chat";
+import toast from "react-hot-toast";
 import { notifyIfHidden } from "../../lib/desktop-notifications";
 import { ChatComposer, type ChatComposerRef } from "./components/ChatComposer";
 import { ChatMessageList, type DisplayMessage } from "./components/ChatMessageList";
@@ -177,6 +178,7 @@ export function ChatPage() {
       },
       onError(err) {
         console.error("Stream error:", err);
+        toast.error(err.message);
         dispatch(streamAborted());
         dispatch(appendMessage({
           id: nextMsgId(),
