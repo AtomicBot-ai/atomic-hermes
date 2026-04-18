@@ -15,9 +15,8 @@ import { patchConfig } from "../../services/api";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import { LOCAL_MODEL_FLOW } from "./onboarding-steps";
+import { LLAMACPP_BASE_URL } from "@ui/settings/llamacpp-profile-config";
 import s from "./LocalModelSelectPage.module.css";
-
-const LLAMACPP_BASE_URL = "http://127.0.0.1:18791/v1";
 
 const MODEL_ICON_FILES: Record<string, string> = {
   qwen: "qwen.svg",

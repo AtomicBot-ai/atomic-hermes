@@ -18,11 +18,10 @@ import { patchConfig } from "../../../services/api";
 import {
   isProfileUsingLlamacppServer,
   profileLlamacppCatalogModelId,
+  LLAMACPP_BASE_URL,
 } from "../llamacpp-profile-config";
 import { useSettingsState } from "../settings-context";
 import s from "./LocalModelsTab.module.css";
-
-const LLAMACPP_BASE_URL = "http://127.0.0.1:18791/v1";
 
 export function LocalModelsTab(props: { port: number }) {
   const { port } = props;

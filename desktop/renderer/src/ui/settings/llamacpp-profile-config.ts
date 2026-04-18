@@ -1,7 +1,9 @@
 import type { ConfigResponse } from "../../services/api";
 import { getConfigString } from "./settings-state";
 
-const LLAMACPP_HOST_MARKER = "127.0.0.1:18791";
+export const LLAMACPP_PORT = 18991;
+export const LLAMACPP_BASE_URL = `http://127.0.0.1:${LLAMACPP_PORT}/v1`;
+const LLAMACPP_HOST_MARKER = `127.0.0.1:${LLAMACPP_PORT}`;
 
 /** True when the saved Hermes profile targets the bundled llama.cpp OpenAI-compatible endpoint. */
 export function isProfileUsingLlamacppServer(configSnap: ConfigResponse | null): boolean {

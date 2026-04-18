@@ -29,7 +29,7 @@ import {
   checkForBackendUpdate,
   resolveServerBinPath,
 } from "./backend-download";
-import { startLlamacppServer, stopLlamacppServer, getLlamacppServerStatus } from "./server";
+import { startLlamacppServer, stopLlamacppServer, getLlamacppServerStatus, LLAMACPP_DEFAULT_PORT } from "./server";
 
 export type LlamacppIpcParams = {
   llamacppDataDir: string;
@@ -384,7 +384,7 @@ export function registerLlamacppIpcHandlers(params: LlamacppIpcParams): void {
     }
   );
 
-  const LLAMACPP_BASE_URL_MARKER = "127.0.0.1:18791";
+  const LLAMACPP_BASE_URL_MARKER = `127.0.0.1:${LLAMACPP_DEFAULT_PORT}`;
 
   ipcMain.handle(
     "llamacpp-propagate-model",

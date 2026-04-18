@@ -2,7 +2,7 @@ import { type ChildProcess, spawn } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
 
-export const LLAMACPP_DEFAULT_PORT = 18791;
+export const LLAMACPP_DEFAULT_PORT = 18991;
 const PID_FILENAME = "llamacpp-server.pid";
 
 type ServerState = {

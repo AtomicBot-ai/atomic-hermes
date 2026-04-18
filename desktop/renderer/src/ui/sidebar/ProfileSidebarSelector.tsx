@@ -17,7 +17,7 @@ export type ProfileSidebarSelectorProps = {
 
 function buildProfileSubtitle(profile: ProfileSummary | null): string {
   if (!profile) return "Select a profile";
-  const parts = [profile.isDefault ? "Default profile" : "Profile"];
+  const parts: string[] = [];
   if (profile.model) parts.push(profile.model);
   if (profile.provider) parts.push(profile.provider);
   return parts.join(" · ");

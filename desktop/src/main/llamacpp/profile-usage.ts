@@ -3,8 +3,9 @@ import * as path from "node:path";
 import * as yaml from "js-yaml";
 
 import { listProfiles } from "../files/profile-resolver";
+import { LLAMACPP_DEFAULT_PORT } from "./server";
 
-const LLAMACPP_BASE_URL_MARKER = "127.0.0.1:18791";
+const LLAMACPP_BASE_URL_MARKER = `127.0.0.1:${LLAMACPP_DEFAULT_PORT}`;
 
 /**
  * A profile targets the bundled llama.cpp OpenAI-compatible endpoint when its
