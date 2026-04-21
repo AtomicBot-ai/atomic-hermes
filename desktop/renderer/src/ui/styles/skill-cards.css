@@ -70,6 +70,11 @@
   height: 26px;
 }
 
+.UiSkillIcon:has(> img) {
+  background: transparent;
+  border-radius: 0;
+}
+
 .UiSkillIcon--custom {
   font-size: 20px;
   background: rgba(255, 255, 255, 0.06);

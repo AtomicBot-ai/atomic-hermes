@@ -1346,6 +1346,99 @@ class _ConfigRoutes:
         except Exception as exc:
             return web.json_response({"ok": False, "error": str(exc)}, status=400)
 
+    async def handle_delete_profile(self, request: "web.Request") -> "web.Response":
+        auth_err = self._check_auth(request)
+        if auth_err:
+            return auth_err
+
+        profile_id = str(request.match_info.get("profile_id", "")).strip()
+        if not profile_id:
+            return web.json_response(
+                {"ok": False, "error": "profile_id is required"}, status=400
+            )
+
+        if profile_id == "default":
+            return web.json_response(
+                {
+                    "ok": False,
+                    "error": "Cannot delete the default profile. Use CLI uninstall instead.",
+                },
+                status=400,
+            )
+
+        host_profile = self._adapter._host_profile_id or "default"
+        if profile_id == host_profile:
+            return web.json_response(
+                {
+                    "ok": False,
+                    "error": (
+                        f"Cannot delete the host profile '{profile_id}' — "
+                        "it is serving the running gateway."
+                    ),
+                },
+                status=400,
+            )
+
+        client_id = self._adapter._extract_client_id(request)
+        selected_for_client = (
+            self._adapter._selected_profiles.get(client_id) if client_id else None
+        )
+        if selected_for_client == profile_id:
+            return web.json_response(
+                {
+                    "ok": False,
+                    "error": (
+                        f"Profile '{profile_id}' is currently selected. "
+                        "Switch to another profile first."
+                    ),
+                },
+                status=409,
+            )
+
+        try:
+            stopped = await self._adapter._profile_runtime_manager.stop_worker(
+                profile_id
+            )
+        except Exception:
+            logger.exception(
+                "[api_extensions] Failed to stop worker for profile '%s'", profile_id
+            )
+            stopped = False
+
+        try:
+            result = await asyncio.get_event_loop().run_in_executor(
+                None,
+                self._adapter._profile_registry.delete_profile,
+                profile_id,
+            )
+        except FileNotFoundError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=404)
+        except ValueError as exc:
+            return web.json_response({"ok": False, "error": str(exc)}, status=400)
+        except Exception as exc:
+            logger.exception(
+                "[api_extensions] Failed to delete profile '%s'", profile_id
+            )
+            return web.json_response({"ok": False, "error": str(exc)}, status=500)
+
+        stale_clients = [
+            cid
+            for cid, pid in self._adapter._selected_profiles.items()
+            if pid == profile_id
+        ]
+        for cid in stale_clients:
+            self._adapter._selected_profiles.pop(cid, None)
+
+        return web.json_response(
+            {
+                "ok": True,
+                "profile": result,
+                "workerStopped": stopped,
+                "clearedSelections": len(stale_clients),
+            },
+            headers=self._profile_headers(request),
+        )
+
     async def handle_select_profile(self, request: "web.Request") -> "web.Response":
         auth_err = self._check_auth(request)
         if auth_err:
@@ -2941,6 +3034,7 @@ def register_routes(app: "web.Application", adapter: Any) -> None:
     app.router.add_post("/api/profiles", routes.handle_create_profile)
     app.router.add_post("/api/profiles/session/select", routes.handle_select_profile)
     app.router.add_get("/api/profiles/runtimes", routes.handle_profile_runtimes)
+    app.router.add_delete("/api/profiles/{profile_id}", routes.handle_delete_profile)
     app.router.add_get("/api/config", routes.handle_get_config)
     app.router.add_patch("/api/config", routes.handle_patch_config)
     app.router.add_get("/api/providers", routes.handle_providers)

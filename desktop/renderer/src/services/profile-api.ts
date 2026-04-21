@@ -83,12 +83,16 @@ export async function selectProfile(
   return payload;
 }
 
+function normalizeProfileName(name: string): string {
+  return name.trim().toLowerCase().replace(/\s+/g, "_");
+}
+
 export async function createProfile(
   port: number,
   name: string,
   opts?: { cloneFrom?: string; cloneAll?: boolean; cloneConfig?: boolean },
 ): Promise<CreateProfileResponse> {
-  const body: Record<string, unknown> = { name };
+  const body: Record<string, unknown> = { name: normalizeProfileName(name) };
   if (opts?.cloneFrom) body.cloneFrom = opts.cloneFrom;
   if (opts?.cloneAll) body.cloneAll = true;
   if (opts?.cloneConfig) body.cloneConfig = true;
@@ -106,4 +110,37 @@ export async function createProfile(
     throw new Error(`createProfile: HTTP ${res.status}${text ? `: ${text}` : ""}`);
   }
   return res.json() as Promise<CreateProfileResponse>;
+}
+
+export type DeleteProfileResponse = {
+  ok: boolean;
+  profile?: {
+    id: string;
+    path: string;
+    log?: string;
+  };
+  workerStopped?: boolean;
+  clearedSelections?: number;
+  error?: string;
+};
+
+export async function deleteProfile(
+  port: number,
+  profileId: string,
+): Promise<DeleteProfileResponse> {
+  const res = await fetch(
+    `${getBaseUrl(port)}/api/profiles/${encodeURIComponent(profileId)}`,
+    {
+      ...withHermesHeaders({
+        method: "DELETE",
+        signal: AbortSignal.timeout(30_000),
+      }),
+    },
+  );
+  const payload = (await res.json().catch(() => ({}))) as DeleteProfileResponse;
+  if (!res.ok) {
+    const message = payload.error || `HTTP ${res.status}`;
+    throw new Error(`deleteProfile: ${message}`);
+  }
+  return payload;
 }

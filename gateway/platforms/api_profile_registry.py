@@ -1,5 +1,7 @@
 """Profile registry helpers for the API server."""
 
+import contextlib
+import io
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -81,3 +83,21 @@ class ProfileRegistry:
         from hermes_cli.profiles import set_active_profile
 
         set_active_profile(profile_id)
+
+    def delete_profile(self, name: str) -> Dict[str, Any]:
+        """Delete a profile by name.
+
+        Wraps ``hermes_cli.profiles.delete_profile`` with ``yes=True`` to skip
+        the interactive confirmation prompt, and captures stdout so CLI output
+        does not pollute gateway logs.
+        """
+        from hermes_cli.profiles import delete_profile as cli_delete_profile
+
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            removed_path = cli_delete_profile(name, yes=True)
+        return {
+            "id": name,
+            "path": str(removed_path),
+            "log": buffer.getvalue().strip(),
+        }

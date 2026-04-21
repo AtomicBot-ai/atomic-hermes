@@ -16,12 +16,15 @@ export type SidebarContentProps = {
   profiles: ProfileSummary[];
   profilesLoading: boolean;
   profilesCreating: boolean;
+  profileDeletingId: string | null;
   selectedProfileId: string | null;
+  hostProfileId: string | null;
   profileMenuOpen: boolean;
   onProfileMenuOpenChange: (open: boolean) => void;
   onSelectProfile: (profileId: string) => void | Promise<void>;
   onCreateProfile: (name: string) => void | Promise<void>;
   onCloneProfile: (name: string) => void | Promise<void>;
+  onDeleteProfile: (profileId: string) => void | Promise<void>;
   sessions: SidebarSessionRow[];
   loading: boolean;
   currentSessionKey: string | null;
@@ -112,12 +115,15 @@ export function SidebarContent(props: SidebarContentProps & { showTerminal?: boo
     profiles,
     profilesLoading,
     profilesCreating,
+    profileDeletingId,
     selectedProfileId,
+    hostProfileId,
     profileMenuOpen,
     onProfileMenuOpenChange,
     onSelectProfile,
     onCreateProfile,
     onCloneProfile,
+    onDeleteProfile,
     sessions,
     loading,
     currentSessionKey,
@@ -161,13 +167,16 @@ export function SidebarContent(props: SidebarContentProps & { showTerminal?: boo
         <ProfileSidebarSelector
           profiles={profiles}
           selectedProfileId={selectedProfileId}
+          hostProfileId={hostProfileId}
           loading={profilesLoading}
           creating={profilesCreating}
+          deletingProfileId={profileDeletingId}
           open={profileMenuOpen}
           onOpenChange={onProfileMenuOpenChange}
           onSelectProfile={onSelectProfile}
           onCreateProfile={onCreateProfile}
           onCloneProfile={onCloneProfile}
+          onDeleteProfile={onDeleteProfile}
         />
       </div>
 

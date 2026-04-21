@@ -167,3 +167,24 @@ class ProfileRuntimeManager:
                 if worker.process.is_alive():
                     worker.process.terminate()
         self._workers.clear()
+
+    async def stop_worker(self, profile_id: str) -> bool:
+        """Stop a single profile worker. Returns True if a worker was stopped."""
+        worker = self._workers.pop(profile_id, None)
+        if worker is None:
+            return False
+        try:
+            worker.request_queue.put({"kind": "shutdown"})
+        except Exception:
+            pass
+        if worker.reader_task:
+            worker.reader_task.cancel()
+        if worker.process.is_alive():
+            worker.process.join(timeout=1.0)
+            if worker.process.is_alive():
+                worker.process.terminate()
+        for future in worker.pending.values():
+            if not future.done():
+                future.set_exception(RuntimeError("Profile worker stopped"))
+        worker.pending.clear()
+        return True

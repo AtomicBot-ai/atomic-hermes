@@ -1,18 +1,22 @@
 import React from "react";
 import { createPortal } from "react-dom";
+import { ConfirmDialog } from "@shared/kit";
 import type { ProfileSummary } from "../../services/profile-api";
 import css from "./Sidebar.module.css";
 
 export type ProfileSidebarSelectorProps = {
   profiles: ProfileSummary[];
   selectedProfileId: string | null;
+  hostProfileId: string | null;
   loading: boolean;
   creating: boolean;
+  deletingProfileId: string | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onSelectProfile: (profileId: string) => void | Promise<void>;
   onCreateProfile: (name: string) => void | Promise<void>;
   onCloneProfile: (name: string) => void | Promise<void>;
+  onDeleteProfile: (profileId: string) => void | Promise<void>;
 };
 
 function buildProfileSubtitle(profile: ProfileSummary | null): string {
@@ -48,19 +52,40 @@ function CloneIcon() {
   );
 }
 
+function TrashIcon() {
+  return (
+    <svg
+      width="14"
+      height="14"
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.4"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden
+    >
+      <path d="M2.5 4h11M6 4V2.75a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1V4M6.5 7v4.5M9.5 7v4.5M4 4l.6 8.25a1.25 1.25 0 0 0 1.25 1.15h4.3a1.25 1.25 0 0 0 1.25-1.15L12 4" />
+    </svg>
+  );
+}
+
 type InlineInputMode = "create" | "clone" | null;
 
 export function ProfileSidebarSelector(props: ProfileSidebarSelectorProps) {
   const {
     profiles,
     selectedProfileId,
+    hostProfileId,
     loading,
     creating,
+    deletingProfileId,
     open,
     onOpenChange,
     onSelectProfile,
     onCreateProfile,
     onCloneProfile,
+    onDeleteProfile,
   } = props;
   const rootRef = React.useRef<HTMLDivElement>(null);
   const dropdownRef = React.useRef<HTMLDivElement>(null);
@@ -68,6 +93,8 @@ export function ProfileSidebarSelector(props: ProfileSidebarSelectorProps) {
   const [inputMode, setInputMode] = React.useState<InlineInputMode>(null);
   const [inputValue, setInputValue] = React.useState("");
   const [dropdownStyle, setDropdownStyle] = React.useState<React.CSSProperties | null>(null);
+  const [profilePendingDelete, setProfilePendingDelete] =
+    React.useState<ProfileSummary | null>(null);
 
   const selectedProfile = React.useMemo(
     () => profiles.find((profile) => profile.id === selectedProfileId) ?? profiles[0] ?? null,
@@ -164,31 +191,55 @@ export function ProfileSidebarSelector(props: ProfileSidebarSelectorProps) {
           ) : (
             profiles.map((profile) => {
               const isActive = profile.id === selectedProfileId;
+              const isHost = hostProfileId != null && profile.id === hostProfileId;
+              const canDelete = !profile.isDefault && !isHost && !isActive;
+              const isDeleting = deletingProfileId === profile.id;
               return (
-                <button
+                <div
                   key={profile.id}
-                  type="button"
-                  role="menuitemradio"
-                  aria-checked={isActive}
-                  className={`${css.UiChatSidebarProfileOption}${isActive ? ` ${css.UiChatSidebarProfileOptionActive}` : ""}`}
-                  onClick={() => {
-                    void onSelectProfile(profile.id);
-                    onOpenChange(false);
-                  }}
+                  className={`${css.UiChatSidebarProfileRow}${isActive ? ` ${css.UiChatSidebarProfileRowActive}` : ""}`}
                 >
-                  <span className={css.UiChatSidebarProfileAvatar} aria-hidden="true">
-                    {profile.name.slice(0, 1).toUpperCase()}
-                  </span>
-                  <span className={css.UiChatSidebarProfileText}>
-                    <span className={css.UiChatSidebarProfileTitle}>{profile.name}</span>
-                    <span className={css.UiChatSidebarProfileSubtitle}>
-                      {buildProfileSubtitle(profile)}
+                  <button
+                    type="button"
+                    role="menuitemradio"
+                    aria-checked={isActive}
+                    className={`${css.UiChatSidebarProfileOption}${isActive ? ` ${css.UiChatSidebarProfileOptionActive}` : ""}`}
+                    onClick={() => {
+                      void onSelectProfile(profile.id);
+                      onOpenChange(false);
+                    }}
+                    disabled={isDeleting}
+                  >
+                    <span className={css.UiChatSidebarProfileAvatar} aria-hidden="true">
+                      {profile.name.slice(0, 1).toUpperCase()}
                     </span>
-                  </span>
-                  <span className={css.UiChatSidebarProfileMeta}>
-                    {profile.gatewayRunning && <span className={css.UiChatSidebarProfileStatusDot} aria-hidden="true" />}
-                  </span>
-                </button>
+                    <span className={css.UiChatSidebarProfileText}>
+                      <span className={css.UiChatSidebarProfileTitle}>{profile.name}</span>
+                      <span className={css.UiChatSidebarProfileSubtitle}>
+                        {buildProfileSubtitle(profile)}
+                      </span>
+                    </span>
+                    <span className={css.UiChatSidebarProfileMeta}>
+                      {profile.gatewayRunning && <span className={css.UiChatSidebarProfileStatusDot} aria-hidden="true" />}
+                    </span>
+                  </button>
+                  {canDelete && (
+                    <button
+                      type="button"
+                      className={css.UiChatSidebarProfileDelete}
+                      aria-label={`Delete profile ${profile.name}`}
+                      title={`Delete profile ${profile.name}`}
+                      disabled={isDeleting}
+                      onClick={(event) => {
+                        event.preventDefault();
+                        event.stopPropagation();
+                        setProfilePendingDelete(profile);
+                      }}
+                    >
+                      <TrashIcon />
+                    </button>
+                  )}
+                </div>
               );
             })
           )}
@@ -279,6 +330,21 @@ export function ProfileSidebarSelector(props: ProfileSidebarSelectorProps) {
         </span>
       </button>
       {dropdown}
+      <ConfirmDialog
+        open={profilePendingDelete != null}
+        title={`Delete profile \u201C${profilePendingDelete?.name ?? ""}\u201D?`}
+        subtitle={
+          "This permanently removes the profile directory with all config, API keys, memories, sessions, skills and cron jobs."
+        }
+        confirmLabel="Delete"
+        danger
+        onConfirm={() => {
+          const profile = profilePendingDelete;
+          setProfilePendingDelete(null);
+          if (profile) void onDeleteProfile(profile.id);
+        }}
+        onCancel={() => setProfilePendingDelete(null)}
+      />
     </div>
   );
 }

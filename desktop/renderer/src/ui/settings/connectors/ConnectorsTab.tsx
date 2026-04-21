@@ -5,6 +5,7 @@ import { useSettingsState } from "../settings-context";
 import { patchConfig } from "../../../services/api";
 import { restartGateway } from "../../../services/messengers-api";
 import { useConnectorsStatus, type ConnectorStatus } from "./useConnectorsStatus";
+import { useActiveProfileGuard } from "./useActiveProfileGuard";
 import { CONNECTORS, resolveConnectorIconUrl, type ConnectorId } from "./connector-definitions";
 import { TelegramModal } from "./modals/TelegramModal";
 import { SlackModal } from "./modals/SlackModal";
@@ -26,6 +27,7 @@ export function ConnectorsTab() {
     installDeps,
     getPlatformInfo,
   } = useConnectorsStatus(port);
+  const profileGuard = useActiveProfileGuard(port);
 
   const [activeModal, setActiveModal] = React.useState<ConnectorId | null>(null);
   const [restartPending, setRestartPending] = React.useState(false);
@@ -33,14 +35,22 @@ export function ConnectorsTab() {
   const [error, setError] = React.useState<string | null>(null);
   const [installConfirm, setInstallConfirm] = React.useState<ConnectorId | null>(null);
 
+  const messengersLocked = !profileGuard.isOnHostProfile && !profileGuard.loading;
+
+  React.useEffect(() => {
+    if (profileGuard.loading) return;
+    void refresh();
+  }, [profileGuard.loading, profileGuard.selectedProfileId, refresh]);
+
   const handleConnect = React.useCallback((id: ConnectorId) => {
+    if (messengersLocked) return;
     const status = statuses[id];
     if (status === "needs-deps") {
       setInstallConfirm(id);
       return;
     }
     setActiveModal(id);
-  }, [statuses]);
+  }, [messengersLocked, statuses]);
 
   const handleConnected = React.useCallback(
     (id: ConnectorId) => {
@@ -102,6 +112,20 @@ export function ConnectorsTab() {
         <span className="UiSkillStatus" aria-label="Installing">
           Installing...
         </span>
+      );
+    }
+
+    if (messengersLocked) {
+      return (
+        <button
+          className="UiSkillConnectButton"
+          type="button"
+          disabled
+          aria-disabled="true"
+          title={`Switch to the host profile "${profileGuard.hostProfileId}" to configure messengers`}
+        >
+          Locked
+        </button>
       );
     }
 
@@ -169,6 +193,62 @@ export function ConnectorsTab() {
         </InlineError>
       )}
 
+      {messengersLocked && (
+        <div
+          style={{
+            padding: "14px 16px",
+            margin: "16px 0 12px",
+            borderRadius: 10,
+            background: "rgba(255, 170, 60, 0.08)",
+            border: "1px solid rgba(255, 170, 60, 0.3)",
+            display: "flex",
+            alignItems: "center",
+            gap: 16,
+            flexWrap: "wrap",
+          }}
+          role="status"
+        >
+          <div
+            style={{
+              flex: "1 1 260px",
+              minWidth: 0,
+              fontSize: 13,
+              lineHeight: 1.5,
+            }}
+          >
+            <div style={{ fontWeight: 600, marginBottom: 2 }}>
+              Messengers run only under the host profile
+            </div>
+            <div style={{ color: "rgba(230, 237, 243, 0.7)" }}>
+              You are on{" "}
+              <code style={{ fontSize: 12 }}>
+                {profileGuard.selectedProfileId ?? "?"}
+              </code>
+              , gateway runs{" "}
+              <code style={{ fontSize: 12 }}>
+                {profileGuard.hostProfileId ?? "?"}
+              </code>
+              . Tokens saved here won&apos;t start a bot until you switch.
+            </div>
+          </div>
+          <div style={{ flex: "0 0 auto", minWidth: 180 }}>
+            <ActionButton
+              variant="primary"
+              disabled={profileGuard.switching || !profileGuard.hostProfileId}
+              onClick={() => void profileGuard.switchToHost()}
+            >
+              {profileGuard.switching
+                ? "Switching..."
+                : `Switch to ${profileGuard.hostProfileId ?? "host"}`}
+            </ActionButton>
+          </div>
+        </div>
+      )}
+
+      {profileGuard.switchError && (
+        <InlineError>{profileGuard.switchError}</InlineError>
+      )}
+
       {restartPending && (
         <div style={{ padding: "8px 12px", margin: "0 0 12px", borderRadius: 8, background: "var(--color-surface-alt, #1a1a2e)", display: "flex", alignItems: "center", gap: 12 }}>
           <span style={{ flex: 1, fontSize: 13 }}>
@@ -184,7 +264,10 @@ export function ConnectorsTab() {
         </div>
       )}
 
-      <div className="UiSkillsScroll" style={{ maxHeight: "none" }}>
+      <div
+        className="UiSkillsScroll"
+        style={{ maxHeight: "none", opacity: messengersLocked ? 0.65 : 1 }}
+      >
         <div className="UiSkillsGrid">
           {CONNECTORS.map((connector) => {
             const iconUrl = resolveConnectorIconUrl(connector.svgIcon);

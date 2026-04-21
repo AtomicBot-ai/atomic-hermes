@@ -3,7 +3,13 @@ import { NavLink, useNavigate, useSearchParams } from "react-router-dom";
 import toast from "react-hot-toast";
 import { useAppSelector } from "@store/hooks";
 import { fetchSessions, deleteSession } from "../../services/session-api";
-import { createProfile, fetchProfiles, selectProfile, type ProfileSummary } from "../../services/profile-api";
+import {
+  createProfile,
+  deleteProfile,
+  fetchProfiles,
+  selectProfile,
+  type ProfileSummary,
+} from "../../services/profile-api";
 import { seedComputerUseMcpIfMissing } from "../../services/seed-computer-use-mcp";
 import { getSelectedHermesProfile, setSelectedHermesProfile } from "../../services/request-context";
 import { getDesktopApiOrNull } from "../../ipc/desktopApi";
@@ -98,6 +104,8 @@ export function Sidebar(props: SidebarProps) {
   const [profiles, setProfiles] = React.useState<ProfileSummary[]>([]);
   const [profilesLoading, setProfilesLoading] = React.useState(true);
   const [profilesCreating, setProfilesCreating] = React.useState(false);
+  const [profileDeletingId, setProfileDeletingId] = React.useState<string | null>(null);
+  const [hostProfileId, setHostProfileId] = React.useState<string | null>(null);
   const [selectedProfileId, setSelectedProfileId] = React.useState<string | null>(
     () => getSelectedHermesProfile(),
   );
@@ -114,6 +122,7 @@ export function Sidebar(props: SidebarProps) {
         const nextSelectedProfile =
           res.selectedProfile || getSelectedHermesProfile() || res.hostProfile || nextProfiles[0]?.id || null;
         setProfiles(nextProfiles);
+        setHostProfileId(res.hostProfile ?? null);
         setSelectedProfileId(nextSelectedProfile);
         setSelectedHermesProfile(nextSelectedProfile);
       } catch (error) {
@@ -228,6 +237,28 @@ export function Sidebar(props: SidebarProps) {
       setProfilesCreating(false);
     }
   }, [finishProfileCreation, port, profilesCreating, selectedProfileId]);
+
+  const handleDeleteProfile = React.useCallback(async (profileId: string) => {
+    if (!profileId || profileDeletingId) return;
+    if (profileId === selectedProfileId) {
+      toast.error("Switch to another profile before deleting the current one");
+      return;
+    }
+    setProfileDeletingId(profileId);
+    try {
+      const result = await deleteProfile(port, profileId);
+      if (!result.ok) {
+        throw new Error(result.error || "Delete failed");
+      }
+      toast.success(`Profile "${profileId}" deleted`);
+      await loadProfiles(true);
+    } catch (error) {
+      console.error("Failed to delete profile:", error);
+      toast.error(error instanceof Error ? error.message : "Failed to delete profile");
+    } finally {
+      setProfileDeletingId(null);
+    }
+  }, [loadProfiles, port, profileDeletingId, selectedProfileId]);
 
   const handleCloneProfile = React.useCallback(async (name: string) => {
     if (profilesCreating || !selectedProfileId) return;
@@ -408,12 +439,15 @@ export function Sidebar(props: SidebarProps) {
             profiles={profiles}
             profilesLoading={profilesLoading}
             profilesCreating={profilesCreating}
+            profileDeletingId={profileDeletingId}
             selectedProfileId={selectedProfileId}
+            hostProfileId={hostProfileId}
             profileMenuOpen={profileMenuOpen}
             onProfileMenuOpenChange={setProfileMenuOpen}
             onSelectProfile={handleSelectProfile}
             onCreateProfile={handleCreateProfile}
             onCloneProfile={handleCloneProfile}
+            onDeleteProfile={handleDeleteProfile}
             sessions={sessions}
             loading={loading}
             currentSessionKey={currentSessionKey}

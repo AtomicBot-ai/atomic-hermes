@@ -20,6 +20,7 @@ import {
   profileLlamacppCatalogModelId,
   LLAMACPP_BASE_URL,
 } from "../llamacpp-profile-config";
+import { resolveLlamacppServerUiKey } from "../AiModelsStatusBar";
 import { useSettingsState } from "../settings-context";
 import s from "./LocalModelsTab.module.css";
 
@@ -32,6 +33,7 @@ export function LocalModelsTab(props: { port: number }) {
     backendDownload,
     models,
     modelDownload,
+    serverStatus,
   } = useAppSelector((st) => st.llamacpp);
 
   const autoStartedRef = React.useRef(false);
@@ -66,6 +68,11 @@ export function LocalModelsTab(props: { port: number }) {
     if (!isProfileUsingLlamacppServer(configSnap)) return null;
     return profileLlamacppCatalogModelId(configSnap?.activeModel ?? "");
   }, [configSnap]);
+
+  // "Active" badge must reflect the actual running state of the llamacpp server,
+  // not just the configured profile model. Otherwise a stopped server keeps the
+  // badge lit until the user switches to a different model.
+  const isServerUp = resolveLlamacppServerUiKey(serverStatus) !== "stopped";
 
   const handleSelect = React.useCallback(
     async (modelId: string) => {
@@ -133,7 +140,7 @@ export function LocalModelsTab(props: { port: number }) {
 
       <div className={s.modelList}>
         {models.map((model) => {
-          const isActive = profileActiveCatalogModelId === model.id;
+          const isActive = profileActiveCatalogModelId === model.id && isServerUp;
           const isDownloading = downloadingModelId === model.id;
           const isSelecting = selectingModelId === model.id;
           const isDeleting = deletingModelId === model.id;

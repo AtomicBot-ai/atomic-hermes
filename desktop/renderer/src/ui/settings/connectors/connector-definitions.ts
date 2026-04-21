@@ -124,7 +124,7 @@ export const CONNECTORS: ConnectorDefinition[] = [
     name: "Mattermost",
     description: "Connect to a Mattermost server",
     iconEmoji: "💬",
-    svgIcon: "mattermost.svg",
+    svgIcon: "Mattermost.svg",
     hasCustomModal: false,
   },
   {

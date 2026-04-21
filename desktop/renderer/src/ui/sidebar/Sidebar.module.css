@@ -377,6 +377,14 @@
   gap: var(--spacing-xs);
 }
 
+.UiChatSidebarProfileRow {
+  position: relative;
+  display: flex;
+  align-items: stretch;
+  width: 100%;
+  min-width: 0;
+}
+
 .UiChatSidebarProfileOption {
   width: 100%;
   min-width: 0;
@@ -401,9 +409,66 @@
   border-color: var(--border-subtle);
 }
 
+.UiChatSidebarProfileOption:disabled {
+  opacity: 0.6;
+  cursor: progress;
+}
+
 .UiChatSidebarProfileOptionActive {
   background: var(--surface-overlay-subtle);
   border-color: var(--surface-overlay);
+}
+
+.UiChatSidebarProfileDelete {
+  position: absolute;
+  top: 50%;
+  right: 8px;
+  transform: translateY(-50%);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--muted2);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    opacity var(--transition-fast),
+    background var(--transition-fast),
+    color var(--transition-fast);
+}
+
+.UiChatSidebarProfileRow:hover .UiChatSidebarProfileDelete,
+.UiChatSidebarProfileRow:focus-within .UiChatSidebarProfileDelete {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.UiChatSidebarProfileRow:has(.UiChatSidebarProfileDelete):hover .UiChatSidebarProfileMeta,
+.UiChatSidebarProfileRow:has(.UiChatSidebarProfileDelete):focus-within .UiChatSidebarProfileMeta {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.UiChatSidebarProfileMeta {
+  transition:
+    opacity var(--transition-fast),
+    visibility var(--transition-fast);
+}
+
+.UiChatSidebarProfileDelete:hover:not(:disabled) {
+  background: var(--surface-overlay);
+  color: var(--danger, #e5484d);
+}
+
+.UiChatSidebarProfileDelete:disabled {
+  opacity: 0.4;
+  cursor: progress;
 }
 
 .UiChatSidebarProfileMeta {
