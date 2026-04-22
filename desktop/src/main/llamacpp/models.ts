@@ -4,6 +4,7 @@ export type LlamacppModelId =
   | "qwen-3.5-4b"
   | "qwen-3.5-9b"
   | "qwen-3.5-35b"
+  | "qwen-3.6-27b"
   | "qwen-3.6-35b"
   | "glm-4.7-flash-30b"
   | "nemotron-3-nano-4b"
@@ -78,6 +79,38 @@ export const LLAMACPP_MODELS: LlamacppModelDef[] = [
     tag: "High Performance",
   },
   {
+    id: "qwen-3.6-27b",
+    name: "Qwen 3.6 27B GGUF",
+    filename: "Qwen3.6-27B-UD-Q4_K_XL.gguf",
+    huggingFaceUrl:
+      "https://huggingface.co/unsloth/Qwen3.6-27B-GGUF/resolve/main/Qwen3.6-27B-UD-Q4_K_XL.gguf",
+    fileSizeGb: 17.6,
+    sizeLabel: "17.6 GB",
+    description: "Next-gen dense reasoning",
+    maxContextLength: 262_144,
+    contextLabel: "256K",
+    minRamGb: 20,
+    recommendedRamGb: 28,
+    icon: "qwen",
+    tag: "New",
+  },
+  {
+    id: "qwen-3.6-35b",
+    name: "Qwen 3.6 35B-A3B GGUF",
+    filename: "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
+    huggingFaceUrl:
+      "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
+    fileSizeGb: 22.1,
+    sizeLabel: "22.1 GB",
+    description: "Next-gen agentic coding MoE",
+    maxContextLength: 262_144,
+    contextLabel: "256K",
+    minRamGb: 24,
+    recommendedRamGb: 36,
+    icon: "qwen",
+    tag: "New",
+  },
+  {
     id: "qwen-3.5-4b",
     name: "Qwen 3.5 4B GGUF",
     filename: "Qwen3.5-4B-Q4_K_M.gguf",
@@ -126,22 +159,6 @@ export const LLAMACPP_MODELS: LlamacppModelDef[] = [
     icon: "qwen",
     chatTemplateAsset: "qwen3.5-chat-template.jinja",
     tag: "High Performance",
-  },
-  {
-    id: "qwen-3.6-35b",
-    name: "Qwen 3.6 35B-A3B GGUF",
-    filename: "Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
-    huggingFaceUrl:
-      "https://huggingface.co/unsloth/Qwen3.6-35B-A3B-GGUF/resolve/main/Qwen3.6-35B-A3B-UD-Q4_K_M.gguf",
-    fileSizeGb: 22.1,
-    sizeLabel: "22.1 GB",
-    description: "Next-gen agentic coding MoE",
-    maxContextLength: 262_144,
-    contextLabel: "256K",
-    minRamGb: 24,
-    recommendedRamGb: 36,
-    icon: "qwen",
-    tag: "New",
   },
   {
     id: "glm-4.7-flash-30b",

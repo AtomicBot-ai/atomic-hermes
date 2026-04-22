@@ -153,6 +153,7 @@ DEFAULT_CONTEXT_LENGTHS = {
     "Qwen/Qwen3.5-397B-A17B": 131072,
     "Qwen/Qwen3.5-35B-A3B": 131072,
     # Same architecture as Qwen/Qwen3.6-35B-A3B (max_position_embeddings 262144).
+    "unsloth/Qwen3.6-27B-GGUF": 262144,
     "unsloth/Qwen3.6-35B-A3B-GGUF": 262144,
     "deepseek-ai/DeepSeek-V3.2": 65536,
     "moonshotai/Kimi-K2.5": 262144,
