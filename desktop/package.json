@@ -1,6 +1,6 @@
 {
   "name": "hermes-desktop",
-  "version": "0.1.31",
+  "version": "0.1.32",
   "description": "Atomic Hermes — self-contained macOS desktop app",
   "main": "dist/main/main.js",
   "private": true,
