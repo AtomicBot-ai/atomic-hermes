@@ -5,6 +5,18 @@ type DashboardState =
   | { kind: "ready"; port: number; url: string }
   | { kind: "failed"; error: string };
 
+type AtomicAuthState = {
+  jwt: string;
+  email: string;
+  userId: string;
+};
+
+type DeepLinkPayload = {
+  host: string;
+  pathname: string;
+  params: Record<string, string>;
+};
+
 function onIpc<T>(channel: string, cb: (payload: T) => void): () => void {
   const handler = (_event: Electron.IpcRendererEvent, payload: T) => cb(payload);
   ipcRenderer.on(channel, handler);
@@ -193,4 +205,14 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("sidebar:set-favorites", { entries }),
   seedProfileProvider: async (source: string, target: string): Promise<unknown> =>
     ipcRenderer.invoke("seed-profile-provider", { source, target }),
+
+  // ── Atomic auth (PAYG / atomic-bot-backend) ─────────────────────────
+  getAtomicAuth: (): Promise<AtomicAuthState | null> =>
+    ipcRenderer.invoke("atomic-auth:get"),
+  setAtomicAuth: (state: AtomicAuthState): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("atomic-auth:set", state),
+  clearAtomicAuth: (): Promise<{ ok: boolean }> =>
+    ipcRenderer.invoke("atomic-auth:clear"),
+  onAtomicDeepLink: (cb: (payload: DeepLinkPayload) => void): (() => void) =>
+    onIpc("atomic:deep-link", cb),
 });

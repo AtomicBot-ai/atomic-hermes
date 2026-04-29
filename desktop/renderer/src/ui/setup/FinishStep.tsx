@@ -2,7 +2,7 @@ import { PrimaryButton } from "@shared/kit";
 import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
-import { API_KEYS_FLOW, LOCAL_MODEL_FLOW } from "./onboarding-steps";
+import { API_KEYS_FLOW, ATOMIC_PAYG_FLOW, LOCAL_MODEL_FLOW } from "./onboarding-steps";
 import { useNavigate } from "react-router-dom";
 import s from "./FinishStep.module.css";
 
@@ -20,8 +20,20 @@ const CONFETTI_COLORS = [
 export function FinishStep() {
   const navigate = useNavigate();
   const { complete, setupFlow } = useSetup();
-  useOnboardingStepEvent("finished", setupFlow === "local-model" ? "local-model" : "api-keys");
-  const flow = setupFlow === "local-model" ? LOCAL_MODEL_FLOW : API_KEYS_FLOW;
+  useOnboardingStepEvent(
+    "finished",
+    setupFlow === "local-model"
+      ? "local-model"
+      : setupFlow === "atomic-payg"
+        ? "atomic-payg"
+        : "api-keys",
+  );
+  const flow =
+    setupFlow === "local-model"
+      ? LOCAL_MODEL_FLOW
+      : setupFlow === "atomic-payg"
+        ? ATOMIC_PAYG_FLOW
+        : API_KEYS_FLOW;
 
   return (
     <>
@@ -30,7 +42,11 @@ export function FinishStep() {
         activeStep={flow.steps.finish}
         onBack={() =>
           void navigate(
-            setupFlow === "local-model" ? "../local-model-select" : "../model",
+            setupFlow === "local-model"
+              ? "../local-model-select"
+              : setupFlow === "atomic-payg"
+                ? "../atomic-model"
+                : "../model",
             { relative: "path" },
           )
         }

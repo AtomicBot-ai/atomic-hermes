@@ -6,12 +6,13 @@ import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import s from "./SetupModePage.module.css";
 
-export type SetupModeChoice = "api-keys" | "local-model";
+export type SetupModeChoice = "api-keys" | "local-model" | "atomic-payg";
 
 export function SetupModePage(props: {
   localModelComingSoon: boolean;
   onSelectApiKeys: () => void;
   onSelectLocalModels: () => void;
+  onSelectAtomicPayg: () => void;
   onBack: () => void;
 }) {
   useOnboardingStepEvent("setup_mode", null);
@@ -30,10 +31,35 @@ export function SetupModePage(props: {
           </div>
 
           <div className={s.UiSetupModeOptions}>
-            <div className={`UiSectionCard UiSectionCardGreen ${s.UiSetupModeOptionCard}`}>
+            <div
+              className={`UiSectionCard UiSectionCardPurple ${s.UiSetupModeOptionCard} ${s.UiSetupModeOptionCardFeatured}`}
+            >
               <div className={s.UiSetupModeCardBody}>
                 <div className={s.UiSetupModeIcon}>
                   <SplashLogo size={35} />
+                </div>
+                <div className={s.UiSetupModeBadge}>Recommended</div>
+                <div className={s.UiSetupModeTitle}>Sign in with Atomic</div>
+                <div className={s.UiSetupModeDesc}>Pay-as-you-go credits</div>
+                <ul className={s.UiSetupModeFeatures}>
+                  <li>Sign in with Google in seconds</li>
+                  <li>OpenRouter access via Atomic credits</li>
+                  <li>Top up only when needed</li>
+                </ul>
+              </div>
+              <div className={s.UiSetupModeCardFooter}>
+                <PrimaryButton size="sm" onClick={props.onSelectAtomicPayg}>
+                  Continue with Atomic
+                </PrimaryButton>
+              </div>
+            </div>
+
+            <div className={`UiSectionCard UiSectionCardGreen ${s.UiSetupModeOptionCard}`}>
+              <div className={s.UiSetupModeCardBody}>
+                <div className={s.UiSetupModeIcon}>
+                  <span style={{ fontSize: 24 }} aria-hidden="true">
+                    🔑
+                  </span>
                 </div>
                 <div className={s.UiSetupModeTitle}>Your own API keys</div>
                 <div className={s.UiSetupModeDesc}>Pay providers directly</div>
@@ -44,9 +70,9 @@ export function SetupModePage(props: {
                 </ul>
               </div>
               <div className={s.UiSetupModeCardFooter}>
-                <PrimaryButton size="sm" onClick={props.onSelectApiKeys}>
+                <SecondaryButton size="sm" onClick={props.onSelectApiKeys}>
                   Connect API keys
-                </PrimaryButton>
+                </SecondaryButton>
               </div>
             </div>
 

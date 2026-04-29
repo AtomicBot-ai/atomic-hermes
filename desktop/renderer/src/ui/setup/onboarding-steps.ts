@@ -22,3 +22,15 @@ export const LOCAL_MODEL_FLOW = {
     finish: 4,
   },
 } as const;
+
+export const ATOMIC_PAYG_FLOW = {
+  totalSteps: 6,
+  steps: {
+    welcome: 0,
+    setupMode: 1,
+    signIn: 2,
+    topup: 3,
+    model: 4,
+    finish: 5,
+  },
+} as const;

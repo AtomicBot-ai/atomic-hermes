@@ -28,6 +28,9 @@ import { ProviderSelectStep } from "./ProviderSelectStep";
 import { ApiKeyStep } from "./ApiKeyStep";
 import { ModelSelectStep } from "./ModelSelectStep";
 import { FinishStep } from "./FinishStep";
+import { AtomicSignInPage } from "./atomic/AtomicSignInPage";
+import { AtomicTopupPage } from "./atomic/AtomicTopupPage";
+import { AtomicModelSelectStep } from "./atomic/AtomicModelSelectStep";
 import "./setup.css";
 
 function SetupModeRoute() {
@@ -44,6 +47,10 @@ function SetupModeRoute() {
       onSelectLocalModels={() => {
         setSetupFlow("local-model");
         void navigate("../local-backend-setup", { relative: "path" });
+      }}
+      onSelectAtomicPayg={() => {
+        setSetupFlow("atomic-payg");
+        void navigate("../atomic-signin", { relative: "path" });
       }}
       onBack={() => {
         setSetupFlow("unset");
@@ -373,6 +380,9 @@ export function SetupPage() {
             <Route path="model" element={<ModelSelectStep />} />
             <Route path="local-backend-setup" element={<LocalBackendSetupRoute />} />
             <Route path="local-model-select" element={<LocalModelSelectRoute />} />
+            <Route path="atomic-signin" element={<AtomicSignInPage />} />
+            <Route path="atomic-topup" element={<AtomicTopupPage />} />
+            <Route path="atomic-model" element={<AtomicModelSelectStep />} />
             <Route path="finish" element={<FinishStep />} />
             <Route path="*" element={<Navigate to="." replace />} />
           </Routes>

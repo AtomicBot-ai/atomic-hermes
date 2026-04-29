@@ -36,13 +36,52 @@ import {
   registerNotificationsHandlers,
   isNotificationsEnabled,
 } from "./notifications";
+import { handleDeepLink } from "./atomic-auth/deep-link";
+import { registerAtomicAuthIpcHandlers } from "./atomic-auth/ipc";
+import {
+  startStripeThanksServer,
+  type StripeThanksServer,
+} from "./atomic-auth/stripe-thanks-server";
+
+const DEEP_LINK_PROTOCOL = "atomicbot-hermes";
 
 app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
+
+// Single-instance lock + deep-link protocol registration must happen before
+// `app.whenReady()`. When a second instance is launched (e.g. by macOS opening
+// an `atomicbot-hermes://...` URL while the app is already running), we forward
+// the URL to the existing main window via `second-instance` / `open-url`
+// events. Note: the scheme is `atomicbot-hermes://` (not `atomicbot://`) to
+// avoid colliding with the openclaw desktop client which uses `atomicbot://`.
+// The backend allowlist (`ALLOWED_DESKTOP_SCHEMES`) must include this exact
+// value, otherwise OAuth/Stripe deep links fall back to `atomicbot://`.
+const gotSingleInstanceLock = app.requestSingleInstanceLock();
+if (!gotSingleInstanceLock) {
+  app.quit();
+}
+
+if (process.defaultApp) {
+  if (process.argv.length >= 2) {
+    app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL, process.execPath, [
+      path.resolve(process.argv[1]!),
+    ]);
+  }
+} else {
+  app.setAsDefaultProtocolClient(DEEP_LINK_PROTOCOL);
+}
 
 let mainWindow: BrowserWindow | null = null;
 let pythonBridge: PythonBridge | null = null;
 let backendPort: number | null = null;
 let snapshotWatcher: SnapshotWatcher | null = null;
+let stripeThanksServer: StripeThanksServer | null = null;
+
+function focusMainWindow(): void {
+  if (!mainWindow || mainWindow.isDestroyed()) return;
+  if (mainWindow.isMinimized()) mainWindow.restore();
+  mainWindow.show();
+  mainWindow.focus();
+}
 
 type DashboardState =
   | { kind: "starting" }
@@ -101,6 +140,28 @@ captureMain("app_launched", {
 
 registerAnalyticsHandlers({ stateDir });
 registerNotificationsHandlers({ stateDir });
+registerAtomicAuthIpcHandlers({ stateDir });
+
+// Deep link delivery (atomicbot-hermes://...) — macOS uses `open-url`,
+// Windows/Linux receive the URL as an argv entry on a second-instance launch.
+app.on("open-url", (event, url) => {
+  event.preventDefault();
+  handleDeepLink(url, mainWindow);
+  // macOS delivers deep links via `open-url` while the app is already
+  // running; bring the window forward so the user lands back in Hermes
+  // instead of Stripe's tab.
+  focusMainWindow();
+});
+
+app.on("second-instance", (_event, argv) => {
+  const url = argv.find((arg) =>
+    typeof arg === "string" && arg.startsWith(`${DEEP_LINK_PROTOCOL}://`),
+  );
+  if (url) {
+    handleDeepLink(url, mainWindow);
+  }
+  focusMainWindow();
+});
 
 ipcMain.handle("get-port", () => backendPort);
 ipcMain.handle("get-hermes-home", () => stateDir);
@@ -343,6 +404,10 @@ app.whenReady().then(async () => {
   }
   await startDesktopBackend();
   void autoStartLlamacppIfNeeded();
+  // Localhost landing page for post-Stripe-Checkout returns. Failure to bind
+  // (port collision with another Hermes instance) is non-fatal: the renderer
+  // still polls the balance after top-up.
+  stripeThanksServer = await startStripeThanksServer();
 });
 
 app.on("window-all-closed", () => {
@@ -358,6 +423,8 @@ app.on("before-quit", () => {
   killAllTerminals();
   void stopLlamacppServer().catch(() => {});
   pythonBridge?.kill();
+  void stripeThanksServer?.stop().catch(() => {});
+  stripeThanksServer = null;
   void shutdownPosthogMain();
 });
 

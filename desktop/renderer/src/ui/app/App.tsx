@@ -28,8 +28,17 @@ import { scheduleWarmHubSkillsCache } from "../../services/warm-hub-skills-cache
 import { useDesktopLocalWarmup } from "../chat/hooks/useDesktopLocalWarmup";
 import { DesktopWarmupBanner } from "../chat/components/DesktopWarmupBanner";
 import { useAppOpenedEvent } from "@analytics";
+import { useAtomicDeepLink } from "../../hooks/useAtomicDeepLink";
+import { useAtomicTopupPolling } from "../../hooks/useAtomicTopupPolling";
+import { clearPostPaygSuccessNavigate, consumePostPaygSuccessNavigate } from "../../services/atomic-backend-api";
+import {
+  atomicAuthActions,
+  fetchAtomicBalance,
+} from "@store/slices/atomicAuthSlice";
 import { UpdateBanner } from "../updates/UpdateBanner";
 import { LlamacppDownloadBanner } from "../updates/LlamacppDownloadBanner";
+import { LowBalanceBanner } from "../shared/atomic/LowBalanceBanner";
+import { useAtomicAuthBootstrap } from "../shared/atomic/useAtomicAuthBootstrap";
 import a from "./App.module.css";
 
 const SIDEBAR_OPEN_LS_KEY = "hermes:sidebar-open";
@@ -161,6 +170,8 @@ export function FullscreenShell(props: { children: React.ReactNode }) {
 
 export function App() {
   useDesktopLocalWarmup();
+  useAtomicAuthBootstrap();
+  useAtomicTopupPolling();
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
   const onboardingLoaded = useAppSelector((s) => s.onboarding.loaded);
@@ -168,6 +179,25 @@ export function App() {
   const navigate = useNavigate();
   const didAutoNavRef = React.useRef(false);
   const wasRestartingRef = React.useRef(false);
+
+  // Stripe Checkout completes in the browser; localhost thanks page fires
+  // `atomicbot-hermes://stripe-success` (see getStripePaygSuccessUrl). We sync
+  // balance and optionally navigate (e.g. onboarding → /setup/atomic-model via
+  // rememberPostPaygSuccessNavigate).
+  useAtomicDeepLink({
+    onStripeSuccess: () => {
+      const postPayNav = consumePostPaygSuccessNavigate();
+      dispatch(atomicAuthActions.setTopupPending(false));
+      void dispatch(fetchAtomicBalance({ sync: true }));
+      if (postPayNav) {
+        void navigate(postPayNav, { replace: true });
+      }
+    },
+    onStripeCancel: () => {
+      dispatch(atomicAuthActions.setTopupPending(false));
+      clearPostPaygSuccessNavigate();
+    },
+  });
 
   React.useEffect(() => {
     void dispatch(initGatewayState());
@@ -216,6 +246,7 @@ export function App() {
     return (
       <>
       <UpdateBanner />
+      {onboarded ? <LowBalanceBanner /> : null}
       <Routes>
         <Route path="setup/*" element={<SetupPage />} />
         <Route path="/" element={<SidebarLayout />}>
@@ -242,15 +273,6 @@ export function App() {
               }
             />
             <Route path="mcp-servers" element={<McpServersTab />} />
-            <Route
-              path="account"
-              element={
-                <PlaceholderTab
-                  title="Account"
-                  description="Account-level desktop controls are planned but are not available in Hermes yet."
-                />
-              }
-            />
             <Route path="other" element={<OtherTabRoute />} />
           </Route>
         </Route>

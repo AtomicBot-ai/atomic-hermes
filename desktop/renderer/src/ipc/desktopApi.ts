@@ -79,6 +79,18 @@ export type UpdateErrorPayload = {
   message: string;
 };
 
+export type AtomicAuthState = {
+  jwt: string;
+  email: string;
+  userId: string;
+};
+
+export type AtomicDeepLinkPayload = {
+  host: string;
+  pathname: string;
+  params: Record<string, string>;
+};
+
 // eslint-disable-next-line @typescript-eslint/no-empty-interface
 export interface DesktopApi {
   /** Node/Electron `process.platform` when running inside Electron preload. */
@@ -141,6 +153,12 @@ export interface DesktopApi {
 
   // Profile seeding
   seedProfileProvider?(source: string, target: string): Promise<{ ok: boolean; error?: string }>;
+
+  // Atomic auth (PAYG / atomic-bot-backend)
+  getAtomicAuth?(): Promise<AtomicAuthState | null>;
+  setAtomicAuth?(state: AtomicAuthState): Promise<{ ok: boolean }>;
+  clearAtomicAuth?(): Promise<{ ok: boolean }>;
+  onAtomicDeepLink?(cb: (payload: AtomicDeepLinkPayload) => void): () => void;
 }
 
 export const DESKTOP_API_UNAVAILABLE = "Desktop API not available";

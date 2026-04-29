@@ -1,9 +1,9 @@
-/* ── SetupModePage (two-column variant) ── */
+/* ── SetupModePage (three-column variant) ── */
 
 .UiSetupModeCard {
   display: flex;
   flex-direction: column;
-  width: min(520px, 92vw);
+  width: min(820px, 96vw);
   min-width: 320px;
   height: auto;
 }
@@ -14,11 +14,35 @@
 
 .UiSetupModeOptions {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-top: 11px;
   align-items: stretch;
   min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .UiSetupModeOptions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.UiSetupModeOptionCardFeatured {
+  border-color: var(--accent-brand, #b0ff57);
+  box-shadow: 0 0 0 1px var(--accent-brand, #b0ff57);
+}
+
+.UiSetupModeBadge {
+  align-self: flex-start;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: var(--accent-brand, #b0ff57);
+  color: var(--accent-brand-contrast, #06231a);
+  font-weight: 700;
+  margin-bottom: 8px;
 }
 
 .UiSetupModeOptions .UiSetupModeOptionCard {

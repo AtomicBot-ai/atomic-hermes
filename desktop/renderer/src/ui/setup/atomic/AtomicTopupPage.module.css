@@ -1,0 +1,149 @@
+/* Lifted from openclaw UpgradePaywallPopup.module.css (card + inner UI). */
+
+.shell {
+  display: flex;
+  flex-direction: column;
+  width: min(520px, 92vw);
+  min-width: 320px;
+}
+
+.title {
+  text-align: center;
+  font-size: 32px;
+  font-weight: 700;
+  line-height: 32px;
+  margin: 0 0 32px;
+}
+
+.titleAccent {
+  color: #c3ff42;
+}
+
+.titlePlain {
+  color: #fff;
+}
+
+.card {
+  width: 100%;
+  padding: 20px;
+  background:
+    linear-gradient(#171717, #171717) padding-box,
+    linear-gradient(
+        150deg,
+        rgba(255, 255, 255, 0.24) 0%,
+        rgba(255, 255, 255, 0) 50%,
+        rgba(255, 255, 255, 0.24) 100%
+      )
+      border-box;
+  border: 1px solid transparent;
+  border-radius: 24px;
+  box-sizing: border-box;
+  max-height: 390px;
+  display: flex;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.cardInner {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  justify-content: center;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.price {
+  font-size: 28px;
+  line-height: 1;
+  font-weight: 500;
+  color: #fff;
+}
+
+.priceSuffix {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.6);
+}
+
+.featureList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: #fff;
+}
+
+.featureItem svg {
+  color: #34c759;
+  width: 16px;
+  height: 16px;
+}
+
+.footer {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+
+.trialNote {
+  margin-top: 8px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+}
+
+.buttonWrap {
+  margin-top: 10px;
+}
+
+.buttonWrap :global(.UiPrimaryButton) {
+  width: 100%;
+  height: 42px;
+  font-size: 14px;
+  border-radius: 999px;
+}
+
+/* Lifted from openclaw SetupReviewPage pending block (renamed). */
+
+.pending {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 48px 24px;
+  min-height: 300px;
+  text-align: center;
+}
+
+.pendingTitle {
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.pendingHint {
+  font-size: 14px;
+  color: rgba(255, 255, 255, 0.5);
+  max-width: 320px;
+  line-height: 20px;
+}
+
+.pendingBack {
+  margin-top: 8px;
+}

@@ -92,6 +92,7 @@ jobs:
         run: npm run build:all
         env:
           POSTHOG_API_KEY: ${{ secrets.POSTHOG_API_KEY }}
+          VITE_ATOMIC_BACKEND_URL: ${{ secrets.VITE_ATOMIC_BACKEND_URL }}
 
       - name: Determine publish mode
         id: publish-mode

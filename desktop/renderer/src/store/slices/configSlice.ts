@@ -1,4 +1,5 @@
-import { createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
+import { getConfig } from "../../services/api";
 import { readPersistedMode, type HermesSetupMode } from "./mode-persistence";
 
 type ConfigState = {
@@ -14,6 +15,18 @@ const initialState: ConfigState = {
   apiKeyConfigured: false,
   mode: readPersistedMode() ?? "self-managed",
 };
+
+export const syncConfigFromGateway = createAsyncThunk(
+  "config/syncFromGateway",
+  async (port: number) => {
+    const snap = await getConfig(port);
+    return {
+      provider: snap.activeProvider || null,
+      model: snap.activeModel || null,
+      apiKeyConfigured: snap.hasApiKeys,
+    };
+  },
+);
 
 const configSlice = createSlice({
   name: "config",
@@ -34,6 +47,13 @@ const configSlice = createSlice({
     resetConfig() {
       return initialState;
     },
+  },
+  extraReducers: (builder) => {
+    builder.addCase(syncConfigFromGateway.fulfilled, (state, action) => {
+      state.provider = action.payload.provider;
+      state.model = action.payload.model;
+      state.apiKeyConfigured = action.payload.apiKeyConfigured;
+    });
   },
 });
 
