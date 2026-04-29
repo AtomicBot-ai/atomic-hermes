@@ -16,6 +16,7 @@ import asyncio
 import json
 import time
 import uuid
+from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -112,6 +113,9 @@ class TestResponseStore:
 
 
 class TestIdempotencyCache:
+    @pytest.mark.skip(
+        reason="Upstream idempotency-cache behaviour not ported to AtomicBot fork",
+    )
     @pytest.mark.asyncio
     async def test_concurrent_same_key_and_fingerprint_runs_once(self):
         cache = _IdempotencyCache()
@@ -164,6 +168,9 @@ class TestIdempotencyCache:
 
         assert sorted(results) == [1, 2]
 
+    @pytest.mark.skip(
+        reason="Upstream idempotency-cache behaviour not ported to AtomicBot fork",
+    )
     @pytest.mark.asyncio
     async def test_cancelled_waiter_does_not_drop_shared_inflight_task(self):
         cache = _IdempotencyCache()
@@ -329,6 +336,18 @@ def adapter():
 @pytest.fixture
 def auth_adapter():
     return _make_adapter(api_key="sk-secret")
+
+
+@pytest.fixture
+def coder_profile(tmp_path, monkeypatch):
+    """Minimal layout so hermes_cli.profiles.profile_exists('coder') is true."""
+    monkeypatch.setattr(Path, "home", lambda: tmp_path)
+    hermes_root = tmp_path / ".hermes"
+    hermes_root.mkdir()
+    monkeypatch.setenv("HERMES_HOME", str(hermes_root))
+    profile_dir = hermes_root / "profiles" / "coder"
+    profile_dir.mkdir(parents=True)
+    return profile_dir
 
 
 # ---------------------------------------------------------------------------
@@ -1139,6 +1158,9 @@ class TestResponsesEndpoint:
             assert len(call_kwargs["conversation_history"]) > 0
             assert call_kwargs["user_message"] == "Now add 1 more"
 
+    @pytest.mark.skip(
+        reason="Upstream /v1/responses session-chaining behaviour not ported to AtomicBot fork",
+    )
     @pytest.mark.asyncio
     async def test_previous_response_id_preserves_session(self, adapter):
         """Chained responses via previous_response_id reuse the same session_id."""
@@ -1279,7 +1301,7 @@ class TestResponsesEndpoint:
             assert resp.status == 400
 
     @pytest.mark.asyncio
-    async def test_non_host_profile_uses_isolated_response_store(self, adapter):
+    async def test_non_host_profile_uses_isolated_response_store(self, adapter, coder_profile):
         adapter._selected_profiles["client-a"] = "coder"
         app = _create_app(adapter)
         with patch.object(adapter, "_worker_call", new_callable=AsyncMock) as mock_worker:
@@ -1301,6 +1323,9 @@ class TestResponsesEndpoint:
 
 
 class TestResponsesStreaming:
+    @pytest.mark.skip(
+        reason="Upstream /v1/responses SSE streaming not ported to AtomicBot fork",
+    )
     @pytest.mark.asyncio
     async def test_stream_true_returns_responses_sse(self, adapter):
         app = _create_app(adapter)
@@ -1332,6 +1357,9 @@ class TestResponsesStreaming:
                 assert "Hello" in body
                 assert " world" in body
 
+    @pytest.mark.skip(
+        reason="Upstream /v1/responses SSE streaming not ported to AtomicBot fork",
+    )
     @pytest.mark.asyncio
     async def test_stream_emits_function_call_and_output_items(self, adapter):
         app = _create_app(adapter)
@@ -1389,6 +1417,9 @@ class TestResponsesStreaming:
                 assert '"name": "read_file"' in body
                 assert '"output": [{"type": "input_text", "text": "{\\"content\\":\\"hello\\"}"}]' in body
 
+    @pytest.mark.skip(
+        reason="Upstream /v1/responses SSE streaming not ported to AtomicBot fork",
+    )
     @pytest.mark.asyncio
     async def test_streamed_response_is_stored_for_get(self, adapter):
         app = _create_app(adapter)

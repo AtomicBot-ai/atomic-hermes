@@ -520,7 +520,7 @@ class APIServerAdapter(BasePlatformAdapter):
         effective_profile = profile_id or self._host_profile_id
         if effective_profile and effective_profile not in ("default", "custom"):
             return effective_profile
-        return "hermes-agent"
+        return self._model_name or "hermes-agent"
 
     def _cors_headers_for_origin(self, origin: str) -> Optional[Dict[str, str]]:
         """Return CORS headers for an allowed browser origin."""

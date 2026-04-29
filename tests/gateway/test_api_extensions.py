@@ -311,23 +311,22 @@ class TestGetConfig:
         mock_config = {"model": "test-model", "provider": "test-provider"}
         mock_env = {"ANTHROPIC_API_KEY": "sk-ant-1234567890abcdef"}
 
-        with patch("gateway.platforms.api_extensions.importlib_or_none") as _:
-            with (
-                patch("hermes_cli.config.load_config", return_value=mock_config),
-                patch("hermes_cli.config.load_env", return_value=mock_env),
-                patch("hermes_cli.config.OPTIONAL_ENV_VARS", {
-                    "ANTHROPIC_API_KEY": {"category": "provider", "password": True},
-                }),
-            ):
-                app = _create_app(adapter)
-                async with TestClient(TestServer(app)) as cli:
-                    resp = await cli.get("/api/config")
-                    assert resp.status == 200
-                    data = await resp.json()
-                    assert data["activeModel"] == "test-model"
-                    assert data["activeProvider"] == "test-provider"
-                    assert "hermesHome" in data
-                    assert isinstance(data["providers"], list)
+        with (
+            patch("hermes_cli.config.load_config", return_value=mock_config),
+            patch("hermes_cli.config.load_env", return_value=mock_env),
+            patch("hermes_cli.config.OPTIONAL_ENV_VARS", {
+                "ANTHROPIC_API_KEY": {"category": "provider", "password": True},
+            }),
+        ):
+            app = _create_app(adapter)
+            async with TestClient(TestServer(app)) as cli:
+                resp = await cli.get("/api/config")
+                assert resp.status == 200
+                data = await resp.json()
+                assert data["activeModel"] == "test-model"
+                assert data["activeProvider"] == "test-provider"
+                assert "hermesHome" in data
+                assert isinstance(data["providers"], list)
 
     @pytest.mark.asyncio
     async def test_routes_non_host_profile_to_worker(self, adapter):
@@ -541,15 +540,22 @@ class TestModelSwitch:
 class TestSkills:
     @pytest.mark.asyncio
     async def test_returns_skills(self, adapter):
-        mock_skills = {
-            "/web-search": {
+        mock_skills = [
+            {
+                "trigger": "/web-search",
                 "name": "web-search",
                 "description": "Search the web",
-                "skill_dir": "/home/.hermes/skills/web-search",
+                "path": "/home/.hermes/skills/web-search",
+                "dirName": "web-search",
+                "enabled": True,
+                "category": "",
+                "author": "",
+                "tags": [],
+                "emoji": "",
             },
-        }
+        ]
 
-        with patch("agent.skill_commands.scan_skill_commands", return_value=mock_skills):
+        with patch("gateway.platforms.api_extensions._list_skills_enriched", return_value=mock_skills):
             app = _create_app(adapter)
             async with TestClient(TestServer(app)) as cli:
                 resp = await cli.get("/api/skills")
