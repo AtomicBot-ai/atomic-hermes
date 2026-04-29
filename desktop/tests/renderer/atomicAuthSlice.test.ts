@@ -1,14 +1,6 @@
 import { configureStore } from "@reduxjs/toolkit";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock("@ipc/desktopApi", () => ({
-  getDesktopApiOrNull: () => ({
-    getAtomicAuth: vi.fn().mockResolvedValue(null),
-    setAtomicAuth: vi.fn().mockResolvedValue({ ok: true }),
-    clearAtomicAuth: vi.fn().mockResolvedValue({ ok: true }),
-  }),
-}));
-
 const patchConfigMock = vi.fn();
 vi.mock("../../renderer/src/services/api", () => ({
   patchConfig: (...args: unknown[]) => patchConfigMock(...args),
@@ -38,7 +30,9 @@ import {
   applyPaygKey,
   atomicAuthActions,
   atomicAuthReducer,
+  clearAtomicAuthThunk,
   fetchAtomicBalance,
+  restoreAtomicAuth,
   storeAtomicToken,
 } from "../../renderer/src/store/slices/atomicAuthSlice";
 
@@ -47,6 +41,7 @@ function makeStore() {
 }
 
 beforeEach(() => {
+  window.localStorage.clear();
   patchConfigMock.mockReset();
   getPaygKeyMock.mockReset();
   getBalanceMock.mockReset();
@@ -54,11 +49,12 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  window.localStorage.clear();
   vi.clearAllMocks();
 });
 
 describe("atomicAuthSlice", () => {
-  it("storeAtomicToken populates jwt/email/userId", async () => {
+  it("storeAtomicToken populates jwt/email/userId and persists to localStorage", async () => {
     const store = makeStore();
 
     await store
@@ -70,6 +66,55 @@ describe("atomicAuthSlice", () => {
     expect(state.jwt).toBe("j");
     expect(state.email).toBe("e@x");
     expect(state.userId).toBe("u_1");
+
+    const persisted = window.localStorage.getItem("atomic-auth");
+    expect(persisted).not.toBeNull();
+    expect(JSON.parse(persisted as string)).toEqual({
+      jwt: "j",
+      email: "e@x",
+      userId: "u_1",
+    });
+  });
+
+  it("restoreAtomicAuth reads JWT back from localStorage", async () => {
+    window.localStorage.setItem(
+      "atomic-auth",
+      JSON.stringify({ jwt: "jwt-restored", email: "r@x", userId: "u_42" }),
+    );
+
+    const store = makeStore();
+    await store.dispatch(restoreAtomicAuth() as never);
+
+    const state = store.getState().atomicAuth;
+    expect(state.jwt).toBe("jwt-restored");
+    expect(state.email).toBe("r@x");
+    expect(state.userId).toBe("u_42");
+    expect(state.restoreLoaded).toBe(true);
+  });
+
+  it("restoreAtomicAuth tolerates missing or malformed entries", async () => {
+    window.localStorage.setItem("atomic-auth", "not json");
+
+    const store = makeStore();
+    await store.dispatch(restoreAtomicAuth() as never);
+
+    const state = store.getState().atomicAuth;
+    expect(state.jwt).toBeNull();
+    expect(state.restoreLoaded).toBe(true);
+  });
+
+  it("clearAtomicAuthThunk wipes the slice and localStorage entry", async () => {
+    const store = makeStore();
+    await store.dispatch(
+      storeAtomicToken({ jwt: "j", email: "e@x", userId: "u_1" }) as never,
+    );
+    expect(window.localStorage.getItem("atomic-auth")).not.toBeNull();
+
+    await store.dispatch(clearAtomicAuthThunk() as never);
+
+    const state = store.getState().atomicAuth;
+    expect(state.jwt).toBeNull();
+    expect(window.localStorage.getItem("atomic-auth")).toBeNull();
   });
 
   it("applyPaygKey rejects when no JWT is present", async () => {

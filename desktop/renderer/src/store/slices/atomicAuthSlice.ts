@@ -1,11 +1,15 @@
 import { createAsyncThunk, createSlice, type PayloadAction } from "@reduxjs/toolkit";
-import { getDesktopApiOrNull } from "@ipc/desktopApi";
 import {
   atomicBackendApi,
   isUnauthorizedError,
   type BalanceResponse,
   type SubscriptionPlan,
 } from "../../services/atomic-backend-api";
+import {
+  clearAtomicAuth as clearAtomicAuthStorage,
+  readAtomicAuth as readAtomicAuthStorage,
+  writeAtomicAuth as writeAtomicAuthStorage,
+} from "../../services/atomic-auth-storage";
 import { patchConfig } from "../../services/api";
 import type { AppDispatch, RootState } from "../store";
 
@@ -16,7 +20,7 @@ export type AtomicAuthSliceState = {
   subscriptionPlan: SubscriptionPlan | null;
   balance: BalanceResponse | null;
 
-  /** True while restoreAtomicAuth is reading JWT from the main process. */
+  /** True while restoreAtomicAuth is reading JWT from local storage. */
   restoreLoading: boolean;
   restoreLoaded: boolean;
 
@@ -64,7 +68,7 @@ export type StoredTokenPayload = {
 };
 
 /**
- * On app startup: read JWT from main-process safeStorage. Does not call the
+ * On app startup: read JWT from `window.localStorage`. Does not call the
  * backend — that happens lazily in `verifyAtomicAuth` once the user enters
  * a screen that needs a fresh balance / plan.
  */
@@ -72,9 +76,7 @@ export const restoreAtomicAuth = createAsyncThunk<
   { jwt: string; email: string; userId: string } | null,
   void
 >("atomicAuth/restore", async () => {
-  const api = getDesktopApiOrNull();
-  if (!api?.getAtomicAuth) return null;
-  const stored = await api.getAtomicAuth();
+  const stored = readAtomicAuthStorage();
   if (!stored?.jwt || !stored?.userId) return null;
   return { jwt: stored.jwt, email: stored.email ?? "", userId: stored.userId };
 });
@@ -86,24 +88,18 @@ export const storeAtomicToken = createAsyncThunk<
   StoredTokenPayload,
   StoredTokenPayload
 >("atomicAuth/store", async (payload) => {
-  const api = getDesktopApiOrNull();
-  if (api?.setAtomicAuth) {
-    await api.setAtomicAuth({
-      jwt: payload.jwt,
-      email: payload.email,
-      userId: payload.userId,
-    });
-  }
+  writeAtomicAuthStorage({
+    jwt: payload.jwt,
+    email: payload.email,
+    userId: payload.userId,
+  });
   return payload;
 });
 
 export const clearAtomicAuthThunk = createAsyncThunk<void, void>(
   "atomicAuth/clear",
   async () => {
-    const api = getDesktopApiOrNull();
-    if (api?.clearAtomicAuth) {
-      await api.clearAtomicAuth();
-    }
+    clearAtomicAuthStorage();
   },
 );
 

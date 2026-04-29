@@ -37,7 +37,6 @@ import {
   isNotificationsEnabled,
 } from "./notifications";
 import { handleDeepLink } from "./atomic-auth/deep-link";
-import { registerAtomicAuthIpcHandlers } from "./atomic-auth/ipc";
 import {
   startStripeThanksServer,
   type StripeThanksServer,
@@ -140,7 +139,6 @@ captureMain("app_launched", {
 
 registerAnalyticsHandlers({ stateDir });
 registerNotificationsHandlers({ stateDir });
-registerAtomicAuthIpcHandlers({ stateDir });
 
 // Deep link delivery (atomicbot-hermes://...) — macOS uses `open-url`,
 // Windows/Linux receive the URL as an argv entry on a second-instance launch.

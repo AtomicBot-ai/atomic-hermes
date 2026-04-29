@@ -5,12 +5,6 @@ type DashboardState =
   | { kind: "ready"; port: number; url: string }
   | { kind: "failed"; error: string };
 
-type AtomicAuthState = {
-  jwt: string;
-  email: string;
-  userId: string;
-};
-
 type DeepLinkPayload = {
   host: string;
   pathname: string;
@@ -206,13 +200,9 @@ contextBridge.exposeInMainWorld("hermesAPI", {
   seedProfileProvider: async (source: string, target: string): Promise<unknown> =>
     ipcRenderer.invoke("seed-profile-provider", { source, target }),
 
-  // ── Atomic auth (PAYG / atomic-bot-backend) ─────────────────────────
-  getAtomicAuth: (): Promise<AtomicAuthState | null> =>
-    ipcRenderer.invoke("atomic-auth:get"),
-  setAtomicAuth: (state: AtomicAuthState): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke("atomic-auth:set", state),
-  clearAtomicAuth: (): Promise<{ ok: boolean }> =>
-    ipcRenderer.invoke("atomic-auth:clear"),
+  // ── Atomic deep-link (atomicbot-hermes://...) ──────────────────────
+  // JWT persistence lives in window.localStorage on the renderer side; only
+  // the deep-link delivery channel crosses the IPC boundary.
   onAtomicDeepLink: (cb: (payload: DeepLinkPayload) => void): (() => void) =>
     onIpc("atomic:deep-link", cb),
 });

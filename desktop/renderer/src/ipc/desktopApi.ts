@@ -79,12 +79,6 @@ export type UpdateErrorPayload = {
   message: string;
 };
 
-export type AtomicAuthState = {
-  jwt: string;
-  email: string;
-  userId: string;
-};
-
 export type AtomicDeepLinkPayload = {
   host: string;
   pathname: string;
@@ -154,10 +148,9 @@ export interface DesktopApi {
   // Profile seeding
   seedProfileProvider?(source: string, target: string): Promise<{ ok: boolean; error?: string }>;
 
-  // Atomic auth (PAYG / atomic-bot-backend)
-  getAtomicAuth?(): Promise<AtomicAuthState | null>;
-  setAtomicAuth?(state: AtomicAuthState): Promise<{ ok: boolean }>;
-  clearAtomicAuth?(): Promise<{ ok: boolean }>;
+  // Atomic auth (PAYG / atomic-bot-backend) — JWT is persisted in
+  // window.localStorage on the renderer side; only the deep-link channel
+  // crosses the IPC boundary.
   onAtomicDeepLink?(cb: (payload: AtomicDeepLinkPayload) => void): () => void;
 }
 
