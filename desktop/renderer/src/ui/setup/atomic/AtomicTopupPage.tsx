@@ -23,10 +23,10 @@ import {
 import { routes } from "../../app/routes";
 import s from "./AtomicTopupPage.module.css";
 
-const TOPUP_AMOUNT_USD = 10;
+const DEFAULT_TOPUP_AMOUNT_USD = 10;
 
 const FEATURES = [
-  "$10 starter credits to get going",
+  "Starter credits to get going",
   "100+ skills and connected apps",
   "Fully encrypted and secure",
   "24/7 access to your agent",
@@ -55,20 +55,36 @@ export function AtomicTopupPage() {
 
   const [busy, setBusy] = React.useState(false);
   const [payError, setPayError] = React.useState<string | null>(null);
+  const [amountInput, setAmountInput] = React.useState(
+    String(DEFAULT_TOPUP_AMOUNT_USD),
+  );
 
   const postPayModelPath = `${routes.setup}/atomic-model`;
+
+  const parsedAmount = Number(amountInput);
+  const amountUsd = Number.isFinite(parsedAmount) ? parsedAmount : NaN;
+  const amountInvalid =
+    !amountInput.trim() ||
+    !Number.isFinite(amountUsd) ||
+    amountUsd <= 0 ||
+    amountUsd > 1000;
 
   const onPay = React.useCallback(async () => {
     if (!jwt) {
       setPayError("Not authenticated");
       return;
     }
+    if (amountInvalid) {
+      setPayError("Enter a valid top-up amount.");
+      return;
+    }
+
     setBusy(true);
     setPayError(null);
     try {
       rememberPostPaygSuccessNavigate(postPayModelPath);
       const result = await atomicBackendApi.createPaygTopup(jwt, {
-        amountUsd: TOPUP_AMOUNT_USD,
+        amountUsd,
         successUrl: getStripePaygSuccessUrl(),
         cancelUrl: STRIPE_PAYG_CANCEL_URL,
       });
@@ -80,9 +96,7 @@ export function AtomicTopupPage() {
     } finally {
       setBusy(false);
     }
-  }, [jwt, dispatch, postPayModelPath]);
-
-  const priceLabel = `$${TOPUP_AMOUNT_USD}`;
+  }, [jwt, dispatch, postPayModelPath, amountUsd, amountInvalid]);
 
   const dismissPending = React.useCallback(() => {
     clearPostPaygSuccessNavigate();
@@ -121,7 +135,7 @@ export function AtomicTopupPage() {
       <OnboardingHeader
         totalSteps={ATOMIC_PAYG_FLOW.totalSteps}
         activeStep={ATOMIC_PAYG_FLOW.steps.topup}
-        onBack={() => void navigate("../atomic-signin", { relative: "path" })}
+        onBack={() => void navigate("../setup-mode", { relative: "path" })}
         onSkip={() => {
           clearPostPaygSuccessNavigate();
           void navigate("../atomic-model", { relative: "path" });
@@ -139,8 +153,34 @@ export function AtomicTopupPage() {
           <div className={s.card}>
             <div className={s.cardInner}>
               <div className={s.priceRow}>
-                <span className={s.price}>{priceLabel}</span>
-                <span className={s.priceSuffix}>starter pack</span>
+                <span className={s.price}>Choose amount</span>
+                <span className={s.priceSuffix}>one-time top-up</span>
+              </div>
+
+              <div className={s.amountSection}>
+                <label htmlFor="atomic-topup-amount" className={s.amountLabel}>
+                  Top-up amount (USD)
+                </label>
+                <div className={s.amountInputWrap}>
+                  <span className={s.amountPrefix}>$</span>
+                  <input
+                    id="atomic-topup-amount"
+                    className={s.amountInput}
+                    inputMode="decimal"
+                    autoComplete="off"
+                    value={amountInput}
+                    onChange={(e) => {
+                      setAmountInput(e.target.value);
+                      if (payError) setPayError(null);
+                    }}
+                    placeholder="10"
+                    aria-invalid={amountInvalid}
+                  />
+                </div>
+                <div className={s.amountHint}>
+                  Pay only for what you want to add. You can top up again
+                  anytime.
+                </div>
               </div>
 
               <ul className={s.featureList}>
@@ -155,16 +195,16 @@ export function AtomicTopupPage() {
               <div className={s.footer}>
                 <div className={s.buttonWrap}>
                   <PrimaryButton
-                    disabled={busy || !jwt}
+                    disabled={busy || !jwt || amountInvalid}
                     loading={busy}
                     onClick={() => void onPay()}
                   >
-                    Top up $10
+                    Continue to payment
                   </PrimaryButton>
                 </div>
 
                 <div className={s.trialNote}>
-                  One-time top-up. Manage credits anytime in settings.
+                  One-time top-up. No subscription, no commitments.
                 </div>
               </div>
             </div>

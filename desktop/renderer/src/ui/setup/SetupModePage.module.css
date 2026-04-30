@@ -38,11 +38,12 @@
   letter-spacing: 0.04em;
   text-transform: uppercase;
   padding: 2px 8px;
-  border-radius: 999px;
+  border-radius: 5px;
   background: var(--accent-brand, #b0ff57);
   color: var(--accent-brand-contrast, #06231a);
   font-weight: 700;
   margin-bottom: 8px;
+  opacity: 0.7;
 }
 
 .UiSetupModeOptions .UiSetupModeOptionCard {
@@ -60,6 +61,11 @@
   min-height: 0;
   display: flex;
   flex-direction: column;
+}
+
+.UiSetupModeRow {
+  display: flex;
+  justify-content: space-between;
 }
 
 .UiSetupModeCardFooter {
@@ -96,12 +102,6 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 22px;
-  margin-bottom: 5px;
-}
-
-.UiSetupModeDesc {
-  font-size: 13px;
-  color: var(--muted3);
   margin-bottom: 16px;
 }
 
@@ -154,4 +154,39 @@
 .UiSetupModeOptionCardComingSoon {
   opacity: 0.65;
   pointer-events: none;
+}
+
+.UiSetupModeStatus {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.UiSetupModeStatusSuccess {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.UiSetupModeStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #34c759;
+}
+
+.UiSetupModeError {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #ff6b6b;
 }
