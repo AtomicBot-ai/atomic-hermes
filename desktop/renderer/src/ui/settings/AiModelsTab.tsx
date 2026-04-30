@@ -1,8 +1,14 @@
 import React from "react";
 import { useAppDispatch, useAppSelector } from "@store/hooks";
 import { switchMode } from "@store/slices/auth/mode-switch";
-import { MODE_LABELS, type HermesSetupMode } from "@store/slices/mode-persistence";
-import { fetchLlamacppServerStatus, stopLlamacppServer } from "@store/slices/llamacppSlice";
+import {
+  MODE_LABELS,
+  type HermesSetupMode,
+} from "@store/slices/mode-persistence";
+import {
+  fetchLlamacppServerStatus,
+  stopLlamacppServer,
+} from "@store/slices/llamacppSlice";
 import { RichSelect, type RichOption } from "../setup/RichSelect";
 import { getModelTier, TIER_INFO } from "../setup/model-presentation";
 import { PROVIDERS, resolveProviderIconUrl } from "../setup/providers";
@@ -20,10 +26,11 @@ import { AtomicAccountTab } from "./atomic/AtomicAccountTab";
 import { AtomicSignInPrompt } from "../shared/atomic/AtomicSignInPrompt";
 import s from "./AiModelsTab.module.css";
 
-function getProviderBadge(provider: (typeof PROVIDERS)[number]):
-  | { text: string; variant: string }
-  | undefined {
-  if (provider.recommended) return { text: "Recommended", variant: "recommended" };
+function getProviderBadge(
+  provider: (typeof PROVIDERS)[number],
+): { text: string; variant: string } | undefined {
+  if (provider.recommended)
+    return { text: "Recommended", variant: "recommended" };
   if (provider.popular) return { text: "Popular", variant: "popular" };
   if (provider.localModels) return { text: "Local", variant: "local" };
   return undefined;
@@ -37,7 +44,11 @@ function ConnectionToggle(props: {
   const active = props.activeMode;
   return (
     <div className={s.connectionSection}>
-      <div className={s.connectionSelector} role="radiogroup" aria-label="Connection mode">
+      <div
+        className={s.connectionSelector}
+        role="radiogroup"
+        aria-label="Connection mode"
+      >
         <button
           type="button"
           className={`${s.connectionOption}${active === "atomic-payg" ? ` ${s["connectionOption--active"]}` : ""}`}
@@ -134,9 +145,12 @@ export function AiModelsTab() {
     void loadModels(selectedProvider);
   }, [loadModels, selectedProvider, setSelectedModel]);
 
-  const provider = PROVIDERS.find((item) => item.id === selectedProvider) ?? null;
+  const provider =
+    PROVIDERS.find((item) => item.id === selectedProvider) ?? null;
   const effectiveConfiguredModel =
-    selectedProvider && selectedProvider === configSnap?.activeProvider ? configuredModel : "";
+    selectedProvider && selectedProvider === configSnap?.activeProvider
+      ? configuredModel
+      : "";
   const selectedModelValue = selectedModel || effectiveConfiguredModel || null;
 
   const providerOptions = React.useMemo<RichOption<string>[]>(
@@ -161,7 +175,9 @@ export function AiModelsTab() {
         return {
           value: modelId,
           label: modelId,
-          badge: tier ? { text: TIER_INFO[tier].label, variant: tier } : undefined,
+          badge: tier
+            ? { text: TIER_INFO[tier].label, variant: tier }
+            : undefined,
           description: tier ? TIER_INFO[tier].description : undefined,
         };
       });
@@ -200,21 +216,54 @@ export function AiModelsTab() {
       await loadModels(selectedProvider);
     }
     return saved;
-  }, [canEditConfig, loadModels, oauthStep, provider, saveProviderConfig, selectedProvider, startOAuth]);
+  }, [
+    canEditConfig,
+    loadModels,
+    oauthStep,
+    provider,
+    saveProviderConfig,
+    selectedProvider,
+    startOAuth,
+  ]);
 
   React.useEffect(() => {
     if (tabMode === "atomic-payg") return;
-    if (!selectedProvider || isLoadingModels || isSavingModel || modelOptions.length === 0) return;
+    if (
+      !selectedProvider ||
+      isLoadingModels ||
+      isSavingModel ||
+      modelOptions.length === 0
+    )
+      return;
     if (selectedModelValue?.startsWith(LLAMACPP_PRIMARY_PREFIX)) return;
-    if (selectedModelValue && modelOptions.some((option) => option.value === selectedModelValue)) return;
+    if (
+      selectedModelValue &&
+      modelOptions.some((option) => option.value === selectedModelValue)
+    )
+      return;
     const fallbackModel = modelOptions[0]?.value;
     if (!fallbackModel) return;
     setSelectedModel(fallbackModel);
     void saveModelSelection(fallbackModel, selectedProvider);
-  }, [isLoadingModels, isSavingModel, modelOptions, saveModelSelection, selectedModelValue, selectedProvider, setSelectedModel, tabMode]);
+  }, [
+    isLoadingModels,
+    isSavingModel,
+    modelOptions,
+    saveModelSelection,
+    selectedModelValue,
+    selectedProvider,
+    setSelectedModel,
+    tabMode,
+  ]);
 
   React.useEffect(() => {
-    if (tabMode !== "atomic-payg" || !jwt || modeSwitchBusy || authMode !== "atomic-payg") return;
+    if (
+      tabMode !== "atomic-payg" ||
+      !jwt ||
+      modeSwitchBusy ||
+      authMode !== "atomic-payg"
+    )
+      return;
     if (selectedProvider !== "openrouter") {
       setSelectedProvider("openrouter");
     }
@@ -281,18 +330,28 @@ export function AiModelsTab() {
       return selectedModelValue || null;
     }
     if (isLlamacppProvider) {
-      const localModel = llamacpp.models.find((m) => m.id === llamacpp.activeModelId);
+      const localModel = llamacpp.models.find(
+        (m) => m.id === llamacpp.activeModelId,
+      );
       if (localModel?.name) return localModel.name;
-      if (llamacpp.activeModelId) return formatModelIdForStatusBar(llamacpp.activeModelId);
+      if (llamacpp.activeModelId)
+        return formatModelIdForStatusBar(llamacpp.activeModelId);
       return null;
     }
     return selectedModelValue || null;
-  }, [authMode, isLlamacppProvider, llamacpp.activeModelId, llamacpp.models, selectedModelValue]);
+  }, [
+    authMode,
+    isLlamacppProvider,
+    llamacpp.activeModelId,
+    llamacpp.models,
+    selectedModelValue,
+  ]);
 
   const runningModelLabel = React.useMemo(() => {
     const uiKey = resolveLlamacppServerUiKey(llamacpp.serverStatus);
     if (uiKey === "stopped") return "None";
-    const rawId = llamacpp.serverStatus?.activeModelId ?? llamacpp.activeModelId ?? null;
+    const rawId =
+      llamacpp.serverStatus?.activeModelId ?? llamacpp.activeModelId ?? null;
     if (!rawId) return "None";
     const localModel = llamacpp.models.find((m) => m.id === rawId);
     if (localModel?.name) return localModel.name;
@@ -325,7 +384,9 @@ export function AiModelsTab() {
       {modeSwitchBusy && (
         <div className={s.modeSwitchLoader} role="status" aria-live="polite">
           <div className={s.modeSwitchSpinner} aria-hidden="true" />
-          <div className={s.modeSwitchLoaderText}>Switching to {MODE_LABELS[tabMode]}...</div>
+          <div className={s.modeSwitchLoaderText}>
+            Switching to {MODE_LABELS[tabMode]}...
+          </div>
         </div>
       )}
 
@@ -339,7 +400,8 @@ export function AiModelsTab() {
               <div className={s.comingSoonBody}>
                 <div className={s.comingSoonTitle}>Coming Soon</div>
                 <div className={s.comingSoonDesc}>
-                  Local models support for this platform is under development. Stay tuned!
+                  Local models support for this platform is under development.
+                  Stay tuned!
                 </div>
               </div>
             </div>
@@ -374,7 +436,12 @@ export function AiModelsTab() {
                       ? "Enter API key to choose a model"
                       : "Select model..."
                 }
-                disabled={!selectedProvider || isLoadingModels || isSavingModel || modelOptions.length === 0}
+                disabled={
+                  !selectedProvider ||
+                  isLoadingModels ||
+                  isSavingModel ||
+                  modelOptions.length === 0
+                }
                 disabledStyles={!selectedProvider || modelOptions.length === 0}
                 onlySelectedIcon
               />
@@ -422,7 +489,18 @@ export function AiModelsTab() {
               <div className={s.dropdownRow}>
                 <div className={s.dropdownGroup}>
                   <div className={s.dropdownLabel}>Provider</div>
-                  <div style={{ fontSize: 14, color: "#fff", paddingTop: 6 }}>Atomic</div>
+                  <div
+                    style={{
+                      flex: 1,
+                      display: "flex",
+                      alignItems: "center",
+                      fontSize: 14,
+                      color: "#fff",
+                      paddingTop: 6,
+                    }}
+                  >
+                    Atomic
+                  </div>
                 </div>
 
                 <div className={s.dropdownGroup}>
@@ -451,9 +529,12 @@ export function AiModelsTab() {
                 </div>
               </div>
 
-              {selectedProvider === "openrouter" && modelOptions.length === 0 && !isLoadingModels ? (
+              {selectedProvider === "openrouter" &&
+              modelOptions.length === 0 &&
+              !isLoadingModels ? (
                 <div className={s.noModelsHint}>
-                  Models could not be loaded. Check your connection or try reloading settings.
+                  Models could not be loaded. Check your connection or try
+                  reloading settings.
                 </div>
               ) : null}
 

@@ -18,7 +18,8 @@ const DEPLETED_THRESHOLD_USD = 0.05;
 const DEFAULT_TOPUP_USD = "10.00";
 
 function openExternal(url: string): void {
-  const api = (window as { hermesAPI?: { openExternal?: (u: string) => void } }).hermesAPI;
+  const api = (window as { hermesAPI?: { openExternal?: (u: string) => void } })
+    .hermesAPI;
   if (api?.openExternal) {
     void api.openExternal(url);
     return;
@@ -33,7 +34,13 @@ function formatDollars(value: number | null | undefined): string {
 
 function LogOutIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      xmlns="http://www.w3.org/2000/svg"
+    >
       <path
         d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9"
         stroke="currentColor"
@@ -51,7 +58,9 @@ export function AtomicAccountTab(props: { port: number }) {
   const jwt = useAppSelector((state) => state.atomicAuth.jwt);
   const email = useAppSelector((state) => state.atomicAuth.email);
   const balance = useAppSelector((state) => state.atomicAuth.balance);
-  const balanceLoading = useAppSelector((state) => state.atomicAuth.balanceLoading);
+  const balanceLoading = useAppSelector(
+    (state) => state.atomicAuth.balanceLoading,
+  );
   const balanceError = useAppSelector((state) => state.atomicAuth.balanceError);
   const topupBusy = useAppSelector((state) => state.atomicAuth.topupBusy);
   const topupError = useAppSelector((state) => state.atomicAuth.topupError);
@@ -69,7 +78,9 @@ export function AtomicAccountTab(props: { port: number }) {
 
   const remaining = balance?.payg?.remaining;
   const balanceDepleted =
-    balance !== null && remaining != null && remaining <= DEPLETED_THRESHOLD_USD;
+    balance !== null &&
+    remaining != null &&
+    remaining <= DEPLETED_THRESHOLD_USD;
 
   const handleTopUp = React.useCallback(async () => {
     if (!jwt) return;
@@ -108,7 +119,10 @@ export function AtomicAccountTab(props: { port: number }) {
         env: { OPENROUTER_API_KEY: "" },
       });
     } catch (err) {
-      console.warn("[AtomicAccountTab] clearing OPENROUTER_API_KEY failed:", err);
+      console.warn(
+        "[AtomicAccountTab] clearing OPENROUTER_API_KEY failed:",
+        err,
+      );
     }
   }, [dispatch, props.port]);
 
@@ -128,7 +142,7 @@ export function AtomicAccountTab(props: { port: number }) {
           >
             {heroAmount}
           </span>
-          <div className={s.balanceRow}>
+          {/* <div className={s.balanceRow}>
             {balanceLoading ? (
               <span className={s.balancePollingHint}>
                 <span className={s.balancePollingSpinner} aria-hidden="true" />
@@ -137,14 +151,16 @@ export function AtomicAccountTab(props: { port: number }) {
             ) : (
               <span className={s.balanceLabel}>Remaining credits</span>
             )}
-          </div>
+          </div> */}
         </div>
 
         {balanceDepleted && (
           <div className={s.depletedCard}>
             <div className={s.depletedBody}>
               <div className={s.depletedTitle}>No credits left</div>
-              <div className={s.depletedSubtitle}>Top up to continue using AI.</div>
+              <div className={s.depletedSubtitle}>
+                Top up to continue using AI.
+              </div>
             </div>
             <button
               type="button"
@@ -187,7 +203,11 @@ export function AtomicAccountTab(props: { port: number }) {
         {topupPending && (
           <div className={s.topUpPendingRow}>
             Waiting for payment to complete in your browser…
-            <button type="button" className={s.topUpPendingAction} onClick={refreshBalance}>
+            <button
+              type="button"
+              className={s.topUpPendingAction}
+              onClick={refreshBalance}
+            >
               Refresh balance
             </button>
           </div>

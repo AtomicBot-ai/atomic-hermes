@@ -1,18 +1,27 @@
 import React from "react";
-import { GlassCard, PrimaryButton, SecondaryButton, SplashLogo } from "@shared/kit";
+import {
+  GlassCard,
+  PrimaryButton,
+  SecondaryButton,
+  SplashLogo,
+} from "@shared/kit";
 import { InfoIcon } from "@shared/kit/icons";
 import { useOnboardingStepEvent } from "@analytics";
 import { OnboardingHeader } from "./OnboardingHeader";
 import { useSetup } from "./setup-context";
 import s from "./SetupModePage.module.css";
+import { ATOMIC_PAYG_FLOW } from "./onboarding-steps";
 
 export type SetupModeChoice = "api-keys" | "local-model" | "atomic-payg";
 
 export function SetupModePage(props: {
   localModelComingSoon: boolean;
+  atomicBusy?: boolean;
+  atomicError?: string | null;
+  atomicSignedInEmail?: string | null;
   onSelectApiKeys: () => void;
   onSelectLocalModels: () => void;
-  onSelectAtomicPayg: () => void;
+  onSelectAtomicPayg: () => Promise<void> | void;
   onBack: () => void;
 }) {
   useOnboardingStepEvent("setup_mode", null);
@@ -20,11 +29,18 @@ export function SetupModePage(props: {
 
   return (
     <>
-      <OnboardingHeader totalSteps={0} activeStep={0} onBack={props.onBack} onSkip={skip} />
+      <OnboardingHeader
+        totalSteps={ATOMIC_PAYG_FLOW.totalSteps}
+        activeStep={ATOMIC_PAYG_FLOW.steps.setupMode}
+        onBack={props.onBack}
+        onSkip={skip}
+      />
       <GlassCard className={s.UiSetupModeCard}>
         <div className="UiSectionContent">
           <div>
-            <div className="UiSectionTitle">Choose how to run Atomic Hermes</div>
+            <div className="UiSectionTitle">
+              Choose how to run Atomic Hermes
+            </div>
             <div className="UiSectionSubtitle">
               Pick what works for you — you can switch anytime in settings.
             </div>
@@ -38,23 +54,54 @@ export function SetupModePage(props: {
                 <div className={s.UiSetupModeIcon}>
                   <SplashLogo size={35} />
                 </div>
-                <div className={s.UiSetupModeBadge}>Recommended</div>
-                <div className={s.UiSetupModeTitle}>Sign in with Atomic</div>
-                <div className={s.UiSetupModeDesc}>Pay-as-you-go credits</div>
+                <div className={s.UiSetupModeTitle}>Pay as you go</div>
                 <ul className={s.UiSetupModeFeatures}>
-                  <li>Sign in with Google in seconds</li>
-                  <li>OpenRouter access via Atomic credits</li>
-                  <li>Top up only when needed</li>
+                  <li>Start in seconds</li>
+                  <li>Access to 100+ AI models</li>
+                  <li>Full control over spend</li>
                 </ul>
+
+                {props.atomicBusy ? (
+                  <div className={s.UiSetupModeStatus}>
+                    <span className="UiButtonSpinner" aria-hidden="true" />
+
+                    <span>
+                      {props.atomicSignedInEmail
+                        ? `Configuring account for ${props.atomicSignedInEmail}...`
+                        : "Waiting for Google sign-in..."}
+                    </span>
+                  </div>
+                ) : null}
+
+                {props.atomicSignedInEmail && !props.atomicBusy ? (
+                  <div className={s.UiSetupModeStatusSuccess}>
+                    <span
+                      className={s.UiSetupModeStatusDot}
+                      aria-hidden="true"
+                    />
+
+                    <span>Signed in as {props.atomicSignedInEmail}</span>
+                  </div>
+                ) : null}
+
+                {props.atomicError ? (
+                  <div className={s.UiSetupModeError}>{props.atomicError}</div>
+                ) : null}
               </div>
               <div className={s.UiSetupModeCardFooter}>
-                <PrimaryButton size="sm" onClick={props.onSelectAtomicPayg}>
-                  Continue with Atomic
+                <PrimaryButton
+                  size="sm"
+                  onClick={props.onSelectAtomicPayg}
+                  disabled={props.atomicBusy}
+                >
+                  {props.atomicBusy ? "Connecting..." : "Continue with Google"}
                 </PrimaryButton>
               </div>
             </div>
 
-            <div className={`UiSectionCard UiSectionCardGreen ${s.UiSetupModeOptionCard}`}>
+            <div
+              className={`UiSectionCard UiSectionCardGreen ${s.UiSetupModeOptionCard}`}
+            >
               <div className={s.UiSetupModeCardBody}>
                 <div className={s.UiSetupModeIcon}>
                   <span style={{ fontSize: 24 }} aria-hidden="true">
@@ -62,7 +109,6 @@ export function SetupModePage(props: {
                   </span>
                 </div>
                 <div className={s.UiSetupModeTitle}>Your own API keys</div>
-                <div className={s.UiSetupModeDesc}>Pay providers directly</div>
                 <ul className={s.UiSetupModeFeatures}>
                   <li>OpenRouter, Ollama, Anthropic and others</li>
                   <li>Full control over models and spending</li>
@@ -70,9 +116,9 @@ export function SetupModePage(props: {
                 </ul>
               </div>
               <div className={s.UiSetupModeCardFooter}>
-                <SecondaryButton size="sm" onClick={props.onSelectApiKeys}>
+                <PrimaryButton size="sm" onClick={props.onSelectApiKeys}>
                   Connect API keys
-                </SecondaryButton>
+                </PrimaryButton>
               </div>
             </div>
 
@@ -86,15 +132,21 @@ export function SetupModePage(props: {
                   </span>
                 </div>
                 <div className={s.UiSetupModeTitle}>Free local models</div>
-                <div className={s.UiSetupModeDesc}>Fully private</div>
                 <ul className={s.UiSetupModeFeatures}>
                   <li>Works offline</li>
                   <li>Your data never leaves your machine</li>
                   <li className={s.UiSetupModeFeatureNote}>
-                    <span className={s.UiSetupModeFeatureNoteIcon} aria-hidden="true">
+                    <span
+                      className={s.UiSetupModeFeatureNoteIcon}
+                      aria-hidden="true"
+                    >
                       <InfoIcon />
                     </span>
-                    <span>{props.localModelComingSoon ? "macOS only for now" : "macOS only"}</span>
+                    <span>
+                      {props.localModelComingSoon
+                        ? "macOS only for now"
+                        : "macOS only"}
+                    </span>
                   </li>
                 </ul>
               </div>
@@ -104,9 +156,9 @@ export function SetupModePage(props: {
                     Coming soon
                   </SecondaryButton>
                 ) : (
-                  <SecondaryButton size="sm" onClick={props.onSelectLocalModels}>
+                  <PrimaryButton size="sm" onClick={props.onSelectLocalModels}>
                     Set up local models
-                  </SecondaryButton>
+                  </PrimaryButton>
                 )}
               </div>
             </div>

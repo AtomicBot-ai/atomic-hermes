@@ -1,5 +1,12 @@
 import React from "react";
-import { Navigate, Outlet, Route, Routes, useNavigate, useSearchParams } from "react-router-dom";
+import {
+  Navigate,
+  Outlet,
+  Route,
+  Routes,
+  useNavigate,
+  useSearchParams,
+} from "react-router-dom";
 import { Brand, SpinningSplashLogo, PoweredBanner } from "@shared/kit";
 import { useAppDispatch, useAppSelector } from "@store/hooks";
 import { initGatewayState } from "@store/slices/gatewaySlice";
@@ -30,7 +37,10 @@ import { DesktopWarmupBanner } from "../chat/components/DesktopWarmupBanner";
 import { useAppOpenedEvent } from "@analytics";
 import { useAtomicDeepLink } from "../../hooks/useAtomicDeepLink";
 import { useAtomicTopupPolling } from "../../hooks/useAtomicTopupPolling";
-import { clearPostPaygSuccessNavigate, consumePostPaygSuccessNavigate } from "../../services/atomic-backend-api";
+import {
+  clearPostPaygSuccessNavigate,
+  consumePostPaygSuccessNavigate,
+} from "../../services/atomic-backend-api";
 import {
   atomicAuthActions,
   fetchAtomicBalance,
@@ -59,7 +69,9 @@ function OtherTabRoute() {
   return (
     <>
       {error && (
-        <div style={{ color: "#ff6b6b", fontSize: 13, padding: "8px 0" }}>{error}</div>
+        <div style={{ color: "#ff6b6b", fontSize: 13, padding: "8px 0" }}>
+          {error}
+        </div>
       )}
       <OtherTab onError={setError} />
     </>
@@ -69,7 +81,14 @@ function OtherTabRoute() {
 function LoadingScreen() {
   return (
     <div className={a.UiCentered}>
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 18 }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 18,
+        }}
+      >
         <SpinningSplashLogo />
         <div className="UiLoadingTitle">Starting Atomic Hermes...</div>
         <div className="UiLoadingSubtitle">Initializing backend services</div>
@@ -85,7 +104,8 @@ function ErrorScreen({ error }: { error: string }) {
       <div className={a.UiCard}>
         <div className={a.UiCardTitle}>Atomic Hermes failed to start</div>
         <div className={a.UiCardSubtitle}>
-          The backend process did not become available. Check the logs for details.
+          The backend process did not become available. Check the logs for
+          details.
         </div>
         <pre>{error || "No details."}</pre>
       </div>
@@ -110,7 +130,9 @@ function ChatRoute() {
 
 function SidebarLayout() {
   useAppOpenedEvent();
-  const [sidebarOpen, setSidebarOpen] = React.useState(readSidebarOpenFromStorage);
+  const [sidebarOpen, setSidebarOpen] = React.useState(
+    readSidebarOpenFromStorage,
+  );
 
   React.useEffect(() => {
     try {
@@ -150,8 +172,20 @@ export function FullscreenTopbar(props: {
           className={a.UiTopbarBackButton}
           onClick={() => void navigate(-1)}
         >
-          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14" fill="none">
-            <path d="M12.25 7H1.75M1.75 7L6.125 2.625M1.75 7L6.125 11.375" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+          <svg
+            xmlns="http://www.w3.org/2000/svg"
+            width="14"
+            height="14"
+            viewBox="0 0 14 14"
+            fill="none"
+          >
+            <path
+              d="M12.25 7H1.75M1.75 7L6.125 2.625M1.75 7L6.125 11.375"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
           </svg>
           <span>Back</span>
         </button>
@@ -161,11 +195,7 @@ export function FullscreenTopbar(props: {
 }
 
 export function FullscreenShell(props: { children: React.ReactNode }) {
-  return (
-    <div className={a.UiAppShell}>
-      {props.children}
-    </div>
-  );
+  return <div className={a.UiAppShell}>{props.children}</div>;
 }
 
 export function App() {
@@ -175,7 +205,7 @@ export function App() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
   const onboardingLoaded = useAppSelector((s) => s.onboarding.loaded);
-  const onboarded = useAppSelector((s) => s.onboarding.onboarded);
+  const onboarded = useAppSelector((s) => false);
   const navigate = useNavigate();
   const didAutoNavRef = React.useRef(false);
   const wasRestartingRef = React.useRef(false);
@@ -245,41 +275,50 @@ export function App() {
   if (state?.kind === "ready") {
     return (
       <>
-      <UpdateBanner />
-      {onboarded ? <LowBalanceBanner /> : null}
-      <Routes>
-        <Route path="setup/*" element={<SetupPage />} />
-        <Route path="/" element={<SidebarLayout />}>
-          <Route index element={<Navigate to={routes.chat} replace />} />
-          <Route path="chat" element={<ChatRoute />} />
-          <Route path="terminal" element={<TerminalPage />} />
-          <Route path="files" element={<FilesPage />} />
-          <Route path="skills" element={<Navigate to={routes.settingsSkills} replace />} />
-          <Route path="skills/edit/:name" element={<SkillEditor />} />
-          <Route path="settings" element={<SettingsPage state={state} />}>
-            <Route index element={<SettingsIndexRedirect />} />
-            <Route path="ai-providers" element={<Navigate to={routes.settingsModels} replace />} />
-            <Route path="ai-models" element={<AiModelsTab />} />
-            <Route path="local-models" element={<Navigate to={routes.settingsModels} replace />} />
-            <Route path="skills" element={<SkillsSettingsTab />} />
-            <Route path="messengers" element={<ConnectorsTab />} />
+        <UpdateBanner />
+        {onboarded ? <LowBalanceBanner /> : null}
+        <Routes>
+          <Route path="setup/*" element={<SetupPage />} />
+          <Route path="/" element={<SidebarLayout />}>
+            <Route index element={<Navigate to={routes.chat} replace />} />
+            <Route path="chat" element={<ChatRoute />} />
+            <Route path="terminal" element={<TerminalPage />} />
+            <Route path="files" element={<FilesPage />} />
             <Route
-              path="voice"
-              element={
-                <PlaceholderTab
-                  title="Voice"
-                  description="Speech and transcription controls are reserved for a future Hermes desktop update."
-                />
-              }
+              path="skills"
+              element={<Navigate to={routes.settingsSkills} replace />}
             />
-            <Route path="mcp-servers" element={<McpServersTab />} />
-            <Route path="other" element={<OtherTabRoute />} />
+            <Route path="skills/edit/:name" element={<SkillEditor />} />
+            <Route path="settings" element={<SettingsPage state={state} />}>
+              <Route index element={<SettingsIndexRedirect />} />
+              <Route
+                path="ai-providers"
+                element={<Navigate to={routes.settingsModels} replace />}
+              />
+              <Route path="ai-models" element={<AiModelsTab />} />
+              <Route
+                path="local-models"
+                element={<Navigate to={routes.settingsModels} replace />}
+              />
+              <Route path="skills" element={<SkillsSettingsTab />} />
+              <Route path="messengers" element={<ConnectorsTab />} />
+              <Route
+                path="voice"
+                element={
+                  <PlaceholderTab
+                    title="Voice"
+                    description="Speech and transcription controls are reserved for a future Hermes desktop update."
+                  />
+                }
+              />
+              <Route path="mcp-servers" element={<McpServersTab />} />
+              <Route path="other" element={<OtherTabRoute />} />
+            </Route>
           </Route>
-        </Route>
-        <Route path="dashboard" element={<DashboardPage />} />
-        <Route path="logs" element={<LogsPage />} />
-        <Route path="*" element={<Navigate to={routes.chat} replace />} />
-      </Routes>
+          <Route path="dashboard" element={<DashboardPage />} />
+          <Route path="logs" element={<LogsPage />} />
+          <Route path="*" element={<Navigate to={routes.chat} replace />} />
+        </Routes>
       </>
     );
   }
