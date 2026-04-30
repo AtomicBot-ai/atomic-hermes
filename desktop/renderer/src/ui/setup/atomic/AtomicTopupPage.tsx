@@ -9,7 +9,10 @@ import {
 } from "@shared/kit";
 import { useOnboardingStepEvent } from "@analytics";
 import { useAppDispatch, useAppSelector } from "@store/hooks";
-import { atomicAuthActions } from "@store/slices/atomicAuthSlice";
+import {
+  atomicAuthActions,
+  clearAtomicAuthThunk,
+} from "@store/slices/atomicAuthSlice";
 import { OnboardingHeader } from "../OnboardingHeader";
 import { useSetup } from "../setup-context";
 import { ATOMIC_PAYG_FLOW } from "../onboarding-steps";
@@ -23,16 +26,12 @@ import {
 import { routes } from "../../app/routes";
 import s from "./AtomicTopupPage.module.css";
 
-const DEFAULT_TOPUP_AMOUNT_USD = 10;
+const DEFAULT_TOPUP_AMOUNT_USD = 25;
 
 const FEATURES = [
-  "Starter credits to get going",
-  "100+ skills and connected apps",
-  "Fully encrypted and secure",
-  "24/7 access to your agent",
-  "1000+ AI models via OpenRouter",
-  "Priority support",
-  "No subscription, no commitments",
+  "Credits never expire",
+  "Top up anytime, no subscription",
+  "Access to 1000+ AI models",
 ] as const;
 
 function openExternal(url: string): void {
@@ -43,6 +42,27 @@ function openExternal(url: string): void {
     return;
   }
   window.open(url, "_blank");
+}
+
+function LockIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 16 16"
+      fill="none"
+      aria-hidden="true"
+    >
+      <path
+        d="M5.333 7V5.667a2.667 2.667 0 1 1 5.334 0V7M4.667 7h6.666c.737 0 1.334.597 1.334 1.333v4c0 .737-.597 1.334-1.334 1.334H4.667a1.333 1.333 0 0 1-1.334-1.334v-4c0-.736.597-1.333 1.334-1.333Z"
+        stroke="currentColor"
+        strokeWidth="1.333"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function AtomicTopupPage() {
@@ -58,6 +78,8 @@ export function AtomicTopupPage() {
   const [amountInput, setAmountInput] = React.useState(
     String(DEFAULT_TOPUP_AMOUNT_USD),
   );
+
+  const isPending = topupPending || busy;
 
   const postPayModelPath = `${routes.setup}/atomic-model`;
 
@@ -103,39 +125,17 @@ export function AtomicTopupPage() {
     dispatch(atomicAuthActions.setTopupPending(false));
   }, [dispatch]);
 
-  if (topupPending) {
-    return (
-      <>
-        <OnboardingHeader
-          totalSteps={ATOMIC_PAYG_FLOW.totalSteps}
-          activeStep={ATOMIC_PAYG_FLOW.steps.topup}
-          onBack={dismissPending}
-          onSkip={ctx.skip}
-        />
-        <GlassCard className={s.shell}>
-          <div className={s.pending}>
-            <span className="UiButtonSpinner" aria-hidden="true" />
-            <div className={s.pendingTitle}>Waiting for payment...</div>
-            <div className={s.pendingHint}>
-              Complete the checkout in your browser, then return here.
-            </div>
-            <div className={s.pendingBack}>
-              <SecondaryButton size="sm" onClick={dismissPending}>
-                Back
-              </SecondaryButton>
-            </div>
-          </div>
-        </GlassCard>
-      </>
-    );
-  }
-
   return (
     <>
       <OnboardingHeader
         totalSteps={ATOMIC_PAYG_FLOW.totalSteps}
         activeStep={ATOMIC_PAYG_FLOW.steps.topup}
-        onBack={() => void navigate("../setup-mode", { relative: "path" })}
+        onBack={() => {
+          ctx.setSetupFlow("unset");
+          dispatch(clearAtomicAuthThunk());
+          clearPostPaygSuccessNavigate();
+          void navigate("../setup-mode", { relative: "path" });
+        }}
         onSkip={() => {
           clearPostPaygSuccessNavigate();
           void navigate("../atomic-model", { relative: "path" });
@@ -146,42 +146,36 @@ export function AtomicTopupPage() {
         <div className="UiSectionContent">
           <div className={s.title}>
             <span className={s.titlePlain}>Power up your </span>
-            <span className={s.titleAccent}>Atomic</span>
-            <span className={s.titlePlain}> credits</span>
+            <span className={s.titleAccent}>agent</span>
           </div>
 
           <div className={s.card}>
             <div className={s.cardInner}>
-              <div className={s.priceRow}>
-                <span className={s.price}>Choose amount</span>
-                <span className={s.priceSuffix}>one-time top-up</span>
+              <div className={s.sectionTitle}>Enter amount</div>
+
+              <div className={s.amountInputWrap}>
+                <span className={s.amountPrefix}>$</span>
+                <input
+                  id="atomic-topup-amount"
+                  className={s.amountInput}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="off"
+                  value={amountInput}
+                  disabled={isPending}
+                  onChange={(e) => {
+                    const digitsOnly = e.target.value
+                      .replace(/\D+/g, "")
+                      .slice(0, 4);
+                    setAmountInput(digitsOnly);
+                    if (payError) setPayError(null);
+                  }}
+                  placeholder="25"
+                  aria-invalid={amountInvalid}
+                />
               </div>
 
-              <div className={s.amountSection}>
-                <label htmlFor="atomic-topup-amount" className={s.amountLabel}>
-                  Top-up amount (USD)
-                </label>
-                <div className={s.amountInputWrap}>
-                  <span className={s.amountPrefix}>$</span>
-                  <input
-                    id="atomic-topup-amount"
-                    className={s.amountInput}
-                    inputMode="decimal"
-                    autoComplete="off"
-                    value={amountInput}
-                    onChange={(e) => {
-                      setAmountInput(e.target.value);
-                      if (payError) setPayError(null);
-                    }}
-                    placeholder="10"
-                    aria-invalid={amountInvalid}
-                  />
-                </div>
-                <div className={s.amountHint}>
-                  Pay only for what you want to add. You can top up again
-                  anytime.
-                </div>
-              </div>
+              <div className={s.divider} />
 
               <ul className={s.featureList}>
                 {FEATURES.map((feature, i) => (
@@ -195,16 +189,36 @@ export function AtomicTopupPage() {
               <div className={s.footer}>
                 <div className={s.buttonWrap}>
                   <PrimaryButton
-                    disabled={busy || !jwt || amountInvalid}
+                    disabled={!jwt || amountInvalid || isPending}
                     loading={busy}
                     onClick={() => void onPay()}
                   >
-                    Continue to payment
+                    {topupPending
+                      ? "Waiting for payment..."
+                      : "Continue to payment"}
                   </PrimaryButton>
                 </div>
 
-                <div className={s.trialNote}>
-                  One-time top-up. No subscription, no commitments.
+                <div className={s.secureNote}>
+                  {topupPending ? (
+                    <div className={s.pendingNoteBlock}>
+                      <span>
+                        Complete payment in your browser, then return here.
+                      </span>
+                      <button
+                        type="button"
+                        className={s.pendingDismissBtn}
+                        onClick={dismissPending}
+                      >
+                        Cancel and change amount
+                      </button>
+                    </div>
+                  ) : (
+                    <>
+                      <LockIcon />
+                      <span>Secure payment via Stripe</span>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

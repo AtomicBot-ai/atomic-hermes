@@ -1,4 +1,11 @@
-import { app, BrowserWindow, ipcMain, Notification, session, shell } from "electron";
+import {
+  app,
+  BrowserWindow,
+  ipcMain,
+  Notification,
+  session,
+  shell,
+} from "electron";
 import * as fs from "fs";
 import * as path from "path";
 import { startPythonBackend, PythonBridge } from "./python-bridge";
@@ -22,15 +29,34 @@ import {
   getAppVersion,
 } from "./updater";
 import { registerLlamacppIpcHandlers } from "./llamacpp/ipc";
-import { stopLlamacppServer, killOrphanedServer, startLlamacppServer } from "./llamacpp/server";
+import {
+  stopLlamacppServer,
+  killOrphanedServer,
+  startLlamacppServer,
+} from "./llamacpp/server";
 import { readActiveModelId } from "./llamacpp/model-state";
-import { getLlamacppModelDef, resolveLlamacppModelPath, resolveChatTemplatePath, type LlamacppModelId } from "./llamacpp/models";
-import { isBackendDownloaded, resolveServerBinPath } from "./llamacpp/backend-download";
+import {
+  getLlamacppModelDef,
+  resolveLlamacppModelPath,
+  resolveChatTemplatePath,
+  type LlamacppModelId,
+} from "./llamacpp/models";
+import {
+  isBackendDownloaded,
+  resolveServerBinPath,
+} from "./llamacpp/backend-download";
 import { getSystemInfo, computeContextLength } from "./llamacpp/hardware";
 import { isAnyProfileUsingLlamacpp } from "./llamacpp/profile-usage";
 import { killUpdateSplash } from "./update-splash";
-import { readAnalyticsState, writeAnalyticsState } from "./analytics/analytics-state";
-import { initPosthogMain, captureMain, shutdownPosthogMain } from "./analytics/posthog-main";
+import {
+  readAnalyticsState,
+  writeAnalyticsState,
+} from "./analytics/analytics-state";
+import {
+  initPosthogMain,
+  captureMain,
+  shutdownPosthogMain,
+} from "./analytics/posthog-main";
 import { registerAnalyticsHandlers } from "./analytics/analytics-ipc";
 import {
   registerNotificationsHandlers,
@@ -44,7 +70,10 @@ import {
 
 const DEEP_LINK_PROTOCOL = "atomicbot-hermes";
 
-app.setPath("userData", path.join(app.getPath("appData"), "ai.atomicbot.hermes"));
+app.setPath(
+  "userData",
+  path.join(app.getPath("appData"), "ai.atomicbot.hermes"),
+);
 
 // Single-instance lock + deep-link protocol registration must happen before
 // `app.whenReady()`. When a second instance is launched (e.g. by macOS opening
@@ -95,8 +124,8 @@ function createWindow(): void {
   mainWindow = new BrowserWindow({
     width: 960,
     height: 720,
-    minWidth: 480,
-    minHeight: 400,
+    minWidth: 900,
+    minHeight: 600,
     title: windowTitle,
     backgroundColor: "#1a1a2e",
     webPreferences: {
@@ -111,7 +140,14 @@ function createWindow(): void {
     event.preventDefault();
   });
 
-  const rendererPath = path.join(__dirname, "..", "..", "renderer", "dist", "index.html");
+  const rendererPath = path.join(
+    __dirname,
+    "..",
+    "..",
+    "renderer",
+    "dist",
+    "index.html",
+  );
 
   mainWindow.loadFile(rendererPath);
 
@@ -128,7 +164,8 @@ const analyticsState = readAnalyticsState(stateDir);
 if (!analyticsState.prompted) {
   analyticsState.enabled = true;
   analyticsState.prompted = true;
-  analyticsState.enabledAt = analyticsState.enabledAt ?? new Date().toISOString();
+  analyticsState.enabledAt =
+    analyticsState.enabledAt ?? new Date().toISOString();
   writeAnalyticsState(stateDir, analyticsState);
 }
 initPosthogMain(analyticsState.userId, analyticsState.enabled);
@@ -152,8 +189,9 @@ app.on("open-url", (event, url) => {
 });
 
 app.on("second-instance", (_event, argv) => {
-  const url = argv.find((arg) =>
-    typeof arg === "string" && arg.startsWith(`${DEEP_LINK_PROTOCOL}://`),
+  const url = argv.find(
+    (arg) =>
+      typeof arg === "string" && arg.startsWith(`${DEEP_LINK_PROTOCOL}://`),
   );
   if (url) {
     handleDeepLink(url, mainWindow);
@@ -178,23 +216,30 @@ ipcMain.handle("get-launch-at-login", () => {
   if (process.platform !== "darwin" && process.platform !== "win32") {
     return { enabled: false };
   }
-  const opts = process.platform === "win32" ? { path: app.getPath("exe") } : undefined;
+  const opts =
+    process.platform === "win32" ? { path: app.getPath("exe") } : undefined;
   const s = app.getLoginItemSettings(opts);
   return { enabled: Boolean(s.openAtLogin) };
 });
 
-ipcMain.handle("set-launch-at-login", (_evt, payload: { enabled?: boolean }) => {
-  if (process.platform !== "darwin" && process.platform !== "win32") {
-    throw new Error("Launch at login is only available on macOS and Windows");
-  }
-  const enabled = Boolean(payload?.enabled);
-  if (process.platform === "win32") {
-    app.setLoginItemSettings({ openAtLogin: enabled, path: app.getPath("exe") });
-  } else {
-    app.setLoginItemSettings({ openAtLogin: enabled });
-  }
-  return { ok: true };
-});
+ipcMain.handle(
+  "set-launch-at-login",
+  (_evt, payload: { enabled?: boolean }) => {
+    if (process.platform !== "darwin" && process.platform !== "win32") {
+      throw new Error("Launch at login is only available on macOS and Windows");
+    }
+    const enabled = Boolean(payload?.enabled);
+    if (process.platform === "win32") {
+      app.setLoginItemSettings({
+        openAtLogin: enabled,
+        path: app.getPath("exe"),
+      });
+    } else {
+      app.setLoginItemSettings({ openAtLogin: enabled });
+    }
+    return { ok: true };
+  },
+);
 
 ipcMain.handle("onboarding-get-state", () => {
   return { onboarded: readOnboardedState(stateDir) };
@@ -227,7 +272,12 @@ ipcMain.handle("reset-and-close", async () => {
 
   killAllTerminals();
 
-  const rmOpts = { recursive: true, force: true, maxRetries: 3, retryDelay: 200 } as const;
+  const rmOpts = {
+    recursive: true,
+    force: true,
+    maxRetries: 3,
+    retryDelay: 200,
+  } as const;
   fs.rmSync(stateDir, rmOpts);
 
   await session.defaultSession.clearStorageData();
@@ -350,7 +400,10 @@ async function startDesktopBackend(): Promise<void> {
   } catch (err: any) {
     console.error("Failed to start Python backend:", err);
     mainWindow?.webContents.send("python-error", err.message || String(err));
-    dashboardState = { kind: "failed", error: "Gateway process failed to start" };
+    dashboardState = {
+      kind: "failed",
+      error: "Gateway process failed to start",
+    };
     mainWindow?.webContents.send("dashboard-error", dashboardState.error);
   }
 }
@@ -361,7 +414,9 @@ async function autoStartLlamacppIfNeeded(): Promise<void> {
   killOrphanedServer(stateDir);
 
   if (!isAnyProfileUsingLlamacpp(stateDir)) {
-    console.log("[llamacpp] auto-start skipped: no profile is configured to use llama.cpp");
+    console.log(
+      "[llamacpp] auto-start skipped: no profile is configured to use llama.cpp",
+    );
     return;
   }
 

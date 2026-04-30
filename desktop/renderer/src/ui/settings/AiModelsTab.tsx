@@ -497,6 +497,9 @@ export function AiModelsTab() {
                       fontSize: 14,
                       color: "#fff",
                       paddingTop: 6,
+                      background: "var(--surface-secondary)",
+                      borderRadius: "var(--radius-lg)",
+                      padding: "8px 12px",
                     }}
                   >
                     Atomic

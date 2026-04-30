@@ -116,7 +116,11 @@ export function SetupModePage(props: {
                 </ul>
               </div>
               <div className={s.UiSetupModeCardFooter}>
-                <PrimaryButton size="sm" onClick={props.onSelectApiKeys}>
+                <PrimaryButton
+                  className={s.UiSetupModeWhiteButton}
+                  size="sm"
+                  onClick={props.onSelectApiKeys}
+                >
                   Connect API keys
                 </PrimaryButton>
               </div>
@@ -156,7 +160,11 @@ export function SetupModePage(props: {
                     Coming soon
                   </SecondaryButton>
                 ) : (
-                  <PrimaryButton size="sm" onClick={props.onSelectLocalModels}>
+                  <PrimaryButton
+                    className={s.UiSetupModeWhiteButton}
+                    size="sm"
+                    onClick={props.onSelectLocalModels}
+                  >
                     Set up local models
                   </PrimaryButton>
                 )}

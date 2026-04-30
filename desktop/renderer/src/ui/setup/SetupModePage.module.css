@@ -77,6 +77,24 @@
   margin-top: 12px;
 }
 
+.UiSetupModeWhiteButton {
+  background: #fff !important;
+  color: #111 !important;
+  border-color: #fff !important;
+}
+
+.UiSetupModeWhiteButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #111 !important;
+  border-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.UiSetupModeWhiteButton:disabled {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: rgba(17, 17, 17, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+
 .UiSetupModeCardFooter :global(.UiPrimaryButton),
 .UiSetupModeCardFooter :global(.UiSecondaryButton) {
   width: 100%;
