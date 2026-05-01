@@ -5,6 +5,12 @@ type DashboardState =
   | { kind: "ready"; port: number; url: string }
   | { kind: "failed"; error: string };
 
+type DeepLinkPayload = {
+  host: string;
+  pathname: string;
+  params: Record<string, string>;
+};
+
 function onIpc<T>(channel: string, cb: (payload: T) => void): () => void {
   const handler = (_event: Electron.IpcRendererEvent, payload: T) => cb(payload);
   ipcRenderer.on(channel, handler);
@@ -193,4 +199,10 @@ contextBridge.exposeInMainWorld("hermesAPI", {
     ipcRenderer.invoke("sidebar:set-favorites", { entries }),
   seedProfileProvider: async (source: string, target: string): Promise<unknown> =>
     ipcRenderer.invoke("seed-profile-provider", { source, target }),
+
+  // ── Atomic deep-link (atomicbot-hermes://...) ──────────────────────
+  // JWT persistence lives in window.localStorage on the renderer side; only
+  // the deep-link delivery channel crosses the IPC boundary.
+  onAtomicDeepLink: (cb: (payload: DeepLinkPayload) => void): (() => void) =>
+    onIpc("atomic:deep-link", cb),
 });

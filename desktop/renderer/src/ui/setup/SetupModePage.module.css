@@ -1,9 +1,9 @@
-/* ── SetupModePage (two-column variant) ── */
+/* ── SetupModePage (three-column variant) ── */
 
 .UiSetupModeCard {
   display: flex;
   flex-direction: column;
-  width: min(520px, 92vw);
+  width: min(820px, 96vw);
   min-width: 320px;
   height: auto;
 }
@@ -14,11 +14,36 @@
 
 .UiSetupModeOptions {
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(3, 1fr);
   gap: 16px;
   margin-top: 11px;
   align-items: stretch;
   min-height: 0;
+}
+
+@media (max-width: 720px) {
+  .UiSetupModeOptions {
+    grid-template-columns: 1fr;
+  }
+}
+
+.UiSetupModeOptionCardFeatured {
+  border-color: var(--accent-brand, #b0ff57);
+  box-shadow: 0 0 0 1px var(--accent-brand, #b0ff57);
+}
+
+.UiSetupModeBadge {
+  align-self: flex-start;
+  font-size: 10px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--accent-brand, #b0ff57);
+  color: var(--accent-brand-contrast, #06231a);
+  font-weight: 700;
+  margin-bottom: 8px;
+  opacity: 0.7;
 }
 
 .UiSetupModeOptions .UiSetupModeOptionCard {
@@ -38,6 +63,11 @@
   flex-direction: column;
 }
 
+.UiSetupModeRow {
+  display: flex;
+  justify-content: space-between;
+}
+
 .UiSetupModeCardFooter {
   flex-shrink: 0;
   width: 100%;
@@ -45,6 +75,24 @@
   flex-direction: column;
   gap: 8px;
   margin-top: 12px;
+}
+
+.UiSetupModeWhiteButton {
+  background: #fff !important;
+  color: #111 !important;
+  border-color: #fff !important;
+}
+
+.UiSetupModeWhiteButton:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.92) !important;
+  color: #111 !important;
+  border-color: rgba(255, 255, 255, 0.92) !important;
+}
+
+.UiSetupModeWhiteButton:disabled {
+  background: rgba(255, 255, 255, 0.22) !important;
+  color: rgba(17, 17, 17, 0.55) !important;
+  border-color: rgba(255, 255, 255, 0.22) !important;
 }
 
 .UiSetupModeCardFooter :global(.UiPrimaryButton),
@@ -72,12 +120,6 @@
   font-weight: 700;
   font-size: 17px;
   line-height: 22px;
-  margin-bottom: 5px;
-}
-
-.UiSetupModeDesc {
-  font-size: 13px;
-  color: var(--muted3);
   margin-bottom: 16px;
 }
 
@@ -130,4 +172,39 @@
 .UiSetupModeOptionCardComingSoon {
   opacity: 0.65;
   pointer-events: none;
+}
+
+.UiSetupModeStatus {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.UiSetupModeStatusSuccess {
+  margin-top: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.82);
+}
+
+.UiSetupModeStatusDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  background: #34c759;
+}
+
+.UiSetupModeError {
+  margin-top: 12px;
+  font-size: 13px;
+  line-height: 1.4;
+  color: #ff6b6b;
 }

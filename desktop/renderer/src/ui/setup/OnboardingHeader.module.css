@@ -1,8 +1,15 @@
 .header {
-  width: min(520px, 92vw);
   display: flex;
   align-items: center;
   margin-bottom: 0px;
+}
+
+.headerWide {
+  width: min(800px, 92vw);
+}
+
+.headerNarrow {
+  width: min(520px, 92vw);
 }
 
 .side {

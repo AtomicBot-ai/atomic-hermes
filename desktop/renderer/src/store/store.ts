@@ -6,6 +6,7 @@ import { chatReducer } from "./slices/chatSlice";
 import { skillsReducer } from "./slices/skillsSlice";
 import { llamacppReducer } from "./slices/llamacppSlice";
 import { desktopWarmupReducer } from "./slices/desktopWarmupSlice";
+import { atomicAuthReducer } from "./slices/atomicAuthSlice";
 
 export const store = configureStore({
   reducer: {
@@ -16,6 +17,7 @@ export const store = configureStore({
     skills: skillsReducer,
     llamacpp: llamacppReducer,
     desktopWarmup: desktopWarmupReducer,
+    atomicAuth: atomicAuthReducer,
   },
 });
 

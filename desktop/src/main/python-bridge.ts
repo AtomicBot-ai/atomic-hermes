@@ -150,21 +150,29 @@ function createBridge(
 
   const kill = () => {
     restartCb = null;
-    if (!child.killed) {
-      child.kill("SIGTERM");
-      setTimeout(() => {
-        if (!child.killed) child.kill("SIGKILL");
-      }, 5_000);
+    if (child.exitCode !== null || child.signalCode !== null) return;
+    try {
+      child.kill("SIGKILL");
+    } catch {
+      /* already dead */
     }
   };
 
   const killAndWait = (): Promise<void> => {
     return new Promise((resolve) => {
-      if (child.killed || child.exitCode !== null) {
+      if (child.exitCode !== null || child.signalCode !== null) {
         resolve();
         return;
       }
-      child.once("exit", () => resolve());
+      let settled = false;
+      const done = () => {
+        if (settled) return;
+        settled = true;
+        resolve();
+      };
+      child.once("exit", done);
+      const safety = setTimeout(done, 1_500);
+      safety.unref?.();
       kill();
     });
   };

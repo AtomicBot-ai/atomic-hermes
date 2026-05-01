@@ -4,7 +4,7 @@ import type { CapabilitiesResponse, DeviceCodeResponse } from "../../services/ap
 
 export type OAuthStep = "idle" | "loading" | "waiting" | "success" | "error";
 
-export type SetupFlowKind = "unset" | "api-keys" | "local-model";
+export type SetupFlowKind = "unset" | "api-keys" | "local-model" | "atomic-payg";
 
 export type SetupState = {
   port: number;

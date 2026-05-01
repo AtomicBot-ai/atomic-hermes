@@ -15,7 +15,12 @@ import {
   type CapabilitiesResponse,
   type DeviceCodeResponse,
 } from "../../services/api";
-import { SetupContext, useSetup, type OAuthStep, type SetupFlowKind } from "./setup-context";
+import {
+  SetupContext,
+  useSetup,
+  type OAuthStep,
+  type SetupFlowKind,
+} from "./setup-context";
 import { getDesktopApiOrNull } from "@ipc/desktopApi";
 import { getSelectedHermesProfile } from "../../services/request-context";
 import { seedComputerUseMcpIfMissing } from "../../services/seed-computer-use-mcp";
@@ -28,12 +33,100 @@ import { ProviderSelectStep } from "./ProviderSelectStep";
 import { ApiKeyStep } from "./ApiKeyStep";
 import { ModelSelectStep } from "./ModelSelectStep";
 import { FinishStep } from "./FinishStep";
+import { AtomicTopupPage } from "./atomic/AtomicTopupPage";
+import { AtomicModelSelectStep } from "./atomic/AtomicModelSelectStep";
+import { useAtomicDeepLink } from "../../hooks/useAtomicDeepLink";
+import { googleAuthDesktopUrl } from "../../services/atomic-backend-api";
+import { applyPaygKey, storeAtomicToken } from "@store/slices/atomicAuthSlice";
+import { setMode } from "@store/slices/configSlice";
+import { persistMode } from "@store/slices/mode-persistence";
 import "./setup.css";
 
 function SetupModeRoute() {
   const navigate = useNavigate();
-  const { setSetupFlow } = useSetup();
+  const dispatch = useAppDispatch();
+  const { setSetupFlow, port } = useSetup();
+
+  const jwt = useAppSelector((state) => state.atomicAuth.jwt);
+  const email = useAppSelector((state) => state.atomicAuth.email);
+  const applyKeyBusy = useAppSelector((state) => state.atomicAuth.applyKeyBusy);
+  const applyKeyError = useAppSelector(
+    (state) => state.atomicAuth.applyKeyError,
+  );
+
   const isMac = (getDesktopApiOrNull()?.platform ?? "darwin") === "darwin";
+
+  const [atomicPhase, setAtomicPhase] = React.useState<
+    "idle" | "waiting" | "authenticated" | "applying" | "error"
+  >(jwt ? "authenticated" : "idle");
+  const [atomicError, setAtomicError] = React.useState<string | null>(null);
+
+  function describeError(err: unknown): string {
+    if (err instanceof Error) return err.message;
+    if (typeof err === "string") return err;
+    if (err && typeof err === "object") {
+      const candidate = (err as { message?: unknown }).message;
+      if (typeof candidate === "string" && candidate.length > 0)
+        return candidate;
+    }
+    return "Unexpected error";
+  }
+
+  const startAtomicSignIn = React.useCallback(() => {
+    setAtomicError(null);
+    setSetupFlow("atomic-payg");
+    setAtomicPhase("waiting");
+    openExternal(googleAuthDesktopUrl());
+  }, [setSetupFlow]);
+
+  useAtomicDeepLink({
+    onAuth: (params) => {
+      void (async () => {
+        try {
+          await dispatch(
+            storeAtomicToken({
+              jwt: params.jwt,
+              email: params.email,
+              userId: params.userId,
+              isNewUser: params.isNewUser,
+            }),
+          ).unwrap();
+          setAtomicPhase("authenticated");
+        } catch (err) {
+          setAtomicError(describeError(err));
+          setAtomicPhase("error");
+        }
+      })();
+    },
+    onAuthError: () => {
+      setAtomicError("Authentication failed — missing token data");
+      setAtomicPhase("error");
+    },
+  });
+
+  const appliedRef = React.useRef<string | null>(null);
+  React.useEffect(() => {
+    if (!jwt || atomicPhase !== "authenticated") return;
+    if (appliedRef.current === jwt) return;
+    appliedRef.current = jwt;
+
+    setAtomicPhase("applying");
+    void (async () => {
+      try {
+        const result = await dispatch(applyPaygKey({ port })).unwrap();
+        dispatch(setMode("atomic-payg"));
+        persistMode("atomic-payg");
+
+        const target =
+          result.remaining > 0 ? "../atomic-model" : "../atomic-topup";
+        void navigate(target, { relative: "path" });
+      } catch (err) {
+        setAtomicError(describeError(err));
+        setAtomicPhase("error");
+      }
+    })();
+  }, [jwt, atomicPhase, dispatch, port, navigate]);
+
   return (
     <SetupModePage
       localModelComingSoon={!isMac}
@@ -45,10 +138,16 @@ function SetupModeRoute() {
         setSetupFlow("local-model");
         void navigate("../local-backend-setup", { relative: "path" });
       }}
+      onSelectAtomicPayg={startAtomicSignIn}
       onBack={() => {
         setSetupFlow("unset");
         void navigate("..", { relative: "path" });
       }}
+      atomicBusy={
+        atomicPhase === "waiting" || atomicPhase === "applying" || applyKeyBusy
+      }
+      atomicError={atomicError ?? applyKeyError ?? null}
+      atomicSignedInEmail={email}
     />
   );
 }
@@ -58,7 +157,9 @@ function LocalBackendSetupRoute() {
   const { setSetupFlow } = useSetup();
   return (
     <LocalBackendSetupPage
-      onContinue={() => void navigate("../local-model-select", { relative: "path" })}
+      onContinue={() =>
+        void navigate("../local-model-select", { relative: "path" })
+      }
       onBack={() => {
         setSetupFlow("unset");
         void navigate("../setup-mode", { relative: "path" });
@@ -95,8 +196,9 @@ export function SetupPage() {
   const gatewayState = useAppSelector((s) => s.gateway.state);
   const port = gatewayState?.kind === "ready" ? gatewayState.port : 8642;
 
-  const [capabilities, setCapabilities] =
-    useState<CapabilitiesResponse | null>(null);
+  const [capabilities, setCapabilities] = useState<CapabilitiesResponse | null>(
+    null,
+  );
 
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
   const [apiKey, setApiKey] = useState("");
@@ -217,9 +319,7 @@ export function SetupPage() {
       });
       return true;
     } catch (err) {
-      setSaveError(
-        err instanceof Error ? err.message : "Failed to save model",
-      );
+      setSaveError(err instanceof Error ? err.message : "Failed to save model");
       return false;
     }
   }, [capabilities, configuredModel, port, selectedModel, selectedProvider]);
@@ -371,8 +471,16 @@ export function SetupPage() {
             <Route path="provider" element={<ProviderSelectStep />} />
             <Route path="api-key" element={<ApiKeyStep />} />
             <Route path="model" element={<ModelSelectStep />} />
-            <Route path="local-backend-setup" element={<LocalBackendSetupRoute />} />
-            <Route path="local-model-select" element={<LocalModelSelectRoute />} />
+            <Route
+              path="local-backend-setup"
+              element={<LocalBackendSetupRoute />}
+            />
+            <Route
+              path="local-model-select"
+              element={<LocalModelSelectRoute />}
+            />
+            <Route path="atomic-topup" element={<AtomicTopupPage />} />
+            <Route path="atomic-model" element={<AtomicModelSelectStep />} />
             <Route path="finish" element={<FinishStep />} />
             <Route path="*" element={<Navigate to="." replace />} />
           </Routes>

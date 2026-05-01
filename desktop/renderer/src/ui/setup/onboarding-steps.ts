@@ -1,24 +1,32 @@
 /** Step indices for onboarding progress (OnboardingDots), per branch after setup-mode. */
 
 export const API_KEYS_FLOW = {
-  totalSteps: 6,
+  totalSteps: 5,
   steps: {
-    welcome: 0,
-    setupMode: 1,
-    provider: 2,
-    apiKey: 3,
-    model: 4,
-    finish: 5,
+    setupMode: 0,
+    provider: 1,
+    apiKey: 2,
+    model: 3,
+    finish: 4,
   },
 } as const;
 
 export const LOCAL_MODEL_FLOW = {
-  totalSteps: 5,
+  totalSteps: 4,
   steps: {
-    welcome: 0,
-    setupMode: 1,
-    backendDownload: 2,
-    modelSelect: 3,
-    finish: 4,
+    setupMode: 0,
+    backendDownload: 1,
+    modelSelect: 2,
+    finish: 3,
+  },
+} as const;
+
+export const ATOMIC_PAYG_FLOW = {
+  totalSteps: 4,
+  steps: {
+    setupMode: 0,
+    topup: 1,
+    model: 2,
+    finish: 3,
   },
 } as const;

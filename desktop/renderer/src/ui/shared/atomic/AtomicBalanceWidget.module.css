@@ -1,0 +1,57 @@
+.widget {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px 16px;
+  border: 1px solid var(--border, rgba(255, 255, 255, 0.08));
+  border-radius: 10px;
+  background: var(--surface-overlay, rgba(255, 255, 255, 0.03));
+}
+
+.row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.label {
+  font-size: 12px;
+  color: var(--muted2, #8e8e8e);
+}
+
+.value {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.refresh {
+  background: none;
+  border: none;
+  color: var(--muted2, #8e8e8e);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 0;
+}
+
+.refresh:hover:not(:disabled) {
+  color: var(--text, #fff);
+}
+
+.refresh:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--danger, #ff6b6b);
+}

@@ -1,5 +1,6 @@
 import { OnboardingDots } from "@shared/kit";
 import s from "./OnboardingHeader.module.css";
+import { ATOMIC_PAYG_FLOW } from "./onboarding-steps";
 
 export type OnboardingHeaderProps = {
   totalSteps: number;
@@ -16,8 +17,12 @@ export function OnboardingHeader({
   onSkip,
   backDisabled,
 }: OnboardingHeaderProps) {
+  const isFirstStep = activeStep === ATOMIC_PAYG_FLOW.steps.setupMode;
+
   return (
-    <div className={s.header}>
+    <div
+      className={`${s.header} ${isFirstStep ? s.headerWide : s.headerNarrow}`}
+    >
       {onBack ? (
         <div className={s.side}>
           <button
