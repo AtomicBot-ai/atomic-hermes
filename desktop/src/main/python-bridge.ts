@@ -45,7 +45,21 @@ function copyDirRecursive(src: string, dest: string): void {
     const srcPath = path.join(src, entry.name);
     const destPath = path.join(dest, entry.name);
 
-    const stat = fs.statSync(srcPath);
+    // Skip broken symlinks (dev mode bundle-dev.sh can leave stale links
+    // pointing to skills removed by branch switch / upstream pull).
+    if (!fs.existsSync(srcPath)) {
+      console.warn(`syncSkills: skipping broken entry ${srcPath}`);
+      continue;
+    }
+
+    let stat: fs.Stats;
+    try {
+      stat = fs.statSync(srcPath);
+    } catch (err) {
+      console.warn(`syncSkills: stat failed for ${srcPath}, skipping:`, err);
+      continue;
+    }
+
     if (stat.isDirectory()) {
       copyDirRecursive(srcPath, destPath);
     } else if (stat.isFile() && !fs.existsSync(destPath)) {

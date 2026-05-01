@@ -205,7 +205,7 @@ export function App() {
   const dispatch = useAppDispatch();
   const state = useAppSelector((s) => s.gateway.state);
   const onboardingLoaded = useAppSelector((s) => s.onboarding.loaded);
-  const onboarded = useAppSelector((s) => false);
+  const onboarded = useAppSelector((s) => s.onboarding.onboarded);
   const navigate = useNavigate();
   const didAutoNavRef = React.useRef(false);
   const wasRestartingRef = React.useRef(false);
